@@ -1,0 +1,17 @@
+# Secretos locales (credenciales SMTP, etc.) — NUNCA commitear.
+.env
+.env.*
+!.env.example
+
+# Base de datos local (solo la carpeta data/ de la raiz del repo)
+/data/
+*.db
+
+# Artefactos varios
+**/__pycache__/
+*.pyc
+.DS_Store
+
+# Sass
+.sass-cache/
+*.css.map

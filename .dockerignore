@@ -1,0 +1,16 @@
+# Contexto de build Docker — excluye lo que no necesita la imagen.
+.git
+.github
+.gitignore
+.dockerignore
+.env
+.env.*
+README.md
+Makefile
+tools
+data
+# Fuente SCSS: la imagen solo necesita el CSS ya compilado.
+PersonalSite/Resources/Scss
+**/*.db
+**/__pycache__
+**/.DS_Store
