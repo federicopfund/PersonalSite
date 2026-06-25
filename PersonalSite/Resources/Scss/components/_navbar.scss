@@ -1,0 +1,130 @@
+// =============================================================
+//  components/_navbar.scss
+// =============================================================
+@use '../abstracts' as *;
+
+.navbar {
+  position: fixed;
+  inset: 0 0 auto 0;
+  z-index: 200;
+  height: $nav-height;
+  background: rgba(gray(950), .96);
+  backdrop-filter: blur(16px);
+  -webkit-backdrop-filter: blur(16px);
+  border-bottom: 1px solid rgba(#fff, .08);
+}
+
+.nav-container {
+  @include container;
+  padding-inline: 1.5rem;
+  height: 100%;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+
+.nav-brand {
+  font-size: 1.15rem;
+  font-weight: 800;
+  letter-spacing: -.04em;
+  color: #fff;
+  text-decoration: none;
+}
+
+.nav-links {
+  list-style: none;
+  display: flex;
+  align-items: center;
+  gap: .25rem;
+
+  a {
+    display: block;
+    padding: .5rem .9rem;
+    border-radius: radius(sm);
+    font-size: .9rem;
+    font-weight: 500;
+    color: gray(300);
+    transition: color $ease, background $ease;
+
+    &:hover {
+      color: #fff;
+      background: rgba(#fff, .1);
+      text-decoration: none;
+    }
+  }
+
+  @include breakpoint(md) {
+    position: absolute;
+    top: $nav-height;
+    left: 0;
+    right: 0;
+    flex-direction: column;
+    gap: 0;
+    background: rgba(gray(950), .98);
+    border-top: 1px solid rgba(#fff, .08);
+    padding: .5rem 0;
+    display: none;
+
+    &.open {
+      display: flex;
+    }
+
+    li {
+      width: 100%;
+    }
+
+    a {
+      border-radius: 0;
+      padding: .85rem 1.5rem;
+    }
+  }
+}
+
+.nav-cta {
+  background: #fff !important;
+  color: gray(950) !important;
+  padding: .5rem 1.1rem !important;
+
+  &:hover {
+    background: gray(200) !important;
+  }
+
+  @include breakpoint(md) {
+    margin: .4rem 1rem !important;
+    border-radius: radius(sm) !important;
+    text-align: center;
+  }
+}
+
+.nav-toggle {
+  display: none;
+  flex-direction: column;
+  justify-content: center;
+  gap: 5px;
+  width: 40px;
+  height: 40px;
+  background: none;
+  border: none;
+  padding: 8px;
+  border-radius: radius(sm);
+
+  &:hover {
+    background: rgba(#fff, .08);
+  }
+
+  span {
+    display: block;
+    height: 2px;
+    background: gray(200);
+    border-radius: 2px;
+    transition: $ease;
+  }
+
+  &.open span:nth-child(1) { transform: translateY(7px) rotate(45deg); }
+  &.open span:nth-child(2) { opacity: 0; transform: scaleX(0); }
+  &.open span:nth-child(3) { transform: translateY(-7px) rotate(-45deg); }
+
+  @include breakpoint(md) {
+    display: flex;
+  }
+}

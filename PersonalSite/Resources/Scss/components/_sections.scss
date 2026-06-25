@@ -1,0 +1,32 @@
+// =============================================================
+//  components/_sections.scss
+// =============================================================
+@use '../abstracts' as *;
+
+.section {
+  padding: 5rem 1.5rem;
+}
+
+.section-alt {
+  background: gray(50);
+}
+
+.section-inner {
+  @include container;
+}
+
+.section-header {
+  margin-bottom: 3rem;
+
+  h2 {
+    font-size: clamp(1.6rem, 3vw, 2.2rem);
+    font-weight: 800;
+    letter-spacing: -.04em;
+    margin-bottom: .4rem;
+  }
+
+  p {
+    color: gray(500);
+    font-size: 1rem;
+  }
+}

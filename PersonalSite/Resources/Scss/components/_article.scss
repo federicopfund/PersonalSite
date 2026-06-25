@@ -1,0 +1,104 @@
+// =============================================================
+//  components/_article.scss
+//  Detalle de una entrada del blog.
+// =============================================================
+@use '../abstracts' as *;
+
+.article-head {
+  @include dark-gradient;
+  color: #fff;
+  padding: 5rem 1.5rem 4rem;
+
+  time {
+    display: block;
+    margin-bottom: .9rem;
+    font-size: .75rem;
+    font-weight: 700;
+    letter-spacing: .1em;
+    text-transform: uppercase;
+    color: gray(400);
+  }
+
+  h1 {
+    font-size: clamp(1.8rem, 4vw, 2.75rem);
+    font-weight: 800;
+    line-height: 1.2;
+    letter-spacing: -.05em;
+  }
+}
+
+.article-head-inner {
+  max-width: 760px;
+  margin-inline: auto;
+}
+
+.article-body {
+  max-width: 760px;
+  margin-inline: auto;
+  padding: 3.5rem 1.5rem 2rem;
+  font-family: $font-serif;
+  font-size: 1.05rem;
+  color: gray(800);
+  line-height: 1.9;
+
+  p { margin-bottom: 1.5rem; }
+
+  h2 {
+    font-family: $font-sans;
+    font-size: 1.5rem;
+    font-weight: 700;
+    margin: 2.5rem 0 1rem;
+    letter-spacing: -.03em;
+  }
+
+  h3 {
+    font-family: $font-sans;
+    font-size: 1.2rem;
+    font-weight: 600;
+    margin: 2rem 0 .75rem;
+  }
+
+  code {
+    font-family: $font-mono;
+    font-size: .875em;
+    background: gray(100);
+    padding: .2em .45em;
+    border-radius: 4px;
+  }
+
+  pre {
+    background: gray(900);
+    color: gray(200);
+    padding: 1.5rem;
+    border-radius: radius(sm);
+    overflow-x: auto;
+    margin: 1.5rem 0;
+
+    code {
+      background: none;
+      padding: 0;
+      font-size: .9em;
+    }
+  }
+}
+
+.article-back {
+  max-width: 760px;
+  margin-inline: auto;
+  padding: 2rem 1.5rem 4rem;
+  border-top: 1px solid gray(200);
+
+  a {
+    display: inline-flex;
+    align-items: center;
+    gap: .4rem;
+    font-weight: 700;
+    color: gray(900);
+    transition: gap $ease;
+
+    &:hover {
+      gap: .7rem;
+      text-decoration: none;
+    }
+  }
+}

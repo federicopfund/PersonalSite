@@ -1,0 +1,24 @@
+// =============================================================
+//  base/_root.scss
+//  Custom properties expuestas en :root. La escala de grises se
+//  genera con @each desde el mapa $grays (single source of truth).
+// =============================================================
+@use '../abstracts' as *;
+
+:root {
+  // Escala de grises como variables CSS (--gray-0 .. --gray-950).
+  @each $level, $value in $grays {
+    --gray-#{$level}: #{$value};
+  }
+
+  // Tokens semanticos.
+  --bg:           #{gray(0)};
+  --bg-alt:       #{gray(50)};
+  --text:         #{gray(900)};
+  --muted:        #{gray(500)};
+  --border:       #{gray(200)};
+  --accent:       #{gray(900)};
+  --accent-hover: #{gray(700)};
+  --nav-h:        #{$nav-height};
+  --ease:         #{$ease};
+}

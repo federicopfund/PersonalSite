@@ -1,0 +1,179 @@
+// =============================================================
+//  components/_ask.scss
+//  Pagina /ask (Wolfram|Alpha). Cajas de resultado en monocromo.
+// =============================================================
+@use '../abstracts' as *;
+
+.ask-section {
+  background: gray(50);
+}
+
+.ask-container {
+  max-width: 720px;
+  margin-inline: auto;
+}
+
+.ask-form {
+  margin-bottom: 2rem;
+}
+
+.ask-label-field {
+  display: block;
+  font-size: .8rem;
+  font-weight: 700;
+  letter-spacing: .07em;
+  text-transform: uppercase;
+  color: gray(500);
+  margin-bottom: .6rem;
+}
+
+.ask-row {
+  display: flex;
+  gap: .75rem;
+
+  @include breakpoint(sm) {
+    flex-direction: column;
+  }
+}
+
+.ask-input {
+  flex: 1;
+  padding: .72rem 1.1rem;
+  border: 1.5px solid gray(200);
+  border-radius: radius(sm);
+  font-size: 1rem;
+  font-family: $font-sans;
+  background: gray(0);
+  color: gray(900);
+  transition: border-color $ease, box-shadow $ease;
+
+  &:focus {
+    @include focus-ring;
+  }
+}
+
+.ask-btn {
+  white-space: nowrap;
+  padding: .72rem 1.4rem;
+
+  @include breakpoint(sm) {
+    width: 100%;
+  }
+}
+
+.ask-examples {
+  margin-top: .85rem;
+  font-size: .82rem;
+  color: gray(500);
+  display: flex;
+  flex-wrap: wrap;
+  gap: .4rem;
+  align-items: center;
+
+  a {
+    color: gray(900);
+    font-weight: 500;
+    padding: .25rem .6rem;
+    background: gray(100);
+    border-radius: radius(pill);
+    text-decoration: none;
+    transition: background $ease, color $ease;
+
+    &:hover {
+      background: gray(900);
+      color: #fff;
+    }
+  }
+}
+
+.ask-box {
+  border-radius: radius(md);
+  padding: 1.75rem 2rem;
+  margin: 1.75rem 0;
+  border: 1.5px solid;
+
+  .ask-label {
+    display: block;
+    font-size: .72rem;
+    font-weight: 700;
+    letter-spacing: .09em;
+    text-transform: uppercase;
+    color: gray(600);
+    margin-bottom: .75rem;
+  }
+
+  p {
+    margin: 0;
+  }
+}
+
+.ask-success {
+  background: gray(50);
+  border-color: gray(200);
+}
+
+.ask-fail {
+  background: gray(100);
+  border-color: gray(300);
+
+  .ask-label { color: gray(700); }
+  p { color: gray(700); font-size: .95rem; }
+}
+
+.ask-answer {
+  font-size: 1.3rem;
+  font-weight: 700;
+  color: gray(900);
+  margin: 0 0 .5rem;
+  line-height: 1.5;
+}
+
+.ask-src {
+  font-size: .75rem;
+  color: gray(500);
+}
+
+.ask-info {
+  margin-top: 3rem;
+  padding-top: 2rem;
+  border-top: 1px solid gray(200);
+
+  h3 {
+    font-size: 1rem;
+    font-weight: 700;
+    letter-spacing: -.02em;
+    margin-bottom: 1rem;
+    color: gray(500);
+  }
+}
+
+.ask-chips {
+  display: flex;
+  flex-wrap: wrap;
+  gap: .5rem;
+  margin-bottom: 1.25rem;
+
+  span {
+    font-size: .8rem;
+    font-weight: 600;
+    padding: .3rem .8rem;
+    border-radius: radius(pill);
+    background: gray(0);
+    border: 1px solid gray(200);
+    color: gray(500);
+  }
+}
+
+.ask-note {
+  font-size: .85rem;
+  color: gray(500);
+  line-height: 1.6;
+
+  code {
+    font-size: .8em;
+    background: gray(100);
+    padding: .15em .4em;
+    border-radius: 4px;
+    color: gray(900);
+  }
+}

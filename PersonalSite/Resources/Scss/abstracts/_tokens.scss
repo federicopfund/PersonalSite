@@ -1,0 +1,54 @@
+// =============================================================
+//  abstracts/_tokens.scss
+//  Design tokens: paleta monocroma (gris / blanco / negro) y escalas.
+//  Sin acento de color: el "acento" es gris oscuro / negro.
+// =============================================================
+@use 'sass:map';
+
+// --- Escala de grises (0 = blanco, 950 = casi negro) ----------
+$grays: (
+  0:   #ffffff,
+  50:  #fafafa,
+  100: #f4f4f5,
+  150: #ececed,
+  200: #e4e4e7,
+  300: #d4d4d8,
+  400: #a1a1aa,
+  500: #71717a,
+  600: #52525b,
+  700: #3f3f46,
+  800: #27272a,
+  900: #18181b,
+  950: #0a0a0b,
+);
+
+// --- Tipografia ----------------------------------------------
+$font-sans:  'Inter', system-ui, -apple-system, sans-serif;
+$font-serif: 'Merriweather', Georgia, serif;
+$font-mono:  'SFMono-Regular', Consolas, monospace;
+
+// --- Radios ---------------------------------------------------
+$radii: (
+  sm:   6px,
+  md:   12px,
+  pill: 999px,
+);
+
+// --- Sombras (neutras) ---------------------------------------
+$shadows: (
+  sm: (0 1px 3px rgba(0, 0, 0, .08), 0 1px 2px rgba(0, 0, 0, .05)),
+  md: (0 4px 16px rgba(0, 0, 0, .10), 0 2px 6px rgba(0, 0, 0, .06)),
+  lg: (0 20px 40px rgba(0, 0, 0, .16), 0 8px 16px rgba(0, 0, 0, .08)),
+);
+
+// --- Breakpoints (max-width) ---------------------------------
+$breakpoints: (
+  sm: 580px,
+  md: 640px,
+  lg: 900px,
+);
+
+// --- Layout ---------------------------------------------------
+$max-width:  1100px;
+$nav-height: 64px;
+$ease:       .22s cubic-bezier(.4, 0, .2, 1);

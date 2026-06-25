@@ -1,0 +1,76 @@
+// =============================================================
+//  components/_cards.scss
+//  Tarjetas de post (home y blog).
+// =============================================================
+@use '../abstracts' as *;
+
+.cards {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
+  gap: 1.75rem;
+}
+
+.card {
+  @include surface;
+  padding: 1.75rem;
+  display: flex;
+  flex-direction: column;
+  transition: box-shadow $ease, transform $ease, border-color $ease;
+
+  &:hover {
+    box-shadow: shadow(md);
+    transform: translateY(-4px);
+    border-color: gray(300);
+  }
+
+  time {
+    font-size: .73rem;
+    font-weight: 700;
+    letter-spacing: .09em;
+    text-transform: uppercase;
+    color: gray(500);
+    display: block;
+    margin-bottom: .75rem;
+  }
+
+  h3 {
+    font-size: 1.05rem;
+    font-weight: 700;
+    line-height: 1.4;
+    margin-bottom: .75rem;
+
+    a {
+      color: gray(900);
+      transition: color $ease;
+
+      &:hover {
+        color: gray(500);
+        text-decoration: none;
+      }
+    }
+  }
+
+  p {
+    font-size: .9rem;
+    color: gray(500);
+    flex: 1;
+    line-height: 1.7;
+  }
+
+  .more {
+    display: inline-flex;
+    align-items: center;
+    gap: .35rem;
+    margin-top: 1.25rem;
+    font-size: .85rem;
+    font-weight: 700;
+    color: gray(900);
+    transition: gap $ease, color $ease;
+
+    &:hover {
+      gap: .6rem;
+      color: gray(600);
+      text-decoration: none;
+    }
+  }
+}

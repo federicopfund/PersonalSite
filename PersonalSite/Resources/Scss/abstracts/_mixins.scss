@@ -1,0 +1,42 @@
+// =============================================================
+//  abstracts/_mixins.scss
+//  Mixins reutilizables: layout, responsive y superficies.
+// =============================================================
+@use 'sass:map';
+@use 'tokens' as *;
+@use 'functions' as *;
+
+// Media query por breakpoint nombrado (mobile-first inverso: max-width).
+@mixin breakpoint($name) {
+  @if not map.has-key($breakpoints, $name) {
+    @error "breakpoint(): '#{$name}' no existe en $breakpoints.";
+  }
+  @media (max-width: map.get($breakpoints, $name)) {
+    @content;
+  }
+}
+
+// Contenedor centrado con ancho maximo.
+@mixin container {
+  max-width: $max-width;
+  margin-inline: auto;
+}
+
+// Anillo de foco accesible (neutro).
+@mixin focus-ring($color: gray(900)) {
+  outline: none;
+  border-color: $color;
+  box-shadow: 0 0 0 3px rgba(0, 0, 0, .12);
+}
+
+// Superficie de tarjeta (fondo blanco + borde + radio).
+@mixin surface($border: gray(200)) {
+  background: gray(0);
+  border: 1px solid $border;
+  border-radius: radius(md);
+}
+
+// Gradiente oscuro usado en navbar, hero, headers y footer.
+@mixin dark-gradient {
+  background: linear-gradient(145deg, gray(950) 0%, gray(900) 55%, gray(800) 100%);
+}

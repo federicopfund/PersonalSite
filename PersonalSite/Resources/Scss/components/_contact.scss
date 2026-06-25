@@ -1,0 +1,142 @@
+// =============================================================
+//  components/_contact.scss
+//  Pagina /contacto: formulario en monocromo, layout en dos columnas.
+//  Las cajas de estado reutilizan .ask-box / .ask-success / .ask-fail.
+// =============================================================
+@use '../abstracts' as *;
+
+.contact-section {
+  background: gray(50);
+}
+
+.contact-container {
+  max-width: 960px;
+  margin-inline: auto;
+}
+
+.contact-grid {
+  display: grid;
+  grid-template-columns: .85fr 1.15fr;
+  gap: 3rem;
+  align-items: start;
+
+  @include breakpoint(lg) {
+    grid-template-columns: 1fr;
+    gap: 2rem;
+  }
+}
+
+.contact-aside {
+  h2 {
+    font-size: 1.6rem;
+    font-weight: 800;
+    letter-spacing: -.03em;
+    margin-bottom: .75rem;
+  }
+
+  p {
+    color: gray(500);
+    line-height: 1.7;
+    margin-bottom: 1.75rem;
+  }
+}
+
+.contact-meta {
+  list-style: none;
+  display: flex;
+  flex-direction: column;
+  gap: 1.1rem;
+
+  li {
+    display: flex;
+    flex-direction: column;
+    gap: .2rem;
+    font-size: .95rem;
+    color: gray(800);
+
+    span {
+      font-size: .7rem;
+      font-weight: 700;
+      letter-spacing: .09em;
+      text-transform: uppercase;
+      color: gray(500);
+    }
+
+    a {
+      color: gray(900);
+      font-weight: 600;
+
+      &:hover {
+        color: gray(500);
+        text-decoration: none;
+      }
+    }
+  }
+}
+
+.contact-form {
+  @include surface(gray(200));
+  padding: 2rem;
+  box-shadow: shadow(sm);
+
+  // La caja de estado (exito/error) va dentro del formulario.
+  .ask-box {
+    margin: 0 0 1.5rem;
+  }
+}
+
+.form-field {
+  margin-bottom: 1.25rem;
+
+  label {
+    display: block;
+    font-size: .78rem;
+    font-weight: 700;
+    letter-spacing: .05em;
+    text-transform: uppercase;
+    color: gray(600);
+    margin-bottom: .5rem;
+  }
+}
+
+.form-input,
+.form-textarea {
+  width: 100%;
+  padding: .8rem 1rem;
+  border: 1.5px solid gray(200);
+  border-radius: radius(sm);
+  font-family: $font-sans;
+  font-size: 1rem;
+  color: gray(900);
+  background: gray(0);
+  transition: border-color $ease, box-shadow $ease;
+
+  &::placeholder {
+    color: gray(400);
+  }
+
+  &:focus {
+    @include focus-ring;
+  }
+}
+
+.form-textarea {
+  resize: vertical;
+  min-height: 160px;
+  line-height: 1.6;
+}
+
+// Honeypot anti-spam: fuera de la pantalla, inaccesible para humanos.
+.form-hp {
+  position: absolute;
+  left: -9999px;
+  width: 1px;
+  height: 1px;
+  overflow: hidden;
+}
+
+.contact-btn {
+  width: 100%;
+  justify-content: center;
+  margin-top: .25rem;
+}

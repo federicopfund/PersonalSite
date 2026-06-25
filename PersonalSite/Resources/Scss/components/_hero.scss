@@ -1,0 +1,116 @@
+// =============================================================
+//  components/_hero.scss
+// =============================================================
+@use '../abstracts' as *;
+
+.hero {
+  margin-top: $nav-height;
+  @include dark-gradient;
+  min-height: calc(100vh - #{$nav-height});
+  display: flex;
+  align-items: center;
+  padding: 5rem 1.5rem;
+  position: relative;
+  overflow: hidden;
+
+  &::before {
+    content: '';
+    position: absolute;
+    inset: 0;
+    pointer-events: none;
+    background:
+      radial-gradient(ellipse 70% 55% at 75% 45%, rgba(#fff, .06) 0%, transparent 65%),
+      radial-gradient(ellipse 40% 40% at 25% 80%, rgba(#fff, .035) 0%, transparent 60%);
+  }
+
+  // En el hero (fondo oscuro) el CTA primario se invierte a blanco.
+  .btn-primary {
+    background: #fff;
+    color: gray(950);
+    box-shadow: 0 4px 14px rgba(0, 0, 0, .35);
+
+    &:hover {
+      background: gray(150);
+      box-shadow: 0 6px 20px rgba(0, 0, 0, .45);
+    }
+  }
+
+  @include breakpoint(md) {
+    min-height: auto;
+    padding: 3.5rem 1.25rem 3rem;
+  }
+}
+
+.hero-inner {
+  @include container;
+  width: 100%;
+  position: relative;
+  z-index: 1;
+  display: grid;
+  grid-template-columns: 1fr 260px;
+  gap: 4rem;
+  align-items: center;
+
+  @include breakpoint(lg) {
+    grid-template-columns: 1fr 200px;
+    gap: 2.5rem;
+  }
+
+  @include breakpoint(md) {
+    grid-template-columns: 1fr;
+    text-align: center;
+    justify-items: center;
+  }
+}
+
+.hero-badge {
+  display: inline-block;
+  margin-bottom: 1.25rem;
+  font-size: .75rem;
+  font-weight: 700;
+  letter-spacing: .1em;
+  text-transform: uppercase;
+  color: gray(300);
+  padding: .3rem .85rem;
+  border-radius: radius(pill);
+  background: rgba(#fff, .06);
+  border: 1px solid rgba(#fff, .14);
+}
+
+.hero-text {
+  h1 {
+    font-size: clamp(2.2rem, 5vw, 3.4rem);
+    font-weight: 800;
+    line-height: 1.15;
+    letter-spacing: -.05em;
+    color: #fff;
+    margin-bottom: 1.25rem;
+
+    em {
+      font-style: normal;
+      color: gray(400);
+    }
+  }
+
+  p {
+    font-size: 1.1rem;
+    color: gray(400);
+    max-width: 480px;
+    line-height: 1.8;
+    margin-bottom: 2.5rem;
+
+    @include breakpoint(md) {
+      margin: 0 auto 2rem;
+    }
+  }
+}
+
+.hero-actions {
+  display: flex;
+  gap: 1rem;
+  flex-wrap: wrap;
+
+  @include breakpoint(md) {
+    justify-content: center;
+  }
+}

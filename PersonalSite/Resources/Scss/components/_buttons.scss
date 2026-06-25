@@ -1,0 +1,44 @@
+// =============================================================
+//  components/_buttons.scss
+//  Boton primario: solido oscuro (funciona sobre fondos claros).
+//  En el hero se invierte a blanco (ver _hero.scss).
+// =============================================================
+@use '../abstracts' as *;
+
+.btn {
+  display: inline-flex;
+  align-items: center;
+  gap: .45rem;
+  padding: .72rem 1.6rem;
+  border-radius: radius(sm);
+  font-weight: 600;
+  font-size: .93rem;
+  text-decoration: none;
+  transition: all $ease;
+
+  &:hover {
+    text-decoration: none;
+  }
+}
+
+.btn-primary {
+  background: gray(900);
+  color: #fff;
+  box-shadow: shadow(md);
+
+  &:hover {
+    background: gray(700);
+    transform: translateY(-1px);
+    box-shadow: shadow(lg);
+  }
+}
+
+.btn-ghost {
+  border: 1.5px solid rgba(#fff, .22);
+  color: gray(200);
+
+  &:hover {
+    background: rgba(#fff, .08);
+    border-color: rgba(#fff, .4);
+  }
+}

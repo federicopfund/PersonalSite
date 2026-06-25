@@ -1,0 +1,27 @@
+// =============================================================
+//  styles.scss — punto de entrada del sistema de estilos.
+//
+//  ARQUITECTURA (7-1 simplificada):
+//    abstracts/  -> tokens, funciones y mixins (no emiten CSS)
+//    base/       -> reset, fuentes y custom properties
+//    components/ -> bloques de UI
+//
+//  Paleta: monocroma (blanco / grises / negro). Sin acentos de color.
+//
+//  NO EDITAR Static/styles.css A MANO: se genera con `make css`.
+// =============================================================
+@use 'base/reset';
+@use 'base/root';
+
+@use 'components/navbar';
+@use 'components/hero';
+@use 'components/buttons';
+@use 'components/photo';
+@use 'components/sections';
+@use 'components/cards';
+@use 'components/blog';
+@use 'components/article';
+@use 'components/ask';
+@use 'components/wolfram';
+@use 'components/contact';
+@use 'components/footer';

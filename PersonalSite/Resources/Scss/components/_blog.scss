@@ -1,0 +1,28 @@
+// =============================================================
+//  components/_blog.scss
+//  Cabecera de la lista del blog.
+// =============================================================
+@use '../abstracts' as *;
+
+.page-head {
+  margin-top: 0;
+  @include dark-gradient;
+  color: #fff;
+  padding: 4rem 1.5rem 3.5rem;
+
+  h1 {
+    font-size: clamp(2rem, 4vw, 3rem);
+    font-weight: 800;
+    letter-spacing: -.05em;
+  }
+
+  p {
+    color: gray(400);
+    margin-top: .5rem;
+    font-size: 1.05rem;
+  }
+}
+
+.page-head-inner {
+  @include container;
+}

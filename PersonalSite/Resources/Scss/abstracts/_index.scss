@@ -1,0 +1,8 @@
+// =============================================================
+//  abstracts/_index.scss
+//  Punto unico de entrada: los consumidores hacen
+//  @use '../abstracts' as *;
+// =============================================================
+@forward 'tokens';
+@forward 'functions';
+@forward 'mixins';

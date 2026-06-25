@@ -1,0 +1,24 @@
+// =============================================================
+//  abstracts/_functions.scss
+//  Accesores tipados a los mapas de tokens.
+// =============================================================
+@use 'sass:map';
+@use 'tokens' as *;
+
+// Color de la escala de grises por nivel (0..950).
+@function gray($level) {
+  @if not map.has-key($grays, $level) {
+    @error "gray(): el nivel '#{$level}' no existe en $grays.";
+  }
+  @return map.get($grays, $level);
+}
+
+// Radio de borde por nombre (sm | md | pill).
+@function radius($name) {
+  @return map.get($radii, $name);
+}
+
+// Sombra por nombre (sm | md | lg).
+@function shadow($name) {
+  @return map.get($shadows, $name);
+}
