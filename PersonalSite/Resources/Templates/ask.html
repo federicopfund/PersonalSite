@@ -1,0 +1,51 @@
+<div class="page-head">
+  <div class="page-head-inner">
+    <h1>Wolfram Alpha</h1>
+    <p>Datos en tiempo real &mdash; c&aacute;lculos, ciencia, geograf&iacute;a, clima y m&aacute;s</p>
+  </div>
+</div>
+
+<section class="section ask-section">
+  <div class="section-inner ask-container">
+
+    <form method="GET" action="/ask" class="ask-form" role="search">
+      <label class="ask-label-field" for="ask-q">Tu consulta</label>
+      <div class="ask-row">
+        <input type="search" id="ask-q" name="q"
+               value="<* TemplateSlot["query"] *>"
+               placeholder="Ej: poblacion de Jap&oacute;n, sqrt(144), distancia Luna-Tierra..."
+               class="ask-input" autocomplete="off" spellcheck="false">
+        <button type="submit" class="btn btn-primary ask-btn">&#x2192; Consultar</button>
+      </div>
+      <div class="ask-examples">
+        <span>Ejemplos r&aacute;pidos:</span>
+        <a href="/ask?q=population+of+Japan">poblacion Japon</a>
+        <a href="/ask?q=distance+from+Earth+to+Moon">distancia Luna</a>
+        <a href="/ask?q=100+USD+in+ARS">100 USD a ARS</a>
+        <a href="/ask?q=speed+of+light">velocidad de la luz</a>
+        <a href="/ask?q=mass+of+sun">masa del Sol</a>
+        <a href="/ask?q=integrate+x^2">integral de x^2</a>
+      </div>
+    </form>
+
+<* TemplateSlot["resultHtml"] *>
+
+    <div class="ask-info">
+      <h3>Fuentes de datos disponibles</h3>
+      <div class="ask-chips">
+        <span>Matematicas</span>
+        <span>Astronomia</span>
+        <span>Quimica</span>
+        <span>Fisica</span>
+        <span>Economia</span>
+        <span>Estadistica</span>
+        <span>Climatologia</span>
+        <span>Linguistica</span>
+        <span>Geografia</span>
+        <span>Historia</span>
+      </div>
+      
+    </div>
+
+  </div>
+</section>

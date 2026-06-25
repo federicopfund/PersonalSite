@@ -1,0 +1,105 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title><* TemplateSlot["siteName"] *></title>
+  <link rel="stylesheet" href="/static/styles.css">
+</head>
+<body>
+  <nav class="navbar">
+    <div class="nav-container">
+      <a class="nav-brand" href="/"><* TemplateSlot["siteName"] *></a>
+      <button class="nav-toggle" id="nt" aria-label="Men&uacute;">
+        <span></span><span></span><span></span>
+      </button>
+      <ul class="nav-links" id="nl">
+        <li><a href="/">Inicio</a></li>
+        <li><a href="/blog">Blog</a></li>
+        <li><a href="/ask">Wolfram &alpha;</a></li>
+        <li><a href="/contacto" class="nav-cta">Contacto</a></li>
+      </ul>
+    </div>
+  </nav>
+<* TemplateSlot["content"] *>
+  <footer class="footer">
+    <div class="footer-inner">
+      <p>&copy; <* TemplateSlot["year"] *> &middot; <strong><* TemplateSlot["siteName"] *></strong> &middot; hecho con Wolfram Language</p>
+    </div>
+  </footer>
+  <script>
+    var t=document.getElementById('nt'),n=document.getElementById('nl');
+    t.addEventListener('click',function(){n.classList.toggle('open');t.classList.toggle('open')});
+    // WA cards: expand height to full natural image height on hover
+    document.querySelectorAll('.wa-card').forEach(function(card){
+      var img=card.querySelector('.wa-plot');
+      var wrap=card.querySelector('.wa-img-wrap');
+      if(!img||!wrap)return;
+      function expand(){
+        if(!img.complete||!img.naturalHeight)return;
+        var w=wrap.clientWidth-32;
+        var h=Math.round(w*img.naturalHeight/img.naturalWidth);
+        wrap.style.height=h+'px';
+      }
+      img.addEventListener('load',function(){if(card.matches(':hover'))expand();});
+      card.addEventListener('mouseenter',expand);
+      card.addEventListener('mouseleave',function(){wrap.style.height='';});
+    });
+    // Magnifier lupa
+    var lupa=document.createElement('div');
+    lupa.className='wa-lupa';
+    document.body.appendChild(lupa);
+    var lupaSize=240,zoom=3.5;
+    function showLupa(img,e){
+      if(!img.complete||!img.naturalHeight)return;
+      var rect=img.getBoundingClientRect();
+      var x=e.clientX-rect.left;
+      var y=e.clientY-rect.top;
+      lupa.style.backgroundImage='url('+img.src+')';
+      var bgW=img.offsetWidth*zoom;
+      var bgH=img.offsetHeight*zoom;
+      lupa.style.backgroundSize=bgW+'px '+bgH+'px';
+      lupa.style.backgroundPosition=(-(x*zoom-lupaSize/2))+'px '+(-(y*zoom-lupaSize/2))+'px';
+      lupa.style.left=(e.clientX-lupaSize/2)+'px';
+      lupa.style.top=(e.clientY-lupaSize/2)+'px';
+      if(!lupa.classList.contains('visible')){lupa.classList.add('visible');}
+    }
+    document.querySelectorAll('.wa-card').forEach(function(card){
+      var img=card.querySelector('.wa-plot');
+      if(!img)return;
+      img.addEventListener('mousemove',function(e){
+        var wrap=card.querySelector('.wa-img-wrap');
+        if(wrap&&parseInt(wrap.style.height||'0')>205){
+          img.classList.add('lupa-active');
+          showLupa(img,e);
+        }
+      });
+      img.addEventListener('mouseleave',function(){
+        lupa.classList.remove('visible');
+        img.classList.remove('lupa-active');
+      });
+    });
+    // WA lightbox
+    document.addEventListener('click',function(e){
+      var img=e.target.closest('.wa-plot');
+      if(img){
+        e.preventDefault();
+        lupa.classList.remove('visible');
+        img.classList.remove('lupa-active');
+        var ov=document.createElement('div');
+        ov.className='wa-lb';
+        var im=document.createElement('img');im.src=img.src;
+        var cl=document.createElement('button');
+        cl.className='wa-lb-close';cl.textContent='\u00D7';
+        cl.addEventListener('click',function(){ov.remove();});
+        ov.appendChild(cl);ov.appendChild(im);
+        ov.addEventListener('click',function(ev){if(ev.target===ov)ov.remove();});
+        document.addEventListener('keydown',function k(ev){
+          if(ev.key==='Escape'){ov.remove();document.removeEventListener('keydown',k);}
+        });
+        document.body.appendChild(ov);
+      }
+    });
+  </script>
+</body>
+</html>

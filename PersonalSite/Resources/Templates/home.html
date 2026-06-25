@@ -1,0 +1,80 @@
+<section class="hero">
+  <div class="hero-inner">
+    <div class="hero-text">
+      <span class="hero-badge">Sitio personal</span>
+      <h1>Hola, soy <em><* TemplateSlot["siteName"] *></em></h1>
+      <p>Desarrollador y apasionado por Wolfram Language.<br>
+         Bienvenido a mi sitio personal, servido enteramente con WL.</p>
+      <div class="hero-actions">
+        <a href="/blog" class="btn btn-primary">Ver el Blog</a>
+        <a href="/contacto" class="btn btn-ghost">Contacto</a>
+      </div>
+    </div>
+    <div class="photo-ring">
+      <img src="/img/Astro.png"
+           alt="<* TemplateSlot["siteName"] *>"
+           class="photo-img"
+           onerror="this.style.display='none';document.getElementById('pf').style.display='flex'">
+      <div class="photo-fallback" id="pf">F</div>
+    </div>
+  </div>
+</section>
+<section class="section section-alt">
+  <div class="section-inner">
+    <div class="section-header">
+      <h2>&Uacute;ltimas entradas</h2>
+      <p>Lo m&aacute;s reciente del blog</p>
+    </div>
+    <div class="cards">
+<* TemplateSlot["latest"] *>
+    </div>
+  </div>
+</section>
+
+<section class="section">
+  <div class="section-inner">
+    <div class="section-header">
+      <h2>Datos en tiempo real</h2>
+      <p>Econom&iacute;a argentina &mdash; via Wolfram Alpha</p>
+    </div>
+    <div class="wa-grid">
+
+      <div class="wa-card">
+        <div class="wa-card-head">
+          <span class="wa-badge">Wolfram &alpha;</span>
+          <h3>&Iacute;ndice de inflaci&oacute;n &mdash; Argentina</h3>
+        </div>
+        <div class="wa-img-wrap">
+          <img src="/wa-img?q=Argentina+inflation+rate+history"
+               alt="Indice de inflacion Argentina"
+               class="wa-plot"
+               loading="lazy"
+               onerror="this.closest('.wa-card').classList.add('wa-err')">
+          <p class="wa-loading">Cargando gr&aacute;fica&hellip;</p>
+        </div>
+        <a href="/ask?q=Argentina+inflation+rate" class="wa-more">
+          Consultar Wolfram Alpha &rarr;
+        </a>
+      </div>
+
+      <div class="wa-card">
+        <div class="wa-card-head">
+          <span class="wa-badge">Wolfram &alpha;</span>
+          <h3>Tipo de cambio USD / ARS</h3>
+        </div>
+        <div class="wa-img-wrap">
+          <img src="/wa-img?q=USD+to+ARS+exchange+rate+history"
+               alt="Tipo de cambio USD ARS"
+               class="wa-plot"
+               loading="lazy"
+               onerror="this.closest('.wa-card').classList.add('wa-err')">
+          <p class="wa-loading">Cargando gr&aacute;fica&hellip;</p>
+        </div>
+        <a href="/ask?q=100+USD+in+ARS" class="wa-more">
+          Consultar Wolfram Alpha &rarr;
+        </a>
+      </div>
+
+    </div>
+  </div>
+</section>

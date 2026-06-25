@@ -1,0 +1,63 @@
+<div class="page-head">
+  <div class="page-head-inner">
+    <h1>Contacto</h1>
+    <p>&iquest;Ten&eacute;s una idea, propuesta o consulta? Escrib&iacute;me y te respondo.</p>
+  </div>
+</div>
+
+<section class="section contact-section">
+  <div class="section-inner contact-container">
+    <div class="contact-grid">
+
+      <aside class="contact-aside">
+        <h2>Hablemos</h2>
+        <p>Complet&aacute; el formulario y tu mensaje llega directo a mi correo.
+           Respondo propuestas de trabajo, colaboraciones y consultas t&eacute;cnicas.</p>
+        <ul class="contact-meta">
+          <li>
+            <span>Email</span>
+            <a href="mailto:federicopfund@gmail.com">federicopfund@gmail.com</a>
+          </li>
+          <li>
+            <span>Tiempo de respuesta</span>
+            24&ndash;48&nbsp;horas
+          </li>
+        </ul>
+      </aside>
+
+      <form method="POST" action="/contacto" class="contact-form" novalidate>
+
+<* TemplateSlot["status"] *>
+
+        <div class="form-field">
+          <label for="c-name">Nombre</label>
+          <input type="text" id="c-name" name="name" class="form-input"
+                 value="<* TemplateSlot["name"] *>"
+                 placeholder="Tu nombre" autocomplete="name" required>
+        </div>
+
+        <div class="form-field">
+          <label for="c-email">Email</label>
+          <input type="email" id="c-email" name="email" class="form-input"
+                 value="<* TemplateSlot["email"] *>"
+                 placeholder="tu@email.com" autocomplete="email" required>
+        </div>
+
+        <div class="form-field">
+          <label for="c-message">Mensaje</label>
+          <textarea id="c-message" name="message" class="form-textarea"
+                    placeholder="Contame en qu&eacute; puedo ayudarte&hellip;" required><* TemplateSlot["message"] *></textarea>
+        </div>
+
+        <!-- Honeypot anti-spam: invisible para humanos, lo completan solo los bots. -->
+        <div class="form-hp" aria-hidden="true">
+          <label for="c-website">No completar este campo</label>
+          <input type="text" id="c-website" name="website" tabindex="-1" autocomplete="off">
+        </div>
+
+        <button type="submit" class="btn btn-primary contact-btn">Enviar mensaje</button>
+      </form>
+
+    </div>
+  </div>
+</section>
