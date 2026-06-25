@@ -1,0 +1,40 @@
+services:
+  web:
+    build:
+      context: .
+      dockerfile: PersonalSite/deploy/Dockerfile
+    image: personalsite:latest
+    hostname: personalsite-prod
+    ports:
+      - "8080:18000"
+    volumes:
+      # Base SQLite persistente (datos reales)
+      - personalsite-data:/data
+      # Licencia Wolfram Engine (activar una vez con: make activate)
+      - personalsite-wolfram:/home/wolframengine/.WolframEngine
+    environment:
+      PERSONALSITE_NAME: "Federico"
+      PERSONALSITE_DB: /data/site.db
+      PERSONALSITE_ROOT: /app
+      POOLSIZE: "2"
+      # Obtene tu AppID gratis en: https://developer.wolframalpha.com/
+      WOLFRAM_ALPHA_APPID: "Q2X7HGK6X9"
+      # --- Formulario de contacto / correo (Gmail por defecto) ---------
+      # Los mensajes llegan a CONTACT_TO. SMTP_USER/SMTP_PASSWORD son secretos:
+      # se toman del entorno del host (NO se commitean). Con Gmail, usa una
+      # "App Password": https://myaccount.google.com/apppasswords
+      CONTACT_TO: "federicopfund@gmail.com"
+      SMTP_SERVER: "smtp.gmail.com"
+      SMTP_PORT: "587"
+      SMTP_USER: "${SMTP_USER:-}"
+      SMTP_PASSWORD: "${SMTP_PASSWORD:-}"
+      SMTP_FROM: "${SMTP_FROM:-}"
+    restart: unless-stopped
+
+volumes:
+  personalsite-data:
+    external: true
+    name: profile_personalsite-data
+  personalsite-wolfram:
+    external: true
+    name: profile_personalsite-wolfram

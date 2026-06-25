@@ -1,0 +1,75 @@
+# Makefile — PersonalSite deploy helpers
+# Uso: make <target>
+
+IMAGE   := personalsite:latest
+COMPOSE := docker compose
+SCSS_IN  := PersonalSite/Resources/Scss/styles.scss
+CSS_OUT  := PersonalSite/Resources/Static/styles.css
+
+.PHONY: build activate seed up down logs shell clean lint css css-watch
+
+## 0. Validar estructura del paclet (lo mismo que corre CI)
+lint:
+	python3 tools/check_structure.py
+
+## 0b. Compilar los estilos SCSS -> CSS (paleta monocroma)
+css:
+	sass $(SCSS_IN) $(CSS_OUT) --style=compressed --no-source-map
+	@echo "CSS compilado: $(CSS_OUT)"
+
+## 0c. Recompilar SCSS automaticamente al guardar
+css-watch:
+	sass --watch $(SCSS_IN):$(CSS_OUT) --style=expanded
+
+## 1. Construir la imagen Docker
+build:
+	docker build -f PersonalSite/deploy/Dockerfile -t $(IMAGE) .
+
+## 2. Activar Wolfram Engine en el volumen persistente
+##    Requiere: Wolfram ID + contraseña en https://wolfram.com/developer
+##    Solo se corre UNA vez.
+activate:
+	docker run --rm -it \
+	  --hostname personalsite-prod \
+	  -v profile_personalsite-wolfram:/home/wolframengine/.WolframEngine \
+	  $(IMAGE) \
+	  wolframscript -activate
+
+## 3. Poblar la base SQLite con el schema y datos de ejemplo
+seed:
+	@mkdir -p data
+	sqlite3 data/site.db < PersonalSite/data/init.sql
+	@echo "Base de datos inicializada en data/site.db"
+
+## 4. Copiar la DB al volumen Docker (después de seed)
+load-db:
+	docker run --rm \
+	  -v personalsite-data:/data \
+	  -v $(PWD)/data:/src \
+	  alpine cp /src/site.db /data/site.db
+	@echo "site.db copiada al volumen personalsite-data"
+
+## 5. Levantar el servidor
+up:
+	$(COMPOSE) up -d
+	@echo "Sitio en: http://localhost:8080"
+
+## 6. Ver logs en tiempo real
+logs:
+	$(COMPOSE) logs -f
+
+## 7. Bajar el servidor
+down:
+	$(COMPOSE) down
+
+## 8. Abrir shell en el contenedor en ejecución
+shell:
+	docker exec -it $$($(COMPOSE) ps -q web) bash
+
+## 9. Limpiar todo (imágenes, volúmenes, contenedores)
+clean:
+	$(COMPOSE) down -v
+	docker rmi $(IMAGE) 2>/dev/null || true
+
+## Flujo completo primera vez
+first-run: build seed load-db activate up
