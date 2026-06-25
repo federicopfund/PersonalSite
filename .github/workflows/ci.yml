@@ -1,0 +1,69 @@
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+
+# Permisos minimos: solo lectura del repo.
+permissions:
+  contents: read
+
+concurrency:
+  group: ci-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  structure:
+    name: Validacion estructural del paclet
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Configurar Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+
+      - name: Validar estructura del paclet
+        run: python3 tools/check_structure.py
+
+  styles:
+    name: SCSS compila al CSS commiteado
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Configurar Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: "20"
+
+      - name: Instalar Sass
+        run: npm install -g sass@1.98.0
+
+      - name: Compilar SCSS a un archivo temporal
+        run: sass PersonalSite/Resources/Scss/styles.scss /tmp/styles.css --style=compressed --no-source-map
+
+      - name: Verificar que styles.css esta actualizado
+        run: |
+          if ! diff -q /tmp/styles.css PersonalSite/Resources/Static/styles.css >/dev/null; then
+            echo "::error::PersonalSite/Resources/Static/styles.css esta desactualizado. Corre 'make css' y commitea."
+            diff /tmp/styles.css PersonalSite/Resources/Static/styles.css || true
+            exit 1
+          fi
+          echo "styles.css coincide con la fuente SCSS."
+
+  docker:
+    name: Build de imagen Docker
+    runs-on: ubuntu-latest
+    needs: [structure, styles]
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Validar docker-compose
+        run: docker compose config -q
+
+      - name: Construir imagen
+        run: docker build -f PersonalSite/deploy/Dockerfile -t personalsite:ci .
