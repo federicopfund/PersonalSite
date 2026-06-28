@@ -333,3 +333,134 @@
 
   code.tm-id { border-color: rgba(#ff6b35, .4); }
 }
+
+// ── Tabs ───────────────────────────────────────────────────────────────────
+.tm-tabs {
+  display: flex;
+  gap: .35rem;
+  border-bottom: 1px solid var(--border);
+  margin: 0 0 1.5rem;
+  padding: 0 1rem;
+}
+
+.tm-tab {
+  padding: .55rem 1.1rem;
+  border: none;
+  background: none;
+  color: var(--text-muted);
+  font-size: .85rem;
+  font-weight: 600;
+  cursor: pointer;
+  border-bottom: 2px solid transparent;
+  transition: color .15s, border-color .15s;
+
+  &:hover { color: var(--heading); }
+
+  &--active {
+    color: var(--accent);
+    border-bottom-color: var(--accent);
+  }
+}
+
+.tm-tab-panel[hidden] { display: none; }
+
+// ── Config section ─────────────────────────────────────────────────────────
+.tm-cfg-desc {
+  font-size: .82rem;
+  color: var(--text-muted);
+  margin: .4rem 0 0;
+
+  code { font-size: .8rem; }
+}
+
+.tm-cfg-actions {
+  display: flex;
+  gap: .5rem;
+  flex-wrap: wrap;
+}
+
+// ── NestGraph levels visualization ────────────────────────────────────────
+.tm-levels {
+  display: flex;
+  gap: 1rem;
+  flex-wrap: wrap;
+  padding: .5rem 0;
+}
+
+.tm-level {
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  padding: .75rem 1rem;
+  min-width: 130px;
+
+  &__head {
+    display: flex;
+    align-items: center;
+    gap: .45rem;
+    margin-bottom: .55rem;
+  }
+
+  &__label {
+    font-size: .75rem;
+    color: var(--text-muted);
+    font-weight: 600;
+  }
+
+  &__tasks {
+    display: flex;
+    flex-wrap: wrap;
+    gap: .3rem;
+  }
+
+  &__chip {
+    font-size: .72rem;
+    padding: .15rem .45rem;
+    border-radius: 999px;
+    border: 1px solid currentColor;
+    opacity: .8;
+  }
+}
+
+.tm-dag-badge {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 26px;
+  height: 20px;
+  padding: 0 .4rem;
+  border-radius: 5px;
+  background: color-mix(in srgb, var(--accent) 18%, transparent);
+  color: var(--accent);
+  font-size: .72rem;
+  font-weight: 700;
+  letter-spacing: .03em;
+}
+
+// ── Config table inline inputs ─────────────────────────────────────────────
+.tm-input--inline {
+  width: 70px;
+  padding: .2rem .4rem;
+  font-size: .8rem;
+}
+
+.tm-mono--sm { font-size: .75rem; }
+
+.tm-field-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: .75rem 1.25rem;
+}
+
+.tm-field--full { grid-column: 1 / -1; }
+
+.tm-hint {
+  display: block;
+  font-size: .72rem;
+  color: var(--text-muted);
+  margin-top: .2rem;
+}
+
+.tm-required { color: #ef5350; }
+
+.tm-modal__box--wide { width: min(640px, 96vw); }

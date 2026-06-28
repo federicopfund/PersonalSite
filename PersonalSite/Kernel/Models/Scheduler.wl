@@ -9,7 +9,7 @@
    o usar POST /tasks/register desde la UI en caliente. *)
 
 BeginPackage["PersonalSite`Scheduler`",
-  {"PersonalSite`TaskManager`"}];
+  {"PersonalSite`TaskManager`", "PersonalSite`TaskConfig`"}];
 
 start::usage  = "start[] registra e inicia todas las tareas de runtime.";
 stop::usage   = "stop[] detiene todas las tareas.";
@@ -93,10 +93,36 @@ start[] :=
   If[TrueQ[$started],
     PersonalSite`TaskManager`summary[],
     (
-      (* Registrar todas las tareas en el TaskManager *)
-      Scan[Function[pair,
-        PersonalSite`TaskManager`register[First[pair], Last[pair]]],
-        $taskSpecs];
+      (* Seed DB si está vacía, luego cargar specs desde DB *)
+      Quiet @ Check[PersonalSite`TaskConfig`seedDefaults[], Null];
+
+      (* Intentar cargar specs desde DB; fallback a $taskSpecs hardcodeados *)
+      Module[{dbSpecs, specsToLoad},
+        dbSpecs = Quiet @ Check[PersonalSite`TaskConfig`all[], {}];
+        specsToLoad = If[Length[dbSpecs] > 0,
+          (* Convertir rows de DB al formato {id, spec} del TaskManager *)
+          Map[Function[row,
+            {row["task_id"],
+             <|
+               "label"    -> row["label"],
+               "group"    -> row["group_name"],
+               "interval" -> row["interval_s"],
+               "enabled"  -> row["enabled"],
+               "deps"     -> row["deps"],
+               "dag_order"-> row["dag_order"],
+               "action"   -> Quiet @ Check[
+                                ToExpression[row["action_code"]],
+                                Function[True]]
+             |>}],
+            dbSpecs],
+          $taskSpecs  (* fallback si DB no disponible *)
+        ];
+
+        (* Registrar todas las tareas en el TaskManager *)
+        Scan[Function[pair,
+          PersonalSite`TaskManager`register[First[pair], Last[pair]]],
+          specsToLoad];
+      ];
 
       (* Iniciar todas (solo las enabled -> True) *)
       PersonalSite`TaskManager`start[];

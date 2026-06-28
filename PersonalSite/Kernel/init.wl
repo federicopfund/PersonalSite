@@ -35,6 +35,7 @@ With[{load = Function[parts,
   load[{"Models", "Cache.wl"}];
   load[{"Models", "Assets.wl"}];
   load[{"Models", "NestScheduler.wl"}];
+  load[{"Models", "TaskConfig.wl"}];
   load[{"Models", "TaskManager.wl"}];
   load[{"Models", "Scheduler.wl"}];
   load[{"Views", "Renderer.wl"}];

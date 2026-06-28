@@ -11,6 +11,45 @@ CREATE TABLE IF NOT EXISTS posts (
     date       TEXT    NOT NULL  -- ISO-8601: YYYY-MM-DD
 );
 
+-- ── Scheduler task config (persistent, editable desde UI) ──────────────
+-- dag_order : nivel en el NestGraph layered digraph (0 = raíz, 1 = L1, ...)
+--             refleja la cardinalidad de la estructura ruliar
+-- deps      : JSON array de task_id dependencias  e.g. '["heartbeat"]'
+-- action_code: código Wolfram evaluado por ToExpression en el kernel
+CREATE TABLE IF NOT EXISTS scheduler_tasks (
+    id           INTEGER PRIMARY KEY AUTOINCREMENT,
+    task_id      TEXT    NOT NULL UNIQUE,
+    label        TEXT    NOT NULL,
+    group_name   TEXT    NOT NULL DEFAULT 'user',
+    interval_s   INTEGER NOT NULL DEFAULT 60,
+    enabled      INTEGER NOT NULL DEFAULT 1,
+    deps         TEXT    NOT NULL DEFAULT '[]',
+    dag_order    INTEGER NOT NULL DEFAULT 0,
+    action_code  TEXT    NOT NULL DEFAULT 'Function[True]',
+    created_at   TEXT    NOT NULL DEFAULT (datetime('now')),
+    updated_at   TEXT    NOT NULL DEFAULT (datetime('now'))
+);
+
+-- Trigger para actualizar updated_at automáticamente
+CREATE TRIGGER IF NOT EXISTS scheduler_tasks_updated
+  AFTER UPDATE ON scheduler_tasks
+  BEGIN
+    UPDATE scheduler_tasks SET updated_at = datetime('now') WHERE id = NEW.id;
+  END;
+
+-- Seed: 6 tareas del sistema (idempotente via INSERT OR IGNORE)
+INSERT OR IGNORE INTO scheduler_tasks
+  (task_id, label, group_name, interval_s, enabled, deps, dag_order, action_code)
+VALUES
+  ('heartbeat',     'Heartbeat',                   'system', 30,  1, '[]',                '0', 'Function[True]'),
+  ('cache-warm',    'Cache warm-up',               'system', 300, 1, '["heartbeat"]',     '1', 'Function[Quiet@Check[PersonalSite`Post`recent[10];True,False]]'),
+  ('theme-rotate',  'Theme rotation tick',         'theme',  10,  1, '["heartbeat"]',     '1', 'Function[PersonalSite`Theme`tick[]]'),
+  ('cards-refresh', 'Cards refresh (DB)',          'cache',  20,  1, '["cache-warm"]',    '2', 'Function[PersonalSite`Assets`refreshCards[]]'),
+  ('nest-refresh',  'NestGraph {2x+1,x+14,x-18}', 'flow',   300, 1, '["cache-warm"]',    '2', 'Function[PersonalSite`NestScheduler`run[{2#+1&,#+14&,#-18&},{1},3,"session"]]'),
+  ('metric-refresh','Metric refresh (heavy)',      'cache',  300, 1, '["cards-refresh"]', '3', 'Function[PersonalSite`Assets`refreshMetric[]]');
+
+
+
 -- Datos de ejemplo
 INSERT OR IGNORE INTO posts (slug, title, summary, body, date) VALUES
   ('hola-wolfram',

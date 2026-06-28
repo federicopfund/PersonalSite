@@ -15,7 +15,7 @@
    -------------------------------------------------------------------------- *)
 
 BeginPackage["PersonalSite`Controller`",
-  {"PersonalSite`TaskManager`"}];
+  {"PersonalSite`TaskManager`", "PersonalSite`TaskConfig`"}];
 
 tasks::usage         = "tasks[req] sirve el dashboard de TaskObjects.";
 tasksSummary::usage  = "tasksSummary[req] devuelve JSON snapshot.";
@@ -23,10 +23,17 @@ tasksHistory::usage  = "tasksHistory[id, req] devuelve historial JSON.";
 tasksStart::usage    = "tasksStart[id, req] inicia la tarea.";
 tasksStop::usage     = "tasksStop[id, req] detiene la tarea.";
 tasksRestart::usage  = "tasksRestart[id, req] reinicia la tarea.";
-tasksConfigure::usage = "tasksConfigure[req] reconfigura una tarea.";
+tasksConfigure::usage  = "tasksConfigure[req] reconfigura una tarea.";
 tasksRegister::usage   = "tasksRegister[req] registra una tarea nueva.";
 tasksUnregister::usage = "tasksUnregister[id, req] elimina una tarea del registro.";
 tasksDag::usage        = "tasksDag[req] devuelve el DAG de dependencias como JSON.";
+tasksConfigList::usage   = "tasksConfigList[req] lista configs de la DB.";
+tasksConfigCreate::usage = "tasksConfigCreate[req] crea un config en la DB.";
+tasksConfigUpdate::usage = "tasksConfigUpdate[req] actualiza un config en la DB.";
+tasksConfigDelete::usage = "tasksConfigDelete[id, req] elimina un config de la DB.";
+tasksConfigApply::usage  = "tasksConfigApply[req] aplica todos los configs de DB al runtime.";
+tasksConfigSeed::usage   = "tasksConfigSeed[req] siembra los defaults en la DB.";
+tasksConfigById::usage   = "tasksConfigById[id, req] devuelve un config por task_id.";
 
 Begin["`Private`"];
 
@@ -136,6 +143,93 @@ tasksRegister[req_] :=
 tasksUnregister[id_String, req_] :=
   Module[{res = Quiet @ Check[PersonalSite`TaskManager`unregister[id], $Failed]},
     jsonResp[<|"ok" -> (res =!= $Failed), "id" -> id|>]];
+
+(* ── GET  /tasks/config         → lista configs DB ──────────────── *)
+tasksConfigList[req_] :=
+  Module[{rows = Quiet @ Check[PersonalSite`TaskConfig`all[], {}]},
+    jsonResp[rows]];
+
+(* ── GET  /tasks/config/:id     → config individual ─────────────── *)
+tasksConfigById[id_String, req_] :=
+  Module[{r = Quiet @ Check[PersonalSite`TaskConfig`byId[id], $Failed]},
+    If[r === $Failed,
+      jsonResp[<|"ok"->False,"error"->"not found"|>, 404],
+      jsonResp[r]]];
+
+(* ── POST /tasks/config/create  → crea config en DB ─────────────── *)
+tasksConfigCreate[req_] :=
+  Module[{body = parseBody[req], spec, res},
+    spec = <|
+      "task_id"     -> Lookup[body, "task_id",    ""],
+      "label"       -> Lookup[body, "label",      ""],
+      "group_name"  -> Lookup[body, "group_name",  "user"],
+      "interval_s"  -> Quiet @ Check[
+                         ToExpression[ToString @ Lookup[body, "interval_s", "60"]], 60],
+      "enabled"     -> ! MemberQ[{"false","False","0"}, Lookup[body, "enabled", "true"]],
+      "deps"        -> StringSplit[Lookup[body, "deps", ""], ","],
+      "dag_order"   -> Quiet @ Check[
+                         ToExpression[ToString @ Lookup[body, "dag_order", "0"]], 0],
+      "action_code" -> Lookup[body, "action_code", "Function[True]"]
+    |>;
+    If[spec["task_id"] === "",
+      Return[jsonResp[<|"ok"->False,"error"->"task_id required"|>, 400]]];
+    res = Quiet @ Check[PersonalSite`TaskConfig`create[spec], $Failed];
+    jsonResp[<|"ok"->(res =!= $Failed), "task_id"->spec["task_id"]|>]];
+
+(* ── POST /tasks/config/update  → actualiza campo en DB ───────────── *)
+tasksConfigUpdate[req_] :=
+  Module[{body = parseBody[req], id, key, value, res},
+    id    = Lookup[body, "task_id", ""];
+    key   = Lookup[body, "key",     ""];
+    value = Lookup[body, "value",   Null];
+    If[id === "" || key === "" || value === Null,
+      Return[jsonResp[<|"ok"->False,"error"->"task_id, key and value required"|>, 400]]];
+    (* Conversiones de tipo *)
+    value = Which[
+      key === "interval_s",  Quiet @ Check[ToExpression[ToString[value]], 60],
+      key === "dag_order",   Quiet @ Check[ToExpression[ToString[value]], 0],
+      key === "enabled",     If[MemberQ[{"false","False","0"}, value], 0, 1],
+      key === "deps",        StringSplit[value, ","],
+      True,                  value];
+    res = Quiet @ Check[PersonalSite`TaskConfig`update[id, key, value], $Failed];
+    jsonResp[<|"ok"->(res =!= $Failed), "task_id"->id, "key"->key|>]];
+
+(* ── POST /tasks/config/delete/:id → elimina config de DB ───────── *)
+tasksConfigDelete[id_String, req_] :=
+  Module[{res = Quiet @ Check[PersonalSite`TaskConfig`delete[id], $Failed]},
+    jsonResp[<|"ok"->(res =!= $Failed), "task_id"->id|>]];
+
+(* ── POST /tasks/config/apply   → aplica DB al runtime TaskManager ── *)
+tasksConfigApply[req_] :=
+  Module[{rows, applied = {}, failed = {}},
+    rows = Quiet @ Check[PersonalSite`TaskConfig`all[], {}];
+    Scan[Function[row,
+      Module[{id = row["task_id"], spec, fn, res},
+        fn  = Quiet @ Check[ToExpression[row["action_code"]], Function[True]];
+        spec = <|
+          "label"    -> row["label"],
+          "group"    -> row["group_name"],
+          "interval" -> row["interval_s"],
+          "enabled"  -> row["enabled"],
+          "deps"     -> row["deps"],
+          "dag_order"-> row["dag_order"],
+          "action"   -> fn
+        |>;
+        res = Quiet @ Check[
+          (PersonalSite`TaskManager`register[id, spec];
+           If[TrueQ[row["enabled"]],
+             PersonalSite`TaskManager`start[id]]; id),
+          $Failed];
+        If[res === $Failed, AppendTo[failed, id], AppendTo[applied, id]]
+      ]],
+      rows];
+    jsonResp[<|"ok"->True, "applied"->applied, "failed"->failed,
+               "total"->Length[rows]|>]];
+
+(* ── POST /tasks/config/seed    → siembra defaults en DB ───────── *)
+tasksConfigSeed[req_] :=
+  Module[{res = Quiet @ Check[PersonalSite`TaskConfig`seedDefaults[], $Failed]},
+    jsonResp[<|"ok"->(res =!= $Failed), "result"->ToString[res]|>]];
 
 End[];
 EndPackage[];

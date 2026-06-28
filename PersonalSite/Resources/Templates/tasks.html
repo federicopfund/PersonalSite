@@ -43,6 +43,15 @@
       </div>
     </section>
 
+    <!-- ── Tabs de navegación ─────────────────────────────────────── -->
+    <div class="tm-tabs">
+      <button class="tm-tab tm-tab--active" data-tab="runtime">⚡ Runtime</button>
+      <button class="tm-tab" data-tab="config">🗄 Config DB</button>
+    </div>
+
+    <!-- ═══════════════════════════ TAB: RUNTIME ═══════════════════ -->
+    <div id="tab-runtime" class="tm-tab-panel">
+
     <!-- ── Flow Config Panel ─────────────────────────────────────── -->
     <section class="tm-section">
       <h2 class="tm-section__title">⚙ Flow Engine Config</h2>
@@ -167,6 +176,117 @@
       </div>
     </div>
 
+    </div><!-- /tab-runtime -->
+
+    <!-- ═══════════════════════════ TAB: CONFIG DB ═════════════════ -->
+    <div id="tab-config" class="tm-tab-panel" hidden>
+
+      <!-- ── Barra de acciones ─────────────────────────────────── -->
+      <section class="tm-section">
+        <div class="tm-section__head">
+          <h2 class="tm-section__title">🗄 Configuración persistente (DB)</h2>
+          <div class="tm-cfg-actions">
+            <button id="cfg-btn-seed"  class="btn btn--ghost btn--sm">⚡ Seed defaults</button>
+            <button id="cfg-btn-apply" class="btn btn--primary btn--sm">▶ Apply to runtime</button>
+            <button id="cfg-btn-new"   class="btn btn--primary btn--sm">+ Nueva config</button>
+          </div>
+        </div>
+        <p class="tm-cfg-desc">
+          Las tareas se almacenan en <code>scheduler_tasks</code>.
+          El campo <strong>dag_order</strong> indica el nivel en el NestGraph
+          layered digraph (cardinalidad de la estructura ruliar):
+          0 = raíz, 1 = L1, 2 = L2, 3 = L3.
+        </p>
+        <span id="cfg-apply-status" class="tm-cfg-status"></span>
+      </section>
+
+      <!-- ── Visualización por niveles DAG ─────────────────────── -->
+      <section class="tm-section">
+        <h2 class="tm-section__title">🌿 Niveles NestGraph (dag_order)</h2>
+        <div id="cfg-levels" class="tm-levels"></div>
+      </section>
+
+      <!-- ── Tabla de configs ───────────────────────────────────── -->
+      <section class="tm-section">
+        <div class="tm-table-wrap">
+          <table class="tm-table tm-table--cfg" id="cfg-table">
+            <thead>
+              <tr>
+                <th>task_id</th>
+                <th>Label</th>
+                <th>Grupo</th>
+                <th>Intervalo (s)</th>
+                <th>dag_order</th>
+                <th>Deps</th>
+                <th>Habilitada</th>
+                <th>Actualizado</th>
+                <th>Acciones</th>
+              </tr>
+            </thead>
+            <tbody id="cfg-tbody">
+              <tr><td colspan="9" class="tm-empty">Cargando…</td></tr>
+            </tbody>
+          </table>
+        </div>
+      </section>
+
+      <!-- ── Modal nueva config ────────────────────────────────── -->
+      <div id="modal-cfg" class="tm-modal" hidden>
+        <div class="tm-modal__box tm-modal__box--wide">
+          <h3 id="cfg-modal-title">Nueva configuración de tarea</h3>
+          <div class="tm-field-grid">
+            <div class="tm-field">
+              <label>task_id <span class="tm-required">*</span></label>
+              <input id="cfg-id" type="text" class="tm-input" placeholder="mi-tarea">
+            </div>
+            <div class="tm-field">
+              <label>Label</label>
+              <input id="cfg-label" type="text" class="tm-input" placeholder="Mi tarea">
+            </div>
+            <div class="tm-field">
+              <label>Grupo</label>
+              <select id="cfg-group" class="tm-select">
+                <option value="user">user</option>
+                <option value="system">system</option>
+                <option value="flow">flow</option>
+                <option value="cache">cache</option>
+                <option value="theme">theme</option>
+              </select>
+            </div>
+            <div class="tm-field">
+              <label>Intervalo (s)</label>
+              <input id="cfg-interval" type="number" min="5" value="60" class="tm-input">
+            </div>
+            <div class="tm-field">
+              <label>dag_order (nivel NestGraph)</label>
+              <input id="cfg-dag-order" type="number" min="0" max="10" value="0" class="tm-input">
+              <small class="tm-hint">0=raíz · 1=L1 · 2=L2 · 3=L3</small>
+            </div>
+            <div class="tm-field">
+              <label>Deps (separadas por coma)</label>
+              <input id="cfg-deps" type="text" class="tm-input" placeholder="heartbeat,cache-warm">
+            </div>
+            <div class="tm-field tm-field--full">
+              <label>Código Wolfram (action_code)</label>
+              <textarea id="cfg-code" class="tm-textarea" rows="3"
+                placeholder="Function[True]"></textarea>
+            </div>
+            <div class="tm-field">
+              <label>
+                <input id="cfg-enabled" type="checkbox" checked>
+                Habilitada
+              </label>
+            </div>
+          </div>
+          <div class="tm-modal__actions">
+            <button id="cfg-cancel" class="btn btn--ghost">Cancelar</button>
+            <button id="cfg-submit" class="btn btn--primary">Guardar en DB</button>
+          </div>
+        </div>
+      </div>
+
+    </div><!-- /tab-config -->
+
   </main>
 
   <footer class="footer">
@@ -181,6 +301,17 @@
   const $  = id => document.getElementById(id);
   const qs = s  => document.querySelector(s);
 
+  /* ── Tabs ───────────────────────────────────────────────────────── */
+  document.querySelectorAll('.tm-tab').forEach(btn => {
+    btn.addEventListener('click', () => {
+      document.querySelectorAll('.tm-tab').forEach(b => b.classList.remove('tm-tab--active'));
+      document.querySelectorAll('.tm-tab-panel').forEach(p => p.hidden = true);
+      btn.classList.add('tm-tab--active');
+      $('tab-' + btn.dataset.tab).hidden = false;
+      if(btn.dataset.tab === 'config') fetchConfig();
+    });
+  });
+
   /* ── Grupos → color ────────────────────────────────────────────── */
   const GROUP_CLASS = {
     system: 'tm-badge--system', flow: 'tm-badge--flow',
@@ -188,7 +319,179 @@
     nest:   'tm-badge--flow',   user:  'tm-badge--user'
   };
 
-  /* ── Render tabla ───────────────────────────────────────────────── */
+  /* ── CONFIG DB ──────────────────────────────────────────────────── */
+  async function fetchConfig(){
+    try{
+      const r = await fetch('/tasks/config');
+      if(!r.ok) return;
+      renderConfig(await r.json());
+    }catch(e){}
+  }
+
+  function renderConfig(rows){
+    /* Tabla */
+    $('cfg-tbody').innerHTML = rows.map(c => {
+      const grpCls = GROUP_CLASS[c.group_name] || 'tm-badge--user';
+      const deps   = (c.deps||[]).map(d=>`<code class="tm-id">${d}</code>`).join(' ');
+      const enBadge = c.enabled
+        ? '<span class="tm-badge tm-badge--on">sí</span>'
+        : '<span class="tm-badge tm-badge--off">no</span>';
+      return `<tr data-cfg-id="${c.task_id}">
+        <td><code class="tm-id">${c.task_id}</code></td>
+        <td>${c.label}</td>
+        <td><span class="tm-badge ${grpCls}">${c.group_name}</span></td>
+        <td>
+          <input type="number" class="tm-input tm-input--inline cfg-iv"
+            value="${c.interval_s}" min="5" data-id="${c.task_id}">
+        </td>
+        <td>
+          <span class="tm-dag-badge" title="NestGraph level">L${c.dag_order}</span>
+        </td>
+        <td class="tm-deps">${deps}</td>
+        <td>${enBadge}</td>
+        <td class="tm-mono tm-mono--sm">${(c.updated_at||'').slice(0,16)}</td>
+        <td class="tm-actions">
+          <button class="btn btn--xs btn--ghost" data-cfg-action="edit" data-cfg-id="${c.task_id}">✎</button>
+          <button class="btn btn--xs btn--ghost tm-btn-del" data-cfg-action="delete" data-cfg-id="${c.task_id}" title="Eliminar config">✕</button>
+        </td>
+      </tr>`;
+    }).join('') || '<tr><td colspan="9" class="tm-empty">Sin configuraciones.</td></tr>';
+
+    /* Niveles NestGraph */
+    const byLevel = {};
+    rows.forEach(c => {
+      const lv = c.dag_order ?? 0;
+      (byLevel[lv] = byLevel[lv] || []).push(c);
+    });
+    $('cfg-levels').innerHTML = Object.entries(byLevel)
+      .sort(([a],[b]) => +a - +b)
+      .map(([lv, tasks]) => `
+        <div class="tm-level">
+          <div class="tm-level__head">
+            <span class="tm-dag-badge">L${lv}</span>
+            <span class="tm-level__label">${lv==0?'Raíz (sin deps)':'Nivel '+lv}</span>
+          </div>
+          <div class="tm-level__tasks">
+            ${tasks.map(t=>`<span class="tm-level__chip ${GROUP_CLASS[t.group_name]||'tm-badge--user'}" title="${t.label}">${t.task_id}</span>`).join('')}
+          </div>
+        </div>`).join('');
+
+    /* Inline interval save on blur */
+    $('cfg-tbody').querySelectorAll('.cfg-iv').forEach(inp => {
+      inp.addEventListener('change', async () => {
+        const id = inp.dataset.id, val = inp.value;
+        await fetch('/tasks/config/update', {
+          method:'POST', headers:{'Content-Type':'application/x-www-form-urlencoded'},
+          body: new URLSearchParams({task_id: id, key:'interval_s', value: val})
+        });
+      });
+    });
+  }
+
+  /* Delegación de acciones en tabla config */
+  document.addEventListener('click', async e => {
+    const btn = e.target.closest('[data-cfg-action]');
+    if(!btn) return;
+    const {cfgAction, cfgId} = btn.dataset;
+
+    if(cfgAction === 'delete'){
+      if(!confirm(`¿Eliminar la config "${cfgId}" de la DB?`)) return;
+      btn.disabled = true;
+      await fetch(`/tasks/config/delete/${cfgId}`, {method:'POST'});
+      fetchConfig();
+      return;
+    }
+    if(cfgAction === 'edit'){
+      const r = await fetch(`/tasks/config/${cfgId}`);
+      if(!r.ok) return;
+      const c = await r.json();
+      $('cfg-modal-title').textContent = `Editar — ${cfgId}`;
+      $('cfg-id').value         = c.task_id;
+      $('cfg-id').disabled      = true;
+      $('cfg-label').value      = c.label;
+      $('cfg-group').value      = c.group_name;
+      $('cfg-interval').value   = c.interval_s;
+      $('cfg-dag-order').value  = c.dag_order ?? 0;
+      $('cfg-deps').value       = (c.deps||[]).join(',');
+      $('cfg-code').value       = c.action_code;
+      $('cfg-enabled').checked  = !!c.enabled;
+      $('modal-cfg').hidden     = false;
+    }
+  });
+
+  /* Seed */
+  $('cfg-btn-seed').addEventListener('click', async () => {
+    $('cfg-btn-seed').disabled = true;
+    await fetch('/tasks/config/seed', {method:'POST'});
+    await fetchConfig();
+    $('cfg-btn-seed').disabled = false;
+  });
+
+  /* Apply to runtime */
+  $('cfg-btn-apply').addEventListener('click', async () => {
+    const btn = $('cfg-btn-apply');
+    btn.disabled = true;
+    $('cfg-apply-status').textContent = '…';
+    try{
+      const r = await fetch('/tasks/config/apply', {method:'POST'});
+      const d = await r.json();
+      $('cfg-apply-status').textContent =
+        `✓ ${d.applied?.length??0} aplicadas · ${d.failed?.length??0} fallidas`;
+      setTimeout(()=>$('cfg-apply-status').textContent='', 5000);
+    }finally{ btn.disabled = false; }
+  });
+
+  /* Modal nueva config */
+  $('cfg-btn-new').addEventListener('click', () => {
+    $('cfg-modal-title').textContent = 'Nueva configuración de tarea';
+    $('cfg-id').disabled = false;
+    ['cfg-id','cfg-label','cfg-deps','cfg-code'].forEach(id => $( id).value = '');
+    $('cfg-group').value = 'user';
+    $('cfg-interval').value = '60';
+    $('cfg-dag-order').value = '0';
+    $('cfg-enabled').checked = true;
+    $('modal-cfg').hidden = false;
+  });
+  $('cfg-cancel').addEventListener('click', () => { $('modal-cfg').hidden = true; });
+
+  $('cfg-submit').addEventListener('click', async () => {
+    const id       = $('cfg-id').value.trim();
+    const label    = $('cfg-label').value.trim() || id;
+    const group    = $('cfg-group').value;
+    const interval = $('cfg-interval').value;
+    const dagOrder = $('cfg-dag-order').value;
+    const deps     = $('cfg-deps').value.trim();
+    const code     = $('cfg-code').value.trim() || 'Function[True]';
+    const enabled  = $('cfg-enabled').checked ? 'true' : 'false';
+    if(!id){ alert('task_id es obligatorio'); return; }
+
+    const isEdit = $('cfg-id').disabled;
+    if(isEdit){
+      /* Actualizar campos en DB */
+      const updates = [
+        ['label',       label],   ['group_name',  group],
+        ['interval_s',  interval],['dag_order',   dagOrder],
+        ['deps',        deps],    ['action_code', code],
+        ['enabled',     enabled === 'true' ? '1' : '0']
+      ];
+      await Promise.all(updates.map(([key, value]) =>
+        fetch('/tasks/config/update', {
+          method:'POST', headers:{'Content-Type':'application/x-www-form-urlencoded'},
+          body: new URLSearchParams({task_id: id, key, value})
+        })
+      ));
+    } else {
+      await fetch('/tasks/config/create', {
+        method:'POST', headers:{'Content-Type':'application/x-www-form-urlencoded'},
+        body: new URLSearchParams({task_id:id, label, group_name:group, interval_s:interval,
+                                   dag_order:dagOrder, deps, action_code:code, enabled})
+      });
+    }
+    $('modal-cfg').hidden = true;
+    fetchConfig();
+  });
+
+  /* ── Render tabla runtime ───────────────────────────────────────── */
   function renderTable(snap){
     $('h-running').textContent = snap.running;
     const tasks = snap.tasks || {};
