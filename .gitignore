@@ -6,6 +6,8 @@
 # Base de datos local (solo la carpeta data/ de la raiz del repo)
 /data/
 *.db
+# Excepcion: la DB de muestra bundleada dentro del paclet SI se versiona
+!PersonalSite/data/site.db
 
 # Artefactos varios
 **/__pycache__/

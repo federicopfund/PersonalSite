@@ -36,7 +36,8 @@ EXCLUDE_PATTERNS = {
 }
 
 # Directorios de primer nivel que NO son parte del paclet Wolfram
-EXCLUDE_TOP_DIRS = {"deploy", "data"}
+# Nota: "data" se incluye porque contiene site.db (pre-sembrada) e init.sql
+EXCLUDE_TOP_DIRS = {"deploy"}
 
 def should_exclude(path: Path) -> bool:
     for pat in EXCLUDE_PATTERNS:
