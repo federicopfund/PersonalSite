@@ -7,40 +7,34 @@
    costo de recomputarlos. Una ScheduledTask en segundo plano lo mantiene
    caliente (ver Scheduler + Assets`refresh). *)
 
-BeginPackage["PersonalSite`Cache`"];
-
-get::usage   = "get[key] devuelve el valor cacheado o Missing; cuenta hit/miss.";
-set::usage   = "set[key, value] guarda value con timestamp y lo devuelve.";
-getOr::usage = "getOr[key, expr] devuelve el valor cacheado o evalua expr (HoldRest), lo guarda y lo devuelve.";
-age::usage   = "age[key] devuelve los segundos desde que se cacheo key, o Missing.";
-has::usage   = "has[key] indica si key esta en cache.";
-stats::usage = "stats[] devuelve <|\"hits\",\"misses\",\"ratio\",\"keys\",\"count\"|>.";
-clear::usage = "clear[] vacia el cache y reinicia los contadores.";
-
-Begin["`Private`"];
+(* Usa Begin/End en lugar de BeginPackage/EndPackage para evitar el warning
+   General::shdw: los simbolos get/set son internos y todos los llamadores
+   ya usan la ruta completa PersonalSite`Cache`get[...]. *)
+Begin["PersonalSite`Cache`Private`"];
 
 $store  = <||>;
 $hits   = 0;
 $misses = 0;
 
-has[key_] := KeyExistsQ[$store, key];
+PersonalSite`Cache`has[key_] := KeyExistsQ[$store, key];
 
-get[key_] :=
+PersonalSite`Cache`get[key_] :=
   If[KeyExistsQ[$store, key],
     $hits++;   $store[key]["value"],
     $misses++; Missing["NotCached", key]];
 
-set[key_, value_] :=
+PersonalSite`Cache`set[key_, value_] :=
   ($store[key] = <|"value" -> value, "at" -> AbsoluteTime[]|>; value);
 
-SetAttributes[getOr, HoldRest];
-getOr[key_, expr_] :=
-  Module[{v = get[key]}, If[MissingQ[v], set[key, expr], v]];
+SetAttributes[PersonalSite`Cache`getOr, HoldRest];
+PersonalSite`Cache`getOr[key_, expr_] :=
+  Module[{v = PersonalSite`Cache`get[key]},
+    If[MissingQ[v], PersonalSite`Cache`set[key, expr], v]];
 
-age[key_] :=
+PersonalSite`Cache`age[key_] :=
   If[KeyExistsQ[$store, key], AbsoluteTime[] - $store[key]["at"], Missing["NotCached", key]];
 
-stats[] :=
+PersonalSite`Cache`stats[] :=
   <|
     "hits"   -> $hits,
     "misses" -> $misses,
@@ -49,7 +43,6 @@ stats[] :=
     "count"  -> Length[$store]
   |>;
 
-clear[] := ($store = <||>; $hits = 0; $misses = 0;);
+PersonalSite`Cache`clear[] := ($store = <||>; $hits = 0; $misses = 0;);
 
 End[];
-EndPackage[];

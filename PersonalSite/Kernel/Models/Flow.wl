@@ -13,61 +13,31 @@
    donde fn[<|dep1 -> r1, ...|>] recibe los resultados de sus dependencias y
    devuelve el resultado de la tarea. (Claves extra como "label" se ignoran.) *)
 
-BeginPackage["PersonalSite`Flow`"];
-
-graph::usage =
-  "graph[spec] devuelve el Graph dirigido del DAG (dependencia -> dependiente).";
-
-edges::usage =
-  "edges[spec] devuelve la lista de aristas dep -> tarea.";
-
-acyclicQ::usage =
-  "acyclicQ[spec] indica si el DAG es valido (sin ciclos ni dependencias inexistentes).";
-
-layers::usage =
-  "layers[spec] devuelve las capas topologicas: listas de tareas que pueden correr en paralelo, o $Failed si hay ciclo.";
-
-run::usage =
-  "run[spec] o run[spec, backend] ejecuta el DAG (cada tarea como TaskObject) y \
-devuelve <|\"ok\",\"results\",\"layers\",\"edges\",\"log\",\"elapsed\",\"backend\",\"kernels\"|>. \
-backend: \"session\" (cooperativo, 1 kernel), \"parallel\" (subkernels reales via \
-ParallelSubmit) o \"sync\". \"parallel\" degrada a \"session\" si no hay kernels.";
-
-kernelInfo::usage =
-  "kernelInfo[] devuelve <|\"max\", \"running\"|> del pool de subkernels.";
-
-setMaxKernels::usage =
-  "setMaxKernels[n] fija el tope de subkernels por kernel del pool.";
-
-shutdownKernels::usage =
-  "shutdownKernels[] cierra los subkernels lanzados.";
-
-distribute::usage =
-  "distribute[] envia a los subkernels las definiciones de los contextos en \
-$distributeContexts (p.ej. los helpers de PersonalSite`Flow`Lib`).";
-
-Begin["`Private`"];
+(* Usa Begin/End en lugar de BeginPackage/EndPackage para evitar el warning
+   General::shdw: el simbolo run aparece tambien en PersonalSite`NestScheduler`.
+   Todos los llamadores ya usan PersonalSite`Flow`run[...]. *)
+Begin["PersonalSite`Flow`Private`"];
 
 deps[spec_, n_]   := Lookup[spec[n], "deps", {}];
 action[spec_, n_] := Lookup[spec[n], "action", (Null &)];
 
-edges[spec_Association] :=
+PersonalSite`Flow`edges[spec_Association] :=
   Flatten @ KeyValueMap[
     Function[{n, def}, (# -> n) & /@ Lookup[def, "deps", {}]],
     spec];
 
-graph[spec_Association] :=
-  Graph[Keys[spec], edges[spec], VertexLabels -> "Name"];
+PersonalSite`Flow`graph[spec_Association] :=
+  Graph[Keys[spec], PersonalSite`Flow`edges[spec], VertexLabels -> "Name"];
 
 (* Valido: todas las dependencias existen y el grafo es aciclico. *)
-acyclicQ[spec_Association] :=
-  Module[{names = Keys[spec], es = edges[spec]},
+PersonalSite`Flow`acyclicQ[spec_Association] :=
+  Module[{names = Keys[spec], es = PersonalSite`Flow`edges[spec]},
     AllTrue[es, MemberQ[names, First[#]] &] && AcyclicGraphQ[Graph[names, es]]
   ];
 
 (* Capas topologicas (Kahn por niveles): en cada paso entran las tareas cuyas
    dependencias ya estan resueltas. $Failed si queda un ciclo. *)
-layers[spec_Association] :=
+PersonalSite`Flow`layers[spec_Association] :=
   Module[{names = Keys[spec], done = {}, out = {}, ready},
     While[Length[done] < Length[names],
       ready = Select[names,
@@ -94,9 +64,9 @@ ensureKernels[] :=
      Quiet @ Check[LaunchKernels[$maxKernels - $KernelCount], Null]];
    $KernelCount);
 
-setMaxKernels[n_Integer /; n > 0] := ($maxKernels = n);
-kernelInfo[]      := <|"max" -> $maxKernels, "running" -> $KernelCount|>;
-shutdownKernels[] := (Quiet @ CloseKernels[]; $KernelCount);
+PersonalSite`Flow`setMaxKernels[n_Integer /; n > 0] := ($maxKernels = n);
+PersonalSite`Flow`kernelInfo[]      := <|"max" -> $maxKernels, "running" -> $KernelCount|>;
+PersonalSite`Flow`shutdownKernels[] := (Quiet @ CloseKernels[]; $KernelCount);
 
 (* --- Distribucion de definiciones a los subkernels -------------------
    Las acciones que usan helpers fuera de System`/Global` necesitan que sus
@@ -112,7 +82,7 @@ distributeContext[ctx_String] :=
         ToExpression["DistributeDefinitions[" <> StringRiffle[names, ", "] <> "]"],
         Null]]];
 
-distribute[] :=
+PersonalSite`Flow`distribute[] :=
   ($DistributedContexts = DeleteDuplicates @ Join[
      If[ListQ[$DistributedContexts], $DistributedContexts, {"Global`"}],
      $distributeContexts];
@@ -168,18 +138,18 @@ runLayer["parallel", spec_, layer_, prev_] :=
       runLayer["sync", spec, layer, prev]]   (* degradacion segura *)
   ];
 
-run[spec_Association] := run[spec, "session"];
+PersonalSite`Flow`run[spec_Association] := PersonalSite`Flow`run[spec, "session"];
 
-run[spec_Association, backendReq_String] :=
+PersonalSite`Flow`run[spec_Association, backendReq_String] :=
   Module[{ls, results = <||>, t0 = AbsoluteTime[], log = {}, backend, nk},
-    If[! acyclicQ[spec],
+    If[! PersonalSite`Flow`acyclicQ[spec],
       Return[<|"ok" -> False, "error" -> "DAG invalido: ciclo o dependencia inexistente."|>]];
-    ls = layers[spec];
+    ls = PersonalSite`Flow`layers[spec];
     If[ls === $Failed,
       Return[<|"ok" -> False, "error" -> "No se pudo ordenar el DAG (ciclo)."|>]];
 
     {backend, nk} = resolveBackend[backendReq];
-    If[backend === "parallel", distribute[]];
+    If[backend === "parallel", PersonalSite`Flow`distribute[]];
 
     Do[
       AssociateTo[results, runLayer[backend, spec, layer, results]];
@@ -191,7 +161,7 @@ run[spec_Association, backendReq_String] :=
       "ok"         -> True,
       "results"    -> results,
       "layers"     -> ls,
-      "edges"      -> edges[spec],
+      "edges"      -> PersonalSite`Flow`edges[spec],
       "log"        -> log,
       "elapsed"    -> AbsoluteTime[] - t0,
       "requested"  -> backendReq,
@@ -202,4 +172,3 @@ run[spec_Association, backendReq_String] :=
   ];
 
 End[];
-EndPackage[];

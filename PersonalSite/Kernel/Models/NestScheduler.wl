@@ -21,35 +21,10 @@
        PersonalSite`NestScheduler`schedule[rules, {1}, 3, 60, "session"];
    -------------------------------------------------------------------------- *)
 
-BeginPackage["PersonalSite`NestScheduler`"];
-
-build::usage =
-  "build[rules, seeds, depth] construye el arbol de nodos y devuelve \
-<|\"spec\", \"records\", \"depth\", \"nodeCount\"|> listo para Flow.";
-
-run::usage =
-  "run[rules, seeds, depth] o run[rules, seeds, depth, backend] ejecuta el \
-NestGraph completo capa por capa en paralelo y devuelve los resultados.";
-
-schedule::usage =
-  "schedule[rules, seeds, depth, interval] o \
-schedule[rules, seeds, depth, interval, backend] registra un ScheduledTask \
-que re-ejecuta el NestGraph cada `interval` segundos.";
-
-cancel::usage =
-  "cancel[] elimina el ScheduledTask activo del NestScheduler.";
-
-results::usage =
-  "results[] devuelve la ultima ejecucion completa.";
-
-export::usage =
-  "export[] o export[\"json\"|\"csv\"] formatea los resultados para consumo \
-desde Power BI u otras herramientas de BI.";
-
-taskInfo::usage =
-  "taskInfo[] devuelve <|\"active\", \"runCount\", \"lastRun\"|>.";
-
-Begin["`Private`"];
+(* Usa Begin/End en lugar de BeginPackage/EndPackage para evitar el warning
+   General::shdw: el simbolo run aparece tambien en PersonalSite`Flow`.
+   Todos los llamadores ya usan PersonalSite`NestScheduler`run[...]. *)
+Begin["PersonalSite`NestScheduler`Private`"];
 
 (* --- Estado del modulo -------------------------------------------------- *)
 $lastResults = <||>;
@@ -123,7 +98,7 @@ recordsToSpec[records_List, rules_List] :=
 
 (* --- API publica -------------------------------------------------------- *)
 
-build[rules_List, seeds : {__}, depth_Integer] :=
+PersonalSite`NestScheduler`build[rules_List, seeds : {__}, depth_Integer] :=
   Module[{recs = buildRecords[rules, seeds, depth], spec},
     spec = recordsToSpec[recs, rules];
     <|"spec"      -> spec,
@@ -134,12 +109,12 @@ build[rules_List, seeds : {__}, depth_Integer] :=
       "nodeCount" -> Length[recs]|>
   ];
 
-run[rules_List, seeds : {__}, depth_Integer] :=
-  run[rules, seeds, depth, "session"];
+PersonalSite`NestScheduler`run[rules_List, seeds : {__}, depth_Integer] :=
+  PersonalSite`NestScheduler`run[rules, seeds, depth, "session"];
 
-run[rules_List, seeds : {__}, depth_Integer, backend_String] :=
+PersonalSite`NestScheduler`run[rules_List, seeds : {__}, depth_Integer, backend_String] :=
   Module[{built, flowResult, t0 = AbsoluteTime[]},
-    built      = build[rules, seeds, depth];
+    built      = PersonalSite`NestScheduler`build[rules, seeds, depth];
     flowResult = PersonalSite`Flow`run[built["spec"], backend];
     $lastResults = <|
       "built"    -> built,
@@ -153,26 +128,26 @@ run[rules_List, seeds : {__}, depth_Integer, backend_String] :=
     $lastResults
   ];
 
-schedule[rules_List, seeds : {__}, depth_Integer, interval : _?NumericQ] :=
-  schedule[rules, seeds, depth, interval, "session"];
+PersonalSite`NestScheduler`schedule[rules_List, seeds : {__}, depth_Integer, interval : _?NumericQ] :=
+  PersonalSite`NestScheduler`schedule[rules, seeds, depth, interval, "session"];
 
-schedule[rules_List, seeds : {__}, depth_Integer,
+PersonalSite`NestScheduler`schedule[rules_List, seeds : {__}, depth_Integer,
          interval : _?NumericQ, backend_String] :=
   (If[$schedTask =!= None, Quiet @ RemoveScheduledTask[$schedTask]];
    $schedTask = RunScheduledTask[
-     run[rules, seeds, depth, backend],
+     PersonalSite`NestScheduler`run[rules, seeds, depth, backend],
      interval];
    $schedTask);
 
-cancel[] :=
+PersonalSite`NestScheduler`cancel[] :=
   If[$schedTask =!= None,
     Quiet @ RemoveScheduledTask[$schedTask];
     $schedTask = None; True,
     False];
 
-results[] := $lastResults;
+PersonalSite`NestScheduler`results[] := $lastResults;
 
-taskInfo[] := <|
+PersonalSite`NestScheduler`taskInfo[] := <|
   "active"   -> ($schedTask =!= None),
   "runCount" -> $runCount,
   "lastRun"  -> $lastRun
@@ -193,9 +168,9 @@ nodeRow[rec_, flowRes_Association] :=
     "ruleIdx" -> rec["ruleIdx"],
     "result"  -> Quiet @ Lookup[flowRes, "n" <> ToString[rec["id"]], Null]|>;
 
-export[] := export["json"];
+PersonalSite`NestScheduler`export[] := PersonalSite`NestScheduler`export["json"];
 
-export["json"] :=
+PersonalSite`NestScheduler`export["json"] :=
   If[! KeyExistsQ[$lastResults, "built"],
     $emptyJSON,
     ExportString[
@@ -204,7 +179,7 @@ export["json"] :=
       "JSON"]
   ];
 
-export["csv"] :=
+PersonalSite`NestScheduler`export["csv"] :=
   If[! KeyExistsQ[$lastResults, "built"],
     $emptyCSV,
     $emptyCSV <> "\n" <>
@@ -222,4 +197,3 @@ export["csv"] :=
   ];
 
 End[];
-EndPackage[];
