@@ -286,3 +286,50 @@
     margin-bottom: .3rem;
   }
 }
+
+// ── Deps column ────────────────────────────────────────────────────────────
+.tm-deps {
+  font-size: .78rem;
+  line-height: 1.6;
+  max-width: 140px;
+
+  code.tm-id { margin: 1px 2px; }
+}
+
+// ── Delete button ──────────────────────────────────────────────────────────
+.tm-btn-del {
+  opacity: .45;
+  transition: opacity .15s;
+
+  &:hover { opacity: 1; color: #ef5350; border-color: #ef5350; }
+}
+
+// ── DAG section ────────────────────────────────────────────────────────────
+.tm-dag-canvas {
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  overflow: hidden;
+  margin-bottom: .75rem;
+
+  svg { display: block; }
+}
+
+.tm-dag-meta {
+  font-size: .78rem;
+  color: var(--text-muted);
+  margin-bottom: .5rem;
+}
+
+.tm-dag-crit {
+  font-size: .82rem;
+  color: var(--text-muted);
+
+  .tm-crit-label {
+    font-weight: 700;
+    color: #ff6b35;
+    margin-right: .35rem;
+  }
+
+  code.tm-id { border-color: rgba(#ff6b35, .4); }
+}

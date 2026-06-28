@@ -12,7 +12,13 @@
 *.pyc
 .DS_Store
 
+# Build artifacts (.paclet)
+/build/
+
 # Sass
 .sass-cache/
 *.css.map
 PersonalSite/deploy/mathpass
+
+# Paclet build artifacts
+/dist/

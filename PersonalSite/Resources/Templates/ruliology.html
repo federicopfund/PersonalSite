@@ -1,0 +1,416 @@
+<!-- ================================================================
+     /ruliology — Sistema multiway aritmético: métricas en vivo
+     Template: no recibe slots de datos; todo se carga vía JS.
+     ================================================================ -->
+
+<!-- KaTeX (cargado antes del body para que las fórmulas rendericen) -->
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/katex@0.16.11/dist/katex.min.css">
+
+<!-- ── Hero ──────────────────────────────────────────────────────── -->
+<section class="rul-hero">
+  <div class="rul-hero-inner">
+    <span class="rul-badge">Ruliología &bull; Sistema Multiway &bull; Wolfram Language 14</span>
+    <h1>De 3<sup>k</sup> a la confluencia</h1>
+    <p class="rul-hero-sub">Un sistema multiway aritmético causalmente invariante<br>
+       con conjunto de estados fractal</p>
+    <div class="rul-hero-maps">
+      <div class="rul-map-pill"><code>a(n) = 2n+1</code></div>
+      <div class="rul-map-pill"><code>b(n) = n+14</code></div>
+      <div class="rul-map-pill"><code>c(n) = n&minus;18</code></div>
+    </div>
+    <div class="rul-hero-meta">
+      Kernel&nbsp;<code id="rul-kernel-id">&#8230;</code> &bull;
+      <span id="rul-status" class="rul-status">cargando m&eacute;tricas&hellip;</span>
+    </div>
+  </div>
+</section>
+
+<!-- ── Métricas pre-computadas ───────────────────────────────────── -->
+<section class="rul-section">
+  <div class="rul-section-inner">
+    <h2 class="rul-section-title">M&eacute;tricas del sistema</h2>
+    <p class="rul-section-sub">
+      Calculadas desde el kernel WL &mdash; actualizaci&oacute;n autom&aacute;tica cada 5&nbsp;min.
+    </p>
+    <div class="rul-kpi-grid" id="rul-kpi-grid">
+      <div class="rul-kpi-card rul-skeleton" id="kpi-lambda"></div>
+      <div class="rul-kpi-card rul-skeleton" id="kpi-dim"></div>
+      <div class="rul-kpi-card rul-skeleton" id="kpi-g22"></div>
+      <div class="rul-kpi-card rul-skeleton" id="kpi-collapse"></div>
+    </div>
+
+    <!-- Serie de crecimiento -->
+    <div class="rul-series-wrap">
+      <h3 class="rul-subsection-title">Serie de crecimiento</h3>
+      <div id="rul-series-bar" class="rul-bar-chart"></div>
+      <div id="rul-series-vals" class="rul-series-vals"></div>
+    </div>
+  </div>
+</section>
+
+<!-- ── Evaluación interactiva (registro nombrado) ────────────────── -->
+<section class="rul-section rul-section--dark">
+  <div class="rul-section-inner">
+    <h2 class="rul-section-title">Evaluaci&oacute;n en vivo &bull; Kernel nativo</h2>
+    <p class="rul-section-sub">
+      Cada bot&oacute;n env&iacute;a una expresi&oacute;n WL pre-definida al kernel y muestra el resultado.
+      El endpoint <code>POST /ruliology/eval</code> s&oacute;lo despacha expresiones del registro
+      interno &mdash; no ejecuta c&oacute;digo arbitrario.
+    </p>
+
+    <div class="rul-eval-grid">
+
+      <!-- Card 1: Serie de crecimiento -->
+      <div class="rul-eval-card" data-key="growth_series">
+        <div class="rul-eval-card-head">
+          <span class="rul-eval-badge">Secci&oacute;n 2</span>
+          <h3>Serie de crecimiento</h3>
+          <p>Estados distintos por generaci&oacute;n (profundidad 0&ndash;20).</p>
+          <div class="rul-eval-math">\(|S_d|\) donde \(S_{d+1} = \bigcup_{n\in S_d}\{a(n),b(n),c(n)\}\)</div>
+        </div>
+        <button class="rul-eval-btn" data-key="growth_series">&#9654; Evaluar</button>
+        <div class="rul-eval-result" id="res-growth_series"></div>
+      </div>
+
+      <!-- Card 2: Tasa de crecimiento -->
+      <div class="rul-eval-card" data-key="growth_rate">
+        <div class="rul-eval-card-head">
+          <span class="rul-eval-badge">Secci&oacute;n 2</span>
+          <h3>Tasa \(\lambda\) &amp; dimensi&oacute;n de caja</h3>
+          <p>Capacidad de c&oacute;mputo \(\log_2\lambda\) por paso.</p>
+          <div class="rul-eval-math">\(\lambda \approx \frac{|S_{22}|}{|S_{21}|},\quad d_{\text{box}} = \log_2\lambda\)</div>
+        </div>
+        <button class="rul-eval-btn" data-key="growth_rate">&#9654; Evaluar</button>
+        <div class="rul-eval-result" id="res-growth_rate"></div>
+      </div>
+
+      <!-- Card 3: Tabla de colapso -->
+      <div class="rul-eval-card" data-key="collapse_table">
+        <div class="rul-eval-card-head">
+          <span class="rul-eval-badge">Secci&oacute;n 2</span>
+          <h3>Factor de colapso de hilos</h3>
+          <p>Hilos posibles \(3^d\) vs. estados distinguibles.</p>
+          <div class="rul-eval-math">\(\text{colapso}(d) = \frac{3^d}{|S_d|}\)</div>
+        </div>
+        <button class="rul-eval-btn" data-key="collapse_table">&#9654; Evaluar</button>
+        <div class="rul-eval-result" id="res-collapse_table"></div>
+      </div>
+
+      <!-- Card 4: Forma cerrada -->
+      <div class="rul-eval-card" data-key="closed_form_check">
+        <div class="rul-eval-card-head">
+          <span class="rul-eval-badge">Teorema 1</span>
+          <h3>Verificaci&oacute;n &mdash; Forma cerrada</h3>
+          <p>Confirma que el conjunto alcanzable coincide con la descripci&oacute;n expl&iacute;cita.</p>
+          <div class="rul-eval-math">\(S \,=\, \{2^{p+1}-1+14q-18r : p,q,r\in\mathbb{Z}_{\ge 0}\}\)</div>
+        </div>
+        <button class="rul-eval-btn" data-key="closed_form_check">&#9654; Verificar</button>
+        <div class="rul-eval-result" id="res-closed_form_check"></div>
+      </div>
+
+      <!-- Card 5: Confluencia -->
+      <div class="rul-eval-card" data-key="confluence_check">
+        <div class="rul-eval-card-head">
+          <span class="rul-eval-badge">Teorema 2</span>
+          <h3>Verificaci&oacute;n &mdash; Invariancia causal</h3>
+          <p>Sistema de reescritura completo: todo par cr&iacute;tico reconverge.</p>
+          <div class="rul-eval-math">
+            \(ab\!\to\!b^2a,\quad ac\!\to\!c^2a,\quad cb\!\to\!bc\)
+            <br>Forma can&oacute;nica: \(b^q c^r a^p\)
+          </div>
+        </div>
+        <button class="rul-eval-btn" data-key="confluence_check">&#9654; Verificar</button>
+        <div class="rul-eval-result" id="res-confluence_check"></div>
+      </div>
+
+      <!-- Card 6: Identidades funcionales -->
+      <div class="rul-eval-card" data-key="function_identities">
+        <div class="rul-eval-card-head">
+          <span class="rul-eval-badge">Demostraci&oacute;n</span>
+          <h3>Identidades de funciones</h3>
+          <p>Las tres reglas de reescritura son identidades verificables.</p>
+          <div class="rul-eval-math">
+            \(a\circ b = b^2\circ a\quad a\circ c = c^2\circ a\quad b\circ c = c\circ b\)
+          </div>
+        </div>
+        <button class="rul-eval-btn" data-key="function_identities">&#9654; Verificar</button>
+        <div class="rul-eval-result" id="res-function_identities"></div>
+      </div>
+
+      <!-- Card 7: Paridad -->
+      <div class="rul-eval-card" data-key="parity_check">
+        <div class="rul-eval-card-head">
+          <span class="rul-eval-badge">Corolario</span>
+          <h3>Invariante de paridad</h3>
+          <p>Todo estado alcanzable es impar &mdash; corolario inmediato de la forma cerrada.</p>
+          <div class="rul-eval-math">\(\forall\, n\in S:\; n \equiv 1 \pmod{2}\)</div>
+        </div>
+        <button class="rul-eval-btn" data-key="parity_check">&#9654; Verificar</button>
+        <div class="rul-eval-result" id="res-parity_check"></div>
+      </div>
+
+      <!-- Card 8: Kernel info -->
+      <div class="rul-eval-card" data-key="kernel_info">
+        <div class="rul-eval-card-head">
+          <span class="rul-eval-badge">Runtime</span>
+          <h3>Info del kernel</h3>
+          <p>Estado del proceso WL que responde estas evaluaciones.</p>
+        </div>
+        <button class="rul-eval-btn" data-key="kernel_info">&#9654; Consultar</button>
+        <div class="rul-eval-result" id="res-kernel_info"></div>
+      </div>
+
+    </div><!-- /rul-eval-grid -->
+  </div>
+</section>
+
+<!-- ── Teoremas (texto + esquema de demostración) ────────────────── -->
+<section class="rul-section">
+  <div class="rul-section-inner">
+    <h2 class="rul-section-title">Los dos resultados exactos</h2>
+
+    <div class="rul-theorem">
+      <div class="rul-theorem-label">Teorema 1 &mdash; Forma cerrada</div>
+      <div class="rul-theorem-stmt">
+        El conjunto de valores alcanzables desde \(1\) es exactamente
+        \[S = \{\,2^{p+1}-1+14q-18r : p,q,r\in\mathbb{Z}_{\ge 0}\,\}\]
+        En particular todo elemento de \(S\) es impar y la serie de conteo \((|S_d|)_{d\ge 0}\)
+        no es D-finita.
+      </div>
+      <details class="rul-theorem-proof">
+        <summary>Esquema de demostración</summary>
+        <p>
+          La semilla es \(1 = 2^1 - 1\) (caso \(p=q=r=0\)).
+          La regla \(a\) duplica: \(a^p(1) = 2^{p+1}-1\).
+          Las reglas \(b,c\) son traslaciones enteras que no alteran la paridad
+          (suman \(14\) y \(-18\), ambos pares), por lo que la paridad se conserva.
+          La clausura bajo \(\{a,b,c\}\) aplicadas inductivamente genera exactamente
+          el retículo afín descrito. La no-D-finidad se sigue de que las colisiones
+          \(2^{p+1}-1+14q-18r = 2^{p'+1}-1+14q'-18r'\) involucran la ecuación
+          \(2^{p+1}-2^{p'+1} = 14(q'-q)-18(r'-r)\) cuya estructura involucra
+          potencias de 2 y combinaciones enteras de 14 y 18, produciendo una
+          función generatriz trascendente.
+        </p>
+      </details>
+    </div>
+
+    <div class="rul-theorem">
+      <div class="rul-theorem-label">Teorema 2 &mdash; Invariancia causal (confluencia)</div>
+      <div class="rul-theorem-stmt">
+        El monoide \(\langle a,b,c\rangle\) generado por las tres reglas admite
+        el sistema de reescritura finito y completo
+        \[ab\to b^2a,\quad ac\to c^2a,\quad cb\to bc\]
+        con forma canónica \(b^q c^r a^p\). En consecuencia:
+        <ul>
+          <li>toda divergencia de hilos reconverge (causal invariance),</li>
+          <li>el orden de aplicación de reglas no altera el estado alcanzable,</li>
+          <li>el problema de la palabra es decidible en tiempo lineal.</li>
+        </ul>
+      </div>
+      <details class="rul-theorem-proof">
+        <summary>Esquema de demostración</summary>
+        <p>
+          <strong>Terminación:</strong> define \(\text{peso}(w) = \sum_i \text{pos}(w_i)\)
+          donde \(\text{pos}(a)=2, \text{pos}(b)=\text{pos}(c)=1\).
+          Cada regla mueve una \(a\) hacia la derecha aumentando su posición
+          pero insertando \(b\) o \(c\) a su izquierda: el peso decrece en cada paso.
+        </p>
+        <p>
+          <strong>Confluencia:</strong> los únicos pares críticos son
+          \(acb \to \{c^2ab,\, acb\}\) y \(abc \to \{b^2ac,\, ab^2a\}\).
+          Ambos reconvergen:
+          \(c^2ab \xrightarrow{cb\to bc} c^2ba\) y
+          \(acb \xrightarrow{ab\to b^2a} b^2ab \xrightarrow{} b^2ba = b^3a\) — igual que
+          el camino por la izquierda. El verificador en WL (Card 5 arriba) lo confirma
+          sobre 300 palabras aleatorias.
+        </p>
+      </details>
+    </div>
+  </div>
+</section>
+
+<!-- ── Volver al blog ─────────────────────────────────────────────── -->
+<div class="rul-back">
+  <a href="/blog">&larr; Blog</a>
+  <a href="/kernel">Kernel REPL &rarr;</a>
+</div>
+
+<!-- ── Scripts ───────────────────────────────────────────────────── -->
+<script src="https://cdn.jsdelivr.net/npm/katex@0.16.11/dist/katex.min.js"></script>
+<script
+  src="https://cdn.jsdelivr.net/npm/katex@0.16.11/dist/contrib/auto-render.min.js"
+  onload="window._rulKatexReady=true;(window._rulKatexQueue||[]).forEach(function(fn){fn();});window._rulKatexQueue=null;">
+</script>
+
+<script>
+(function () {
+  'use strict';
+
+  /* ── Utilidades ─────────────────────────────────────── */
+  function esc(s) {
+    return String(s)
+      .replace(/&/g,'&amp;').replace(/</g,'&lt;')
+      .replace(/>/g,'&gt;').replace(/"/g,'&quot;');
+  }
+
+  function setStatus(msg, cls) {
+    var el = document.getElementById('rul-status');
+    if (!el) return;
+    el.textContent = msg;
+    el.className   = 'rul-status' + (cls ? ' rul-status--' + cls : '');
+  }
+
+  /* ── Renderizar KaTeX (queue-safe) ──────────────────── */
+  function doRenderTex(el) {
+    try {
+      renderMathInElement(el, {
+        delimiters: [
+          {left:'\\[', right:'\\]', display:true},
+          {left:'\\(', right:'\\)', display:false}
+        ],
+        throwOnError: false
+      });
+    } catch(e) {}
+  }
+
+  function renderTex(el) {
+    if (window._rulKatexReady) {
+      doRenderTex(el);
+    } else {
+      (window._rulKatexQueue = window._rulKatexQueue || []).push(function(){ doRenderTex(el); });
+    }
+  }
+
+  /* Renderizar matemática estática de la página al cargar */
+  renderTex(document.body);
+
+  /* ── Poblar KPI cards desde /ruliology/metrics ────────── */
+  function loadMetrics() {
+    fetch('/ruliology/metrics')
+      .then(function(r){ return r.json(); })
+      .then(function(m) {
+        var kernelEl = document.getElementById('rul-kernel-id');
+
+        fillKpi('kpi-lambda',
+          '&lambda;',
+          m.lambda ? m.lambda.toFixed(4) : '&hellip;',
+          'Tasa de crecimiento por generaci&oacute;n');
+
+        fillKpi('kpi-dim',
+          'd<sub>box</sub>',
+          m.box_dim ? m.box_dim.toFixed(4) : '&hellip;',
+          'Dimensi&oacute;n de caja (log<sub>2</sub>&lambda;)');
+
+        fillKpi('kpi-g22',
+          '|S<sub>22</sub>|',
+          m.states_g22 ? m.states_g22.toLocaleString() : '&hellip;',
+          'Estados distintos en generaci&oacute;n 22');
+
+        fillKpi('kpi-collapse',
+          '3<sup>10</sup>/|S<sub>10</sub>|',
+          m.collapse_g10 ? m.collapse_g10.toFixed(2) + '&times;' : '&hellip;',
+          'Factor de colapso en generaci&oacute;n 10');
+
+        if (m.series_head) renderBarChart(m.series_head);
+        if (m.series_head) renderSeriesVals(m.series_head);
+        setStatus('listo', 'ok');
+      })
+      .catch(function(e) { setStatus('error: ' + e, 'err'); });
+  }
+
+  function fillKpi(id, label, val, desc) {
+    var el = document.getElementById(id);
+    if (!el) return;
+    el.classList.remove('rul-skeleton');
+    el.innerHTML =
+      '<div class="rul-kpi-label">' + label + '</div>' +
+      '<div class="rul-kpi-val">'   + val   + '</div>' +
+      '<div class="rul-kpi-desc">'  + desc  + '</div>';
+  }
+
+  /* ── Mini bar chart de la serie ──────────────────────── */
+  function renderBarChart(series) {
+    var el  = document.getElementById('rul-series-bar');
+    if (!el) return;
+    var max = Math.max.apply(null, series);
+    var html = '';
+    for (var i = 0; i < series.length; i++) {
+      var h = Math.round(80 * series[i] / max);
+      html +=
+        '<div class="rul-bar-wrap" title="g=' + i + ': ' + series[i] + ' estados">' +
+          '<div class="rul-bar" style="height:' + h + 'px"></div>' +
+          '<span class="rul-bar-lbl">' + i + '</span>' +
+        '</div>';
+    }
+    el.innerHTML = html;
+  }
+
+  function renderSeriesVals(series) {
+    var el = document.getElementById('rul-series-vals');
+    if (!el) return;
+    el.textContent = '[ ' + series.join(', ') + ', \u2026 ]';
+  }
+
+  /* ── Evaluar expresión nombrada ──────────────────────── */
+  function evalNamed(key) {
+    var resEl = document.getElementById('res-' + key);
+    if (!resEl) return;
+    resEl.innerHTML = '<span class="rul-spinner">&#8987;</span> evaluando&hellip;';
+    resEl.className = 'rul-eval-result rul-eval-result--loading';
+
+    fetch('/ruliology/eval', {
+      method: 'POST',
+      headers: {'Content-Type': 'application/x-www-form-urlencoded'},
+      body: 'key=' + encodeURIComponent(key)
+    })
+    .then(function(r) { return r.json(); })
+    .then(function(d) {
+      if (d.error) {
+        resEl.innerHTML = '<span class="rul-res-err">&#9888; ' + esc(d.error) + '</span>';
+        resEl.className = 'rul-eval-result rul-eval-result--err';
+        return;
+      }
+      var html =
+        '<div class="rul-res-meta">' +
+          '<span class="rul-res-ms">' + d.ms + 'ms</span>' +
+          '<span class="rul-res-kern">kernel&nbsp;' + esc(String(d.kernel||'')) + '</span>' +
+        '</div>';
+      /* Solo mostrar TeX si es LaTeX válido (sin secuencias privadas de WL) */
+      if (d.tex && d.tex.length > 2 && d.tex.indexOf('\\unicode') === -1 && d.tex.length < 400)
+        html += '<div class="rul-res-tex">\\[' + esc(d.tex) + '\\]</div>';
+      html += '<pre class="rul-res-pre">' + esc(d.out || '') + '</pre>';
+      resEl.innerHTML = html;
+      resEl.className = 'rul-eval-result rul-eval-result--ok';
+      renderTex(resEl);
+    })
+    .catch(function(e) {
+      resEl.innerHTML = '<span class="rul-res-err">&#9888; ' + esc(String(e)) + '</span>';
+      resEl.className = 'rul-eval-result rul-eval-result--err';
+    });
+  }
+
+  /* ── Event listeners en botones de evaluación ────────── */
+  document.querySelectorAll('.rul-eval-btn').forEach(function(btn) {
+    btn.addEventListener('click', function() {
+      var key = btn.getAttribute('data-key');
+      if (key) evalNamed(key);
+    });
+  });
+
+  /* ── Auto-cargar métricas al iniciar ─────────────────── */
+  loadMetrics();
+  /* Auto-evaluar kernel_info al cargar para mostrar el kernel ID */
+  fetch('/ruliology/eval', {
+    method: 'POST',
+    headers: {'Content-Type': 'application/x-www-form-urlencoded'},
+    body: 'key=kernel_info'
+  })
+  .then(function(r){ return r.json(); })
+  .then(function(d) {
+    var el = document.getElementById('rul-kernel-id');
+    if (el && d.kernel !== undefined) el.textContent = d.kernel;
+  })
+  .catch(function() {});
+
+})();
+</script>

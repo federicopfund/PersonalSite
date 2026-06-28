@@ -24,7 +24,9 @@ tasksStart::usage    = "tasksStart[id, req] inicia la tarea.";
 tasksStop::usage     = "tasksStop[id, req] detiene la tarea.";
 tasksRestart::usage  = "tasksRestart[id, req] reinicia la tarea.";
 tasksConfigure::usage = "tasksConfigure[req] reconfigura una tarea.";
-tasksRegister::usage = "tasksRegister[req] registra una tarea nueva.";
+tasksRegister::usage   = "tasksRegister[req] registra una tarea nueva.";
+tasksUnregister::usage = "tasksUnregister[id, req] elimina una tarea del registro.";
+tasksDag::usage        = "tasksDag[req] devuelve el DAG de dependencias como JSON.";
 
 Begin["`Private`"];
 
@@ -58,6 +60,10 @@ tasks[req_] :=
 (* ── GET /tasks/summary ────────────────────────────────────────────── *)
 tasksSummary[req_] :=
   jsonResp[PersonalSite`TaskManager`summary[]];
+
+(* ── GET /tasks/dag ────────────────────────────────────────────────── *)
+tasksDag[req_] :=
+  jsonResp[PersonalSite`TaskManager`dagData[]];
 
 (* ── GET /tasks/history/:id ────────────────────────────────────────── *)
 tasksHistory[id_String, req_] :=
@@ -125,6 +131,11 @@ tasksRegister[req_] :=
       $Failed];
     jsonResp[<|"ok" -> (res =!= $Failed), "id" -> id|>]
   ];
+
+(* ── POST /tasks/unregister/:id ───────────────────────────────────── *)
+tasksUnregister[id_String, req_] :=
+  Module[{res = Quiet @ Check[PersonalSite`TaskManager`unregister[id], $Failed]},
+    jsonResp[<|"ok" -> (res =!= $Failed), "id" -> id|>]];
 
 End[];
 EndPackage[];

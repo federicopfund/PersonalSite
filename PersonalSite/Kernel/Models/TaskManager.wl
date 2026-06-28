@@ -63,6 +63,9 @@ summary::usage =
 dagData::usage =
   "dagData[] devuelve el grafo DAG de dependencias entre tareas como JSON.";
 
+unregister::usage =
+  "unregister[name] detiene y elimina la tarea del registro. Devuelve name o $Failed.";
+
 Begin["`Private`"];
 
 (* ── Almacenamiento ─────────────────────────────────────────────────── *)
@@ -102,7 +105,8 @@ monitoredRun[name_String] :=
 
     (* Actualizar state *)
     With[{s = $states[name], prev = $states[name]["avgMs"],
-          atStr = TimeString[Now], errStr = If[ok, "", errMsg]},
+          atStr = DateString[Now, {"Hour24", ":", "Minute", ":", "Second"}],
+          errStr = If[ok, "", errMsg]},
       $states[name] = <|s,
         "runs"    -> s["runs"] + 1,
         "errors"  -> s["errors"] + If[ok, 0, 1],
@@ -149,6 +153,13 @@ stop[] := (stop /@ Keys[$specs]; $specs);
 
 restart[name_String] := (stop[name]; start[name]);
 
+unregister[name_String] :=
+  If[! KeyExistsQ[$specs, name], $Failed,
+    (stop[name];
+     KeyDropFrom[$specs,  name];
+     KeyDropFrom[$states, name];
+     name)];
+
 (* ── Reconfigurar en caliente ────────────────────────────────────────── *)
 configure[name_String, key_String, value_] :=
   Module[{wasRunning},
@@ -186,7 +197,7 @@ history[name_String] :=
     {}];
 
 (* ── Snapshot JSON-serializable ─────────────────────────────────────── *)
-
+toJ[x_] := Which[
   x === True || x === False, x,
   IntegerQ[x],               x,
   NumberQ[x],                N[x],

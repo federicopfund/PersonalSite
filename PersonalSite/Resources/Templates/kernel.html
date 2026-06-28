@@ -20,6 +20,9 @@
       <p class="kernel-trigger-sub">Evaluar expresi&oacute;n nativa con un click</p>
 
       <div class="kernel-trigger-list" id="kernel-trigger-list">
+
+        <!-- ── Math / dev ───────────────────────────── -->
+        <div class="kta-group-label">Dev &middot; Math</div>
         <button class="kernel-trigger-btn" data-expr="$KernelID">
           <span class="kta-label">Kernel&nbsp;ID</span>
           <code class="kta-expr">$KernelID</code>
@@ -40,18 +43,97 @@
           <span class="kta-label">CharPoly</span>
           <code class="kta-expr">CharPoly[{{1,2},{3,4}},x]</code>
         </button>
-        <button class="kernel-trigger-btn" data-expr="Association[&quot;kernel&quot; -&gt; $KernelID, &quot;ts&quot; -&gt; Now, &quot;uptime&quot; -&gt; Round[AbsoluteTime[]-$StartTime]]">
-          <span class="kta-label">System&nbsp;State</span>
-          <code class="kta-expr">Association[kernel,ts,uptime]</code>
-        </button>
-        <button class="kernel-trigger-btn" data-expr="PersonalSite`TaskManager`summary[]">
-          <span class="kta-label">Task&nbsp;Summary</span>
-          <code class="kta-expr">TaskManager`summary[]</code>
-        </button>
         <button class="kernel-trigger-btn" data-expr="Information[Plot, LongForm -&gt; False]">
           <span class="kta-label">Plot&nbsp;Info</span>
           <code class="kta-expr">Information[Plot]</code>
         </button>
+
+        <!-- ── Runtime · Poll ────────────────────────── -->
+        <div class="kta-group-label kta-group-label--poll">Runtime &middot; Poll</div>
+
+        <button class="kernel-trigger-btn kta-poll" data-expr="$ScheduledTasks">
+          <span class="kta-label">$ScheduledTasks</span>
+          <code class="kta-expr">todos los tasks WL activos</code>
+        </button>
+
+        <button class="kernel-trigger-btn kta-poll" data-expr="AssociationMap[TaskStatus, $ScheduledTasks]">
+          <span class="kta-label">TaskStatus&nbsp;Map</span>
+          <code class="kta-expr">AssociationMap[TaskStatus,&hellip;]</code>
+        </button>
+
+        <button class="kernel-trigger-btn kta-poll" data-expr="Select[$ScheduledTasks, TaskStatus[#] === &quot;Running&quot; &amp;]">
+          <span class="kta-label">Running&nbsp;Now</span>
+          <code class="kta-expr">Select[&hellip;, status=Running]</code>
+        </button>
+
+        <button class="kernel-trigger-btn kta-poll" data-expr="PersonalSite`TaskManager`summary[]">
+          <span class="kta-label">TaskManager</span>
+          <code class="kta-expr">TaskManager`summary[]</code>
+        </button>
+
+        <button class="kernel-trigger-btn kta-poll" data-expr="&lt;|&quot;scheduled&quot;-&gt;Length[$ScheduledTasks],&quot;running&quot;-&gt;Length[Select[$ScheduledTasks,TaskStatus[#]===&quot;Running&quot;&amp;]],&quot;kernel&quot;-&gt;$KernelID,&quot;uptime&quot;-&gt;Round[AbsoluteTime[]-$StartTime]|&gt;">
+          <span class="kta-label">Pool&nbsp;Census</span>
+          <code class="kta-expr">&lt;| sched, running, uptime |&gt;</code>
+        </button>
+
+        <button class="kernel-trigger-btn kta-poll" data-expr="Association[&quot;kernel&quot; -&gt; $KernelID, &quot;pid&quot; -&gt; $ProcessID, &quot;timeUsed&quot; -&gt; Round[TimeUsed[], .01], &quot;uptime&quot; -&gt; Round[AbsoluteTime[]-$StartTime], &quot;system&quot; -&gt; $SystemID]">
+          <span class="kta-label">Kernel&nbsp;Pool</span>
+          <code class="kta-expr">kernel,pid,timeUsed,uptime</code>
+        </button>
+
+        <button class="kernel-trigger-btn kta-poll" data-expr="Association[&quot;kernel&quot; -&gt; $KernelID, &quot;ts&quot; -&gt; Now, &quot;uptime&quot; -&gt; Round[AbsoluteTime[]-$StartTime]]">
+          <span class="kta-label">System&nbsp;State</span>
+          <code class="kta-expr">kernel, ts, uptime</code>
+        </button>
+
+        <button class="kernel-trigger-btn kta-poll" data-expr="{MemoryInUse[], $ByteOrdering, $MachineName}">
+          <span class="kta-label">Memory</span>
+          <code class="kta-expr">MemoryInUse[], $Machine&hellip;</code>
+        </button>
+
+        <button class="kernel-trigger-btn kta-poll" data-expr="{$Version, $SystemID, $MachineType, $OperatingSystem}">
+          <span class="kta-label">WL&nbsp;Version</span>
+          <code class="kta-expr">$Version, $SystemID&hellip;</code>
+        </button>
+
+        <button class="kernel-trigger-btn kta-poll" data-expr="$ContextPath">
+          <span class="kta-label">$ContextPath</span>
+          <code class="kta-expr">contextos WL cargados</code>
+        </button>
+
+        <!-- ── Scheduler · Tasks ──────────────────────────── -->
+        <div class="kta-group-label kta-group-label--poll">Scheduler &middot; Tasks</div>
+
+        <button class="kernel-trigger-btn kta-poll"
+          data-expr="PersonalSite`TaskManager`summary[]">
+          <span class="kta-label">TM&nbsp;Summary</span>
+          <code class="kta-expr">TaskManager`summary[]</code>
+        </button>
+
+        <button class="kernel-trigger-btn kta-poll"
+          data-expr="Map[Function[s,&lt;|&quot;label&quot;->s[&quot;label&quot;],&quot;running&quot;->s[&quot;running&quot;],&quot;runs&quot;->s[&quot;runs&quot;],&quot;avgMs&quot;->Round[s[&quot;avgMs&quot;],.1],&quot;lastRun&quot;->s[&quot;lastRun&quot;]|&gt;],Values[PersonalSite`TaskManager`allTasks[]]]">
+          <span class="kta-label">Task&nbsp;Stats</span>
+          <code class="kta-expr">label, running, runs, avgMs por tarea</code>
+        </button>
+
+        <button class="kernel-trigger-btn kta-poll"
+          data-expr="Select[PersonalSite`TaskManager`Private`$states, TrueQ[#[&quot;running&quot;]] &amp;&amp; #[&quot;runs&quot;] === 0 &amp;]">
+          <span class="kta-label">Zero&nbsp;Runs</span>
+          <code class="kta-expr">tareas running sin ejecuciones</code>
+        </button>
+
+        <button class="kernel-trigger-btn kta-poll"
+          data-expr="Association @ KeyValueMap[Function[{n,s}, n -&gt; &lt;|&quot;runs&quot;->s[&quot;runs&quot;],&quot;errors&quot;->s[&quot;errors&quot;],&quot;lastMs&quot;->Round[s[&quot;lastMs&quot;],.1]|&gt;], PersonalSite`TaskManager`Private`$states]">
+          <span class="kta-label">Runs&nbsp;+&nbsp;Errors</span>
+          <code class="kta-expr">runs, errors, lastMs por tarea</code>
+        </button>
+
+        <button class="kernel-trigger-btn kta-poll"
+          data-expr="&lt;|&quot;started&quot;->PersonalSite`Scheduler`Private`$started,&quot;startedAt&quot;->PersonalSite`Scheduler`Private`$startedAt,&quot;wlTasks&quot;->Length[$ScheduledTasks],&quot;tmTasks&quot;->Length[PersonalSite`TaskManager`Private`$specs],&quot;tmRunning&quot;->Length[Select[PersonalSite`TaskManager`Private`$states,TrueQ[#[&quot;running&quot;]]&amp;]]|&gt;">
+          <span class="kta-label">Sched&nbsp;Health</span>
+          <code class="kta-expr">$started, wlTasks, tmRunning</code>
+        </button>
+
       </div>
 
       <!-- Custom action entry -->

@@ -1,0 +1,481 @@
+// =============================================================
+//  components/_ruliology.scss
+//  Página /ruliology: sistema multiway aritmético en vivo.
+//  Comparte la paleta monocroma del sitio; usa naranja (#eb7a1a)
+//  sólo para acentos de acción (igual que /kernel).
+// =============================================================
+@use '../abstracts' as *;
+
+$rul-accent:   #eb7a1a;
+$rul-dark:     #09090c;
+$rul-dark2:    #0f0a14;
+$rul-ok:       #00c97a;
+$rul-err:      #ff4444;
+$rul-loading:  #ffcc00;
+
+// ── Hero ──────────────────────────────────────────────────────
+.rul-hero {
+  background: linear-gradient(135deg, $rul-dark 0%, $rul-dark2 100%);
+  padding: 4.5rem 1.5rem 3.5rem;
+  border-bottom: 1px solid rgba($rul-accent, .18);
+  text-align: center;
+}
+
+.rul-hero-inner {
+  max-width: 800px;
+  margin: 0 auto;
+
+  h1 {
+    font-size: clamp(2.2rem, 5vw, 3.4rem);
+    font-weight: 800;
+    color: $rul-accent;
+    letter-spacing: -.03em;
+    line-height: 1.15;
+    margin: .6rem 0 1rem;
+  }
+}
+
+.rul-badge {
+  display: inline-block;
+  font-size: .68rem;
+  font-weight: 700;
+  letter-spacing: .1em;
+  text-transform: uppercase;
+  color: rgba($rul-accent, .8);
+  background: rgba($rul-accent, .08);
+  border: 1px solid rgba($rul-accent, .22);
+  padding: .3rem 1rem;
+  border-radius: radius(pill);
+}
+
+.rul-hero-sub {
+  color: rgba(#fff, .55);
+  font-size: 1.05rem;
+  line-height: 1.7;
+  margin-bottom: 1.75rem;
+}
+
+.rul-hero-maps {
+  display: flex;
+  gap: .75rem;
+  justify-content: center;
+  flex-wrap: wrap;
+  margin-bottom: 1.5rem;
+}
+
+.rul-map-pill {
+  background: rgba(#fff, .06);
+  border: 1px solid rgba(#fff, .12);
+  border-radius: radius(pill);
+  padding: .3rem .9rem;
+
+  code {
+    font-family: $font-mono;
+    font-size: .85rem;
+    color: rgba(#fff, .8);
+    background: none;
+  }
+}
+
+.rul-hero-meta {
+  font-family: $font-mono;
+  font-size: .75rem;
+  color: rgba(#fff, .35);
+
+  code { color: rgba($rul-accent, .75); }
+}
+
+.rul-status {
+  &--ok   { color: $rul-ok; }
+  &--err  { color: $rul-err; }
+  &--busy { color: $rul-loading; }
+}
+
+// ── Secciones ─────────────────────────────────────────────────
+.rul-section {
+  padding: 4rem 1.5rem;
+  background: var(--bg);
+
+  &--dark {
+    background: #0c0c10;
+    border-top: 1px solid rgba($rul-accent, .1);
+    border-bottom: 1px solid rgba($rul-accent, .1);
+  }
+}
+
+.rul-section-inner {
+  max-width: 1160px;
+  margin: 0 auto;
+}
+
+.rul-section-title {
+  font-size: clamp(1.5rem, 3vw, 2rem);
+  font-weight: 800;
+  letter-spacing: -.04em;
+  color: var(--heading);
+  margin-bottom: .5rem;
+
+  .rul-section--dark & { color: rgba(#fff, .92); }
+}
+
+.rul-section-sub {
+  color: var(--text-muted, gray(500));
+  font-size: .92rem;
+  margin-bottom: 2.5rem;
+  max-width: 680px;
+
+  code {
+    font-family: $font-mono;
+    font-size: .85em;
+    background: rgba($rul-accent, .08);
+    color: $rul-accent;
+    padding: .15em .4em;
+    border-radius: 3px;
+  }
+
+  .rul-section--dark & {
+    color: rgba(#fff, .45);
+    code { background: rgba($rul-accent, .12); }
+  }
+}
+
+.rul-subsection-title {
+  font-size: 1.05rem;
+  font-weight: 700;
+  color: var(--heading);
+  margin: 2rem 0 .75rem;
+  letter-spacing: -.02em;
+}
+
+// ── KPI cards ─────────────────────────────────────────────────
+.rul-kpi-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+  gap: 1rem;
+  margin-bottom: 2.5rem;
+}
+
+.rul-kpi-card {
+  background: var(--bg-alt, gray(50));
+  border: 1px solid gray(200);
+  border-radius: radius(md);
+  padding: 1.5rem 1.25rem;
+  text-align: center;
+}
+
+.rul-kpi-label {
+  font-family: $font-sans;
+  font-size: .72rem;
+  font-weight: 700;
+  letter-spacing: .08em;
+  text-transform: uppercase;
+  color: gray(500);
+  margin-bottom: .5rem;
+}
+
+.rul-kpi-val {
+  font-family: $font-mono;
+  font-size: 1.9rem;
+  font-weight: 800;
+  color: $rul-accent;
+  line-height: 1;
+  margin-bottom: .4rem;
+}
+
+.rul-kpi-desc {
+  font-size: .72rem;
+  color: gray(500);
+  line-height: 1.5;
+}
+
+// ── Skeleton loading ──────────────────────────────────────────
+@keyframes rul-shimmer {
+  from { background-position: -200% 0; }
+  to   { background-position:  200% 0; }
+}
+
+.rul-skeleton {
+  min-height: 110px;
+  background: linear-gradient(90deg, gray(100) 25%, gray(50) 50%, gray(100) 75%);
+  background-size: 200% 100%;
+  animation: rul-shimmer 1.4s infinite linear;
+  border: none !important;
+}
+
+// ── Bar chart ─────────────────────────────────────────────────
+.rul-bar-chart {
+  display: flex;
+  align-items: flex-end;
+  gap: 4px;
+  height: 90px;
+  margin-bottom: .5rem;
+}
+
+.rul-bar-wrap {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 3px;
+  flex: 1;
+}
+
+.rul-bar {
+  width: 100%;
+  background: $rul-accent;
+  border-radius: 2px 2px 0 0;
+  opacity: .75;
+  transition: opacity .15s;
+  min-height: 2px;
+
+  .rul-bar-wrap:hover & { opacity: 1; }
+}
+
+.rul-bar-lbl {
+  font-family: $font-mono;
+  font-size: .6rem;
+  color: gray(400);
+}
+
+.rul-series-vals {
+  font-family: $font-mono;
+  font-size: .78rem;
+  color: gray(500);
+  word-break: break-word;
+  line-height: 1.7;
+}
+
+// ── Eval card grid ────────────────────────────────────────────
+.rul-eval-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(320px, 1fr));
+  gap: 1.25rem;
+}
+
+.rul-eval-card {
+  background: rgba(#fff, .035);
+  border: 1px solid rgba(#fff, .1);
+  border-radius: radius(md);
+  padding: 1.5rem;
+  display: flex;
+  flex-direction: column;
+  gap: .9rem;
+  transition: border-color .2s;
+
+  &:hover { border-color: rgba($rul-accent, .35); }
+}
+
+.rul-eval-card-head {
+  h3 {
+    font-size: 1rem;
+    font-weight: 700;
+    color: rgba(#fff, .9);
+    margin: .3rem 0 .4rem;
+  }
+
+  p {
+    font-size: .82rem;
+    color: rgba(#fff, .45);
+    line-height: 1.55;
+    margin: 0 0 .6rem;
+  }
+}
+
+.rul-eval-badge {
+  font-size: .62rem;
+  font-weight: 700;
+  letter-spacing: .1em;
+  text-transform: uppercase;
+  color: rgba($rul-accent, .75);
+  background: rgba($rul-accent, .1);
+  border: 1px solid rgba($rul-accent, .2);
+  padding: .2rem .6rem;
+  border-radius: radius(pill);
+}
+
+.rul-eval-math {
+  font-size: .85rem;
+  color: rgba(#fff, .6);
+  background: rgba(#000, .25);
+  border: 1px solid rgba(#fff, .07);
+  border-radius: radius(sm);
+  padding: .6rem .9rem;
+  line-height: 1.8;
+
+  // KaTeX override for dark bg
+  .katex { color: rgba(#fff, .85); }
+}
+
+.rul-eval-btn {
+  background: $rul-accent;
+  color: #fff;
+  border: none;
+  border-radius: radius(sm);
+  padding: .55rem 1.1rem;
+  font-size: .83rem;
+  font-weight: 700;
+  cursor: pointer;
+  align-self: flex-start;
+  transition: opacity .15s, transform .1s;
+
+  &:hover  { opacity: .88; }
+  &:active { transform: scale(.97); }
+}
+
+// ── Eval result ───────────────────────────────────────────────
+.rul-eval-result {
+  border-radius: radius(sm);
+  overflow: hidden;
+  font-family: $font-mono;
+  font-size: .8rem;
+
+  &--loading {
+    color: $rul-loading;
+    background: rgba($rul-loading, .07);
+    padding: .5rem .75rem;
+  }
+
+  &--ok {
+    background: rgba($rul-ok, .05);
+    border: 1px solid rgba($rul-ok, .2);
+  }
+
+  &--err {
+    background: rgba($rul-err, .07);
+    border: 1px solid rgba($rul-err, .2);
+    padding: .5rem .75rem;
+  }
+}
+
+.rul-res-meta {
+  display: flex;
+  gap: .75rem;
+  align-items: center;
+  padding: .35rem .75rem;
+  border-bottom: 1px solid rgba(#fff, .06);
+  background: rgba(#000, .15);
+}
+
+.rul-res-ms {
+  font-size: .7rem;
+  font-weight: 700;
+  color: $rul-ok;
+}
+
+.rul-res-kern {
+  font-size: .7rem;
+  color: rgba(#fff, .3);
+}
+
+.rul-res-tex {
+  padding: .5rem .75rem;
+  color: rgba(#fff, .8);
+  .katex { color: rgba(#fff, .9); }
+}
+
+.rul-res-pre {
+  margin: 0;
+  padding: .6rem .75rem;
+  color: rgba(#fff, .75);
+  white-space: pre-wrap;
+  word-break: break-all;
+  font-size: .78rem;
+  line-height: 1.65;
+  max-height: 240px;
+  overflow-y: auto;
+}
+
+.rul-res-err {
+  color: $rul-err;
+  font-size: .82rem;
+}
+
+.rul-spinner {
+  display: inline-block;
+  animation: rul-spin 1s linear infinite;
+}
+
+@keyframes rul-spin {
+  from { transform: rotate(0deg); }
+  to   { transform: rotate(360deg); }
+}
+
+// ── Theorem blocks ────────────────────────────────────────────
+.rul-theorem {
+  background: var(--bg-alt, gray(50));
+  border-left: 4px solid $rul-accent;
+  border-radius: 0 radius(md) radius(md) 0;
+  padding: 1.75rem 2rem;
+  margin-bottom: 1.75rem;
+
+  &:last-child { margin-bottom: 0; }
+}
+
+.rul-theorem-label {
+  font-size: .7rem;
+  font-weight: 700;
+  letter-spacing: .12em;
+  text-transform: uppercase;
+  color: $rul-accent;
+  margin-bottom: .6rem;
+}
+
+.rul-theorem-stmt {
+  font-family: $font-serif;
+  font-size: 1rem;
+  line-height: 1.85;
+  color: var(--text);
+
+  ul {
+    margin: .75rem 0 .75rem 1.5rem;
+    li { margin-bottom: .3rem; }
+  }
+
+  // KaTeX in theorem
+  .katex { font-size: 1.05em; }
+}
+
+.rul-theorem-proof {
+  margin-top: 1rem;
+  border-top: 1px solid gray(200);
+  padding-top: 1rem;
+
+  summary {
+    font-size: .82rem;
+    font-weight: 700;
+    color: gray(500);
+    cursor: pointer;
+    user-select: none;
+    letter-spacing: .04em;
+    text-transform: uppercase;
+  }
+
+  p {
+    font-family: $font-sans;
+    font-size: .88rem;
+    line-height: 1.75;
+    color: var(--text);
+    margin-top: .85rem;
+
+    strong { color: var(--heading); }
+  }
+}
+
+// ── Back link ─────────────────────────────────────────────────
+.rul-back {
+  display: flex;
+  gap: 2rem;
+  justify-content: center;
+  align-items: center;
+  padding: 2.5rem 1.5rem;
+  border-top: 1px solid gray(200);
+
+  a {
+    font-size: .88rem;
+    font-weight: 700;
+    color: gray(700);
+    transition: color .15s;
+    text-decoration: none;
+
+    &:hover { color: $rul-accent; }
+  }
+}

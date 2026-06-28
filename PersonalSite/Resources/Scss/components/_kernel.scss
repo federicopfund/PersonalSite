@@ -93,6 +93,10 @@
   padding: 1rem;
   position: sticky;
   top: 80px;
+  max-height: calc(100vh - 100px);
+  overflow-y: auto;
+  scrollbar-width: thin;
+  scrollbar-color: rgba(#eb7a1a, .25) transparent;
 }
 
 .kernel-trigger-title {
@@ -117,6 +121,25 @@
   margin-bottom: .85rem;
 }
 
+// Group separator label inside trigger list
+.kta-group-label {
+  font-size: .6rem;
+  font-weight: 800;
+  letter-spacing: .1em;
+  text-transform: uppercase;
+  color: rgba(#eb7a1a, .55);
+  padding: .5rem 0 .1rem;
+  border-bottom: 1px solid rgba(#eb7a1a, .1);
+  margin-top: .3rem;
+
+  &:first-child { margin-top: 0; padding-top: .1rem; }
+
+  &--poll {
+    color: rgba(#00e5ff, .55);
+    border-bottom-color: rgba(#00e5ff, .1);
+  }
+}
+
 .kernel-trigger-btn {
   display: flex;
   flex-direction: column;
@@ -133,6 +156,18 @@
 
   &:hover  { background: rgba(#eb7a1a, .12); border-color: rgba(#eb7a1a, .4); }
   &:active { background: rgba(#eb7a1a, .2); }
+
+  // Poll variant — cyan accent
+  &.kta-poll {
+    background: rgba(#00e5ff, .03);
+    border-color: rgba(#00e5ff, .12);
+
+    .kta-label { color: rgba(#00e5ff, .8); }
+    .kta-expr  { color: rgba(#e8d5b0, .45); }
+
+    &:hover  { background: rgba(#00e5ff, .09); border-color: rgba(#00e5ff, .35); }
+    &:active { background: rgba(#00e5ff, .15); }
+  }
 }
 
 .kta-label {

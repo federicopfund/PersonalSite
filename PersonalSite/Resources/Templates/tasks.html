@@ -87,6 +87,7 @@
               <th>Grupo</th>
               <th>Intervalo</th>
               <th>Estado</th>
+              <th>Deps</th>
               <th>Runs</th>
               <th>Errores</th>
               <th>Última ejecución</th>
@@ -95,10 +96,23 @@
             </tr>
           </thead>
           <tbody id="tm-tbody">
-            <tr><td colspan="9" class="tm-empty">Cargando…</td></tr>
+            <tr><td colspan="10" class="tm-empty">Cargando…</td></tr>
           </tbody>
         </table>
       </div>
+    </section>
+
+    <!-- ── DAG de dependencias ───────────────────────────────────── -->
+    <section class="tm-section" id="dag-section">
+      <div class="tm-section__head">
+        <h2 class="tm-section__title">🔗 Grafo de dependencias (DAG)</h2>
+        <button id="btn-dag" class="btn btn--ghost btn--sm">↺ Recargar DAG</button>
+      </div>
+      <div id="dag-meta" class="tm-dag-meta"></div>
+      <div id="dag-canvas" class="tm-dag-canvas">
+        <svg id="dag-svg" width="100%" height="260"></svg>
+      </div>
+      <div id="dag-critpath" class="tm-dag-crit"></div>
     </section>
 
     <!-- ── Historial de una tarea ─────────────────────────────────── -->
@@ -187,6 +201,7 @@
         <td><span class="tm-badge ${grpCls}">${t.group}</span></td>
         <td>${t.interval} s</td>
         <td><span class="tm-badge ${runCls}">${t.running?'ACTIVA':'detenida'}</span></td>
+        <td class="tm-deps">${(t.deps||[]).map(d=>`<code class="tm-id">${d}</code>`).join(' ')}</td>
         <td>${t.runs}</td>
         <td class="${errCls}">${t.errors}</td>
         <td class="tm-mono">${t.lastRun}</td>
@@ -197,16 +212,12 @@
                <button class="btn btn--xs btn--ghost"   data-action="restart" data-id="${id}">↺</button>`
             : `<button class="btn btn--xs btn--primary" data-action="start"   data-id="${id}">Start</button>`}
           <button class="btn btn--xs btn--ghost" data-action="history" data-id="${id}">Hist.</button>
+          <button class="btn btn--xs btn--ghost tm-btn-del" data-action="unregister" data-id="${id}" title="Eliminar tarea">✕</button>
         </td>
       </tr>`;
     });
     $('tm-tbody').innerHTML = rows.join('') ||
-      '<tr><td colspan="9" class="tm-empty">Sin tareas.</td></tr>';
-
-    /* Configurar intervalo live para nest-refresh si existe */
-    if(tasks['nest-refresh']){
-      $('cfg-depth').value = 3;
-    }
+      '<tr><td colspan="10" class="tm-empty">Sin tareas.</td></tr>';
   }
 
   /* ── Fetch snapshot ─────────────────────────────────────────────── */
@@ -228,7 +239,14 @@
     if(!btn) return;
     const {action, id} = btn.dataset;
 
-    if(action === 'history'){ showHistory(id); return; }
+    if(action === 'history'){   showHistory(id); return; }
+    if(action === 'unregister'){
+      if(!confirm(`¿Eliminar la tarea "${id}"? Esta acción detiene y borra su registro.`)) return;
+      btn.disabled = true;
+      try{ await fetch(`/tasks/unregister/${id}`, {method:'POST'}); await fetchSummary(); }
+      finally{ btn.disabled = false; }
+      return;
+    }
 
     btn.disabled = true;
     try{
@@ -265,24 +283,160 @@
 
   /* ── Aplicar config Flow a nest-refresh ─────────────────────────── */
   $('btn-apply-nest').addEventListener('click', async ()=>{
-    const btn = $('btn-apply-nest');
+    const btn     = $('btn-apply-nest');
+    const backend = $('cfg-backend').value;
+    const kernels = parseInt($('cfg-kernels').value) || 1;
+    const depth   = parseInt($('cfg-depth').value)   || 3;
+    const seeds   = $('cfg-seeds').value.trim()       || '1';
+
     btn.disabled = true;
     $('cfg-status').textContent = '…';
     try{
-      const iv = parseInt($('cfg-depth')?.value||3)||3;
-      const r  = await fetch('/tasks/configure', {
+      /* Recalcula el intervalo base según backend (parallel más costoso) */
+      const baseInterval = backend === 'parallel' ? 600 : 300;
+
+      /* Actualizar interval */
+      const r1 = await fetch('/tasks/configure', {
         method:'POST',
         headers:{'Content-Type':'application/x-www-form-urlencoded'},
-        body: new URLSearchParams({id:'nest-refresh', key:'interval', value: 300})
+        body: new URLSearchParams({id:'nest-refresh', key:'interval', value: baseInterval})
       });
-      const d = await r.json();
-      $('cfg-status').textContent = d.ok ? '✓ Aplicado' : '✗ Error';
-      if(d.ok) await fetchSummary();
-    }finally{ btn.disabled = false; setTimeout(()=>$('cfg-status').textContent='',3000); }
+
+      /* Reconstruir actionCode con los nuevos parámetros */
+      const seedArr  = seeds.split(',').map(s=>s.trim()).filter(Boolean).join(', ');
+      const actionWL = `Function[PersonalSite\`NestScheduler\`run[{2#+1&,#+14&,#-18&},{${seedArr}},${depth},"${backend}"]]]`;
+      const r2 = await fetch('/tasks/configure', {
+        method:'POST',
+        headers:{'Content-Type':'application/x-www-form-urlencoded'},
+        body: new URLSearchParams({id:'nest-refresh', key:'action', value: actionWL})
+      });
+
+      const [d1, d2] = await Promise.all([r1.json(), r2.json()]);
+      $('cfg-status').textContent = (d1.ok && d2.ok) ? '✓ Aplicado' : '✗ Error parcial';
+      if(d1.ok) await fetchSummary();
+    }catch(e){
+      $('cfg-status').textContent = '✗ Error';
+    }finally{ btn.disabled = false; setTimeout(()=>$('cfg-status').textContent='',4000); }
   });
 
   /* ── Actualizar manual ───────────────────────────────────────────── */
   $('btn-refresh').addEventListener('click', fetchSummary);
+
+  /* ── DAG visualization ───────────────────────────────────────────── */
+  async function fetchDag(){
+    try{
+      const r = await fetch('/tasks/dag');
+      if(!r.ok) return;
+      renderDag(await r.json());
+    }catch(e){}
+  }
+
+  function renderDag(dag){
+    const nodes   = dag.nodes  || [];
+    const links   = dag.links  || [];
+    const topo    = dag.topoOrder || [];
+    const cp      = dag.critPath  || [];
+    const svg     = $('dag-svg');
+    const W       = svg.clientWidth || 700;
+    const H       = 240;
+
+    /* Layout: columns by topo rank */
+    const rank = {};
+    topo.forEach((id, i) => rank[id] = i);
+    const cols   = topo.length || 1;
+    const xStep  = Math.min(120, (W - 60) / Math.max(cols - 1, 1));
+    const nodePos = {};
+    /* Group nodes by rank column */
+    const byRank = {};
+    nodes.forEach(n => {
+      const r = rank[n.id] ?? 0;
+      (byRank[r] = byRank[r] || []).push(n.id);
+    });
+    Object.entries(byRank).forEach(([r, ids]) => {
+      ids.forEach((id, i) => {
+        nodePos[id] = {
+          x: 40 + parseInt(r) * xStep,
+          y: 30 + i * (H - 30) / Math.max(ids.length, 1) + (H - 30) / Math.max(ids.length * 2, 1)
+        };
+      });
+    });
+
+    const NS = 'http://www.w3.org/2000/svg';
+    svg.setAttribute('viewBox', `0 0 ${W} ${H}`);
+
+    /* Clear */
+    while(svg.firstChild) svg.removeChild(svg.firstChild);
+
+    /* Arrowhead marker */
+    const defs  = document.createElementNS(NS, 'defs');
+    const mark  = document.createElementNS(NS, 'marker');
+    mark.setAttribute('id', 'arr'); mark.setAttribute('markerWidth','8');
+    mark.setAttribute('markerHeight','8'); mark.setAttribute('refX','6');
+    mark.setAttribute('refY','3'); mark.setAttribute('orient','auto');
+    const poly = document.createElementNS(NS, 'polygon');
+    poly.setAttribute('points','0 0,0 6,6 3'); poly.setAttribute('fill','var(--c-accent,#7c4dff)');
+    mark.appendChild(poly); defs.appendChild(mark); svg.appendChild(defs);
+
+    /* Draw edges */
+    links.forEach(e => {
+      const s = nodePos[e.source], t = nodePos[e.target];
+      if(!s || !t) return;
+      const onCP = cp.includes(e.source) && cp.includes(e.target);
+      const line = document.createElementNS(NS, 'line');
+      line.setAttribute('x1', s.x); line.setAttribute('y1', s.y);
+      line.setAttribute('x2', t.x - 14); line.setAttribute('y2', t.y);
+      line.setAttribute('stroke', onCP ? '#ff6b35' : 'var(--c-accent,#7c4dff)');
+      line.setAttribute('stroke-width', onCP ? '2.5' : '1.5');
+      line.setAttribute('stroke-opacity', '0.65');
+      line.setAttribute('marker-end', 'url(#arr)');
+      svg.appendChild(line);
+    });
+
+    /* Draw nodes */
+    nodes.forEach(n => {
+      const p = nodePos[n.id];
+      if(!p) return;
+      const onCP = cp.includes(n.id);
+      const g = document.createElementNS(NS, 'g');
+      g.setAttribute('class', 'dag-node');
+      g.style.cursor = 'pointer';
+      g.addEventListener('click', () => showHistory(n.id));
+
+      const circ = document.createElementNS(NS, 'circle');
+      circ.setAttribute('cx', p.x); circ.setAttribute('cy', p.y); circ.setAttribute('r', 14);
+      circ.setAttribute('fill', n.running ? (onCP ? '#ff6b35' : 'var(--c-accent,#7c4dff)') : '#555');
+      circ.setAttribute('stroke', onCP ? '#ff6b35' : 'none');
+      circ.setAttribute('stroke-width', '2');
+      g.appendChild(circ);
+
+      const txt = document.createElementNS(NS, 'text');
+      txt.setAttribute('x', p.x); txt.setAttribute('y', p.y + 28);
+      txt.setAttribute('text-anchor', 'middle');
+      txt.setAttribute('font-size', '10');
+      txt.setAttribute('fill', 'var(--c-text,#ddd)');
+      txt.textContent = n.id.length > 12 ? n.id.slice(0, 11) + '…' : n.id;
+      g.appendChild(txt);
+
+      const runs = document.createElementNS(NS, 'text');
+      runs.setAttribute('x', p.x); runs.setAttribute('y', p.y + 4);
+      runs.setAttribute('text-anchor', 'middle');
+      runs.setAttribute('font-size', '9');
+      runs.setAttribute('fill', '#fff');
+      runs.textContent = n.runs ?? '';
+      g.appendChild(runs);
+
+      svg.appendChild(g);
+    });
+
+    $('dag-meta').textContent =
+      `${dag.nodeCount} nodos · ${dag.edgeCount} aristas · orden topológico: ${topo.join(' → ')}`;
+    $('dag-critpath').innerHTML = cp.length
+      ? `<span class="tm-crit-label">Ruta crítica:</span> ${cp.map(id=>`<code class="tm-id">${id}</code>`).join(' → ')}`
+      : '';
+  }
+
+  fetchDag();
+  $('btn-dag').addEventListener('click', fetchDag);
 
   /* ── Modal nueva tarea ───────────────────────────────────────────── */
   $('btn-add').addEventListener('click', ()=>{ $('modal-add').hidden = false; });

@@ -6,7 +6,7 @@ COMPOSE := docker compose
 SCSS_IN  := PersonalSite/Resources/Scss/styles.scss
 CSS_OUT  := PersonalSite/Resources/Static/styles.css
 
-.PHONY: build activate seed up down logs shell clean lint css css-watch ce-build ce-deploy
+.PHONY: build activate seed up down logs shell clean lint css css-watch ce-build ce-deploy paclet paclet-clean
 
 ## 0. Validar estructura del paclet (lo mismo que corre CI)
 lint:
@@ -24,6 +24,21 @@ css-watch:
 ## 1. Construir la imagen Docker
 build:
 	docker build -f PersonalSite/deploy/Dockerfile -t $(IMAGE) .
+
+## 1b. Construir el artifact .paclet → build/alpha-1.0.1.paclet
+##     Uso: make paclet
+##          make paclet CHANNEL=beta
+##          make paclet OUT=dist
+CHANNEL ?= alpha
+OUT     ?= build
+
+paclet: css
+	@python3 tools/build_paclet.py --channel $(CHANNEL) --out $(OUT)
+
+## Limpiar carpeta build/
+paclet-clean:
+	rm -rf build/
+	@echo "build/ eliminada"
 
 ## 2. Activar Wolfram Engine en el volumen persistente
 ##    Requiere: Wolfram ID + contraseña en https://wolfram.com/developer

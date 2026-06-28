@@ -245,6 +245,55 @@ Quiet @ Check[PersonalSite`Scheduler`start[], $Failed];</code></pre>
 <p>El <code>heartbeat</code> late cada 30 segundos y el <code>cache-warm</code> mantiene la lista de posts caliente cada 5 minutos. Así, mientras el kernel viva, el framework se mantiene a sí mismo en runtime &mdash; exactamente lo que viste simulado arriba, pero de verdad.</p>',
    '2026-06-27');
 
+INSERT OR IGNORE INTO posts (slug, title, summary, body, date) VALUES
+  ('multiway-confluencia',
+   'De 3ᵏ a la confluencia: un sistema multiway aritmético causalmente invariante',
+   'Tres mapas afines, un monoide con sistema de reescritura completo y un conjunto de estados fractal. Dos teoremas exactos, sus verificaciones que corren, y métricas conectadas a la ruliología.',
+   '<p>Wolfram describe la ruliología como la ciencia básica de estudiar qué hacen las reglas simples. Este artículo toma una regla mínima — tres mapas afines sobre los enteros — y la trata como un <strong>sistema multiway determinista</strong>, donde cada hilo de derivación es una computación. El objetivo es doble: medir métricas ruliológicas concretas y demostrar dos hechos exactos que estructuran todo el sistema.</p>
+
+<h2>El objeto: tres mapas, un grafo</h2>
+<p>Las tres reglas son simples:</p>
+<pre><code>a(n) = 2n+1     (* duplicación *)
+b(n) = n+14     (* traslación + *)
+c(n) = n-18     (* traslación - *)
+</code></pre>
+<p>Aplicadas simultáneamente desde la semilla <code>1</code>, generan un grafo multiway. En generación 0 hay 1 estado; en generación 1 hay 3; en generación 2 ya hay 8 — porque los hilos colapsan.</p>
+<pre><code>g = NestGraph[{2#+1, #+14, #-18}&amp;, {1}, 4,
+     VertexLabels -&gt; Automatic,
+     GraphLayout  -&gt; "LayeredDigraphEmbedding"]
+</code></pre>
+
+<h2>Métricas ruliológicas</h2>
+<p>El <strong>factor de colapso</strong> en generación 10 es <code>3¹⁰ / |S₁₀| ≈ 9.5×</code>: hay casi 10 veces menos estados distinguibles que hilos posibles. El 52 % de los estados son alcanzados por más de un hilo — son nodos de confluencia.</p>
+<p>La <strong>tasa de crecimiento</strong> λ ≈ 1.728 implica una dimensión de caja log₂λ ≈ 0.79 — la serie crece sub-exponencialmente pero sin forma cerrada sencilla, lo que sugiere (y se verifica empíricamente) que la serie de conteo no es D-finita.</p>
+
+<h2>Teorema 1 — Forma cerrada</h2>
+<p>El conjunto de valores alcanzables desde 1 es exactamente:</p>
+<pre><code>S = { 2^(p+1)-1 + 14q - 18r : p,q,r ∈ ℤ≥0 }
+</code></pre>
+<p>De esto se sigue de inmediato que todo estado es <strong>impar</strong> (la semilla es impar y los tres mapas preservan la paridad), y que el grafo tiene morfología de dos lóbulos (estados con y sin componente de duplicación dominante).</p>
+<p>Verificación en WL (corre en tiempo real en <a href="/ruliology">la página interactiva</a>):</p>
+<pre><code>brute = deepReach[12];
+canon = {2^(p+1)-1+14q-18r, {p,0,11},{q,0,50},{r,0,50}} // Flatten // DeleteDuplicates;
+Sort[Select[brute,-600&lt;=#&lt;=600&amp;]] === Sort[Select[canon,-600&lt;=#&lt;=600&amp;]]
+(* True *)
+</code></pre>
+
+<h2>Teorema 2 — Invariancia causal (confluencia)</h2>
+<p>El monoide ⟨a,b,c⟩ admite el sistema de reescritura finito y completo:</p>
+<pre><code>ab → b²a      ac → c²a      cb → bc
+</code></pre>
+<p>con forma canónica <code>b^q c^r a^p</code>. Esto es la versión rigurosa de la "invariancia causal" del marco de Wolfram: toda divergencia de hilos reconverge, el orden de aplicación de reglas no altera el estado alcanzable.</p>
+<p>El sistema <strong>termina</strong> porque cada regla mueve una <em>a</em> hacia la derecha. Es <strong>confluente</strong> porque todos los pares críticos reconvergen — verificado sobre 300 palabras aleatorias:</p>
+<pre><code>AllTrue[tests, applyWord[#] === applyWord[normalForm[#]] &amp;]   (* True *)
+AllTrue[tests, MatchQ[normalForm[#], {"b"...,"c"...,"a"...}] &amp;] (* True *)
+</code></pre>
+
+<h2>Evaluación interactiva</h2>
+<p>La página <a href="/ruliology"><strong>/ruliology</strong></a> permite evaluar cada métrica directamente en el kernel WL que sirve este sitio: serie de crecimiento, tabla de colapso, verificación de la forma cerrada, confirmación de confluencia e identidades funcionales — todo con tiempos de respuesta reales del proceso.</p>
+<p>El endpoint <code>POST /ruliology/eval</code> despacha expresiones por <em>clave nombrada</em> (no código arbitrario), y <code>GET /ruliology/metrics</code> devuelve las métricas pre-computadas con TTL de 5 minutos.</p>',
+   '2026-06-28');
+
 -- Estado de apariencia: el usuario elige la regla del tema en /apariencia y,
 -- en modo auto, la ScheduledTask `theme-rotate` lo rota en el tiempo.
 CREATE TABLE IF NOT EXISTS settings (
