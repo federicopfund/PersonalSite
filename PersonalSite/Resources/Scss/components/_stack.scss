@@ -106,6 +106,19 @@
   }
 }
 
+// Colorize black simple-icons SVGs to brand colors
+// Databricks #FF3621 (red-orange)
+.si-databricks {
+  filter: brightness(0) saturate(100%) invert(30%) sepia(100%) saturate(2000%)
+    hue-rotate(355deg) brightness(105%);
+}
+
+// LinkedIn #0A66C2 (blue)
+.si-linkedin {
+  filter: brightness(0) saturate(100%) invert(24%) sepia(89%) saturate(700%)
+    hue-rotate(205deg) brightness(90%);
+}
+
 .stack-linkedin {
   display: inline-flex;
   align-items: center;
