@@ -70,16 +70,138 @@
 .kernel-section {
   background: #09090c;
   min-height: 60vh;
-  padding: 2rem 0 4rem;
 }
 
-.kernel-notebook {
-  max-width: 1000px;
+// ── Two-column layout ─────────────────────────────────────────────
+.kernel-layout {
+  display: grid;
+  grid-template-columns: 260px 1fr;
+  gap: 1.5rem;
+  max-width: 1200px;
   margin: 0 auto;
-  padding: 0 1.25rem;
+  padding: 2rem 1.25rem 4rem;
+  align-items: start;
+
+  @media (max-width: 860px) { grid-template-columns: 1fr; }
+}
+
+// ── Trigger Actions Sidebar ───────────────────────────────────────
+.kernel-trigger-panel {
+  background: rgba(#fff, .025);
+  border: 1px solid rgba(#eb7a1a, .18);
+  border-radius: radius(md);
+  padding: 1rem;
+  position: sticky;
+  top: 80px;
+}
+
+.kernel-trigger-title {
+  font-size: .82rem;
+  font-weight: 800;
+  letter-spacing: .07em;
+  text-transform: uppercase;
+  color: #eb7a1a;
+  margin: 0 0 .25rem;
+}
+
+.kernel-trigger-sub {
+  font-size: .68rem;
+  color: rgba(#fff, .3);
+  margin: 0 0 .85rem;
+}
+
+.kernel-trigger-list {
   display: flex;
   flex-direction: column;
-  gap: 1.25rem;
+  gap: .4rem;
+  margin-bottom: .85rem;
+}
+
+.kernel-trigger-btn {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: .1rem;
+  padding: .45rem .7rem;
+  background: rgba(#eb7a1a, .04);
+  border: 1px solid rgba(#eb7a1a, .15);
+  border-radius: radius(sm);
+  cursor: pointer;
+  text-align: left;
+  transition: background $ease, border-color $ease;
+  width: 100%;
+
+  &:hover  { background: rgba(#eb7a1a, .12); border-color: rgba(#eb7a1a, .4); }
+  &:active { background: rgba(#eb7a1a, .2); }
+}
+
+.kta-label {
+  font-size: .65rem;
+  font-weight: 700;
+  letter-spacing: .05em;
+  text-transform: uppercase;
+  color: rgba(#eb7a1a, .85);
+}
+
+.kta-expr {
+  font-size: .68rem;
+  color: rgba(#e8d5b0, .55);
+  font-family: $font-mono;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  max-width: 210px;
+  display: block;
+}
+
+.kernel-trigger-add {
+  margin-bottom: .75rem;
+
+  .kernel-btn { margin-top: .4rem; width: 100%; box-sizing: border-box; justify-content: center; }
+}
+
+.kernel-trigger-custom {
+  width: 100%;
+  background: rgba(#fff, .06);
+  border: 1px solid rgba(#eb7a1a, .2);
+  border-radius: radius(sm);
+  color: #e8d5b0;
+  font-family: $font-mono;
+  font-size: .78rem;
+  padding: .3rem .5rem;
+  outline: none;
+  box-sizing: border-box;
+
+  &::placeholder { color: rgba(#fff, .22); }
+  &:focus { border-color: rgba(#eb7a1a, .5); }
+}
+
+.kernel-autoeval {
+  display: flex;
+  align-items: center;
+  gap: .5rem;
+  font-size: .7rem;
+  color: rgba(#fff, .4);
+  cursor: pointer;
+  user-select: none;
+
+  input[type=checkbox] { accent-color: #eb7a1a; cursor: pointer; }
+}
+
+// ── Main notebook column ──────────────────────────────────────────
+.kernel-main {
+  display: flex;
+  flex-direction: column;
+  gap: 1rem;
+}
+
+.kernel-cells-header {
+  font-size: .72rem;
+  color: rgba(#fff, .3);
+  padding: .25rem .1rem;
+  border-bottom: 1px solid rgba(#fff, .06);
+
+  code { color: rgba(#eb7a1a, .7); font-family: $font-mono; margin: 0 .2rem; }
 }
 
 // ── Input area ───────────────────────────────────────────────────
@@ -305,11 +427,28 @@
 
 .k-err { color: #ff5555; font-family: $font-mono; }
 
-// ── Cell history ─────────────────────────────────────────────────
+// ── Cells list ──────────────────────────────────────────────────
 .kernel-cells {
   display: flex;
   flex-direction: column;
   gap: .9rem;
+  max-height: 70vh;
+  overflow-y: auto;
+  scroll-behavior: smooth;
+}
+
+// New cell flash animation
+.kernel-cell--new {
+  animation: kc-flash .8s ease-out;
+}
+
+@keyframes kc-flash {
+  0%   { background: rgba(#eb7a1a, .15); }
+  100% { background: transparent; }
+}
+
+.pulse-flash {
+  animation: kernel-pulse .9s ease-out;
 }
 
 .kernel-cell {

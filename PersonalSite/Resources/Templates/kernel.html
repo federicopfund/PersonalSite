@@ -1,131 +1,189 @@
 <section class="kernel-hero">
   <div class="kernel-hero-inner">
-    <span class="kernel-badge">Wolfram Language &bull; Runtime REPL &bull; ScheduledTask</span>
+    <span class="kernel-badge">Wolfram Language 14 &bull; Native Kernel &bull; ScheduledTask REPL</span>
     <h1>Kernel Evaluation</h1>
-    <p>Evaluaci&oacute;n nativa en el kernel WL &bull; TeXForm &bull; OutputForm &bull;
-       Re-evaluaci&oacute;n autom&aacute;tica con ScheduledTask</p>
+    <p>Evaluaci&oacute;n nativa &bull; <code>ToExpression[input, InputForm]</code> &bull; TeXForm &bull; OutputForm</p>
     <div class="kernel-meta">
-      Kernel&nbsp;ID:&nbsp;<code id="kernel-id">&#8230;</code> &bull;
-      Celdas:&nbsp;<code id="kernel-cells-count">0</code> &bull;
+      Kernel&nbsp;<code id="kernel-id">&#8230;</code> &bull;
+      In[<code id="kernel-next-n">1</code>] &bull;
       <span id="kernel-status" class="kernel-status">listo</span>
     </div>
   </div>
 </section>
 
 <section class="kernel-section">
-  <div class="kernel-notebook">
+  <div class="kernel-layout">
 
-    <!-- ── Input area ───────────────────────────────────── -->
-    <div class="kernel-input-area">
-      <div class="kernel-in-header">
-        <span class="kernel-label kernel-label--in">In[<span id="in-n">1</span>]:=</span>
-        <span class="kernel-input-hint">Shift+Enter para evaluar</span>
-      </div>
-      <textarea id="kernel-input" class="kernel-input" rows="4" spellcheck="false"
-        placeholder="NestList[2#+1&amp;, 1, 5]&#10;Integrate[x^2, x]&#10;Table[Prime[n], {n, 10}]&#10;Association[&quot;kernel&quot; -&gt; $KernelID, &quot;ts&quot; -&gt; Now]"></textarea>
-      <div class="kernel-actions">
-        <button id="kernel-eval-btn" class="kernel-btn kernel-btn--eval">
-          &#9654; Evaluar
+    <!-- ── Trigger / Action panel (left sidebar) ─────── -->
+    <aside class="kernel-trigger-panel">
+      <h3 class="kernel-trigger-title">&#9889; Trigger Actions</h3>
+      <p class="kernel-trigger-sub">Evaluar expresi&oacute;n nativa con un click</p>
+
+      <div class="kernel-trigger-list" id="kernel-trigger-list">
+        <button class="kernel-trigger-btn" data-expr="$KernelID">
+          <span class="kta-label">Kernel&nbsp;ID</span>
+          <code class="kta-expr">$KernelID</code>
         </button>
-        <div class="kernel-sched-wrap">
-          <button id="kernel-sched-btn" class="kernel-btn kernel-btn--sched">
-            &#8635; Programar cada
-          </button>
-          <input type="number" id="sched-interval" class="kernel-sched-iv"
-                 value="30" min="5" max="3600" title="Intervalo en segundos">
-          <span class="kernel-sched-s">s</span>
+        <button class="kernel-trigger-btn" data-expr="NestList[2#+1&amp;, 1, 6]">
+          <span class="kta-label">NestList</span>
+          <code class="kta-expr">NestList[2#+1&amp;,1,6]</code>
+        </button>
+        <button class="kernel-trigger-btn" data-expr="Integrate[x^2 Sin[x], x]">
+          <span class="kta-label">Integral</span>
+          <code class="kta-expr">Integrate[x^2 Sin[x],x]</code>
+        </button>
+        <button class="kernel-trigger-btn" data-expr="Table[Prime[n], {n, 10}]">
+          <span class="kta-label">Primes</span>
+          <code class="kta-expr">Table[Prime[n],{n,10}]</code>
+        </button>
+        <button class="kernel-trigger-btn" data-expr="CharacteristicPolynomial[{{1,2},{3,4}}, x]">
+          <span class="kta-label">CharPoly</span>
+          <code class="kta-expr">CharPoly[{{1,2},{3,4}},x]</code>
+        </button>
+        <button class="kernel-trigger-btn" data-expr="Association[&quot;kernel&quot; -&gt; $KernelID, &quot;ts&quot; -&gt; Now, &quot;uptime&quot; -&gt; Round[AbsoluteTime[]-$StartTime]]">
+          <span class="kta-label">System&nbsp;State</span>
+          <code class="kta-expr">Association[kernel,ts,uptime]</code>
+        </button>
+        <button class="kernel-trigger-btn" data-expr="PersonalSite`TaskManager`summary[]">
+          <span class="kta-label">Task&nbsp;Summary</span>
+          <code class="kta-expr">TaskManager`summary[]</code>
+        </button>
+        <button class="kernel-trigger-btn" data-expr="Information[Plot, LongForm -&gt; False]">
+          <span class="kta-label">Plot&nbsp;Info</span>
+          <code class="kta-expr">Information[Plot]</code>
+        </button>
+      </div>
+
+      <!-- Custom action entry -->
+      <div class="kernel-trigger-add">
+        <input id="kta-custom-input" type="text" class="kernel-trigger-custom"
+               placeholder="Expresi&oacute;n personalizada&hellip;">
+        <button id="kta-add-btn" class="kernel-btn kernel-btn--eval" style="margin-top:.4rem;width:100%;">
+          &#43; Agregar &amp; Ejecutar
+        </button>
+      </div>
+
+      <!-- Auto-eval on load toggle -->
+      <label class="kernel-autoeval">
+        <input type="checkbox" id="kta-autoeval">
+        <span>Auto-eval al cargar</span>
+      </label>
+    </aside>
+
+    <!-- ── Main notebook area ─────────────────────────── -->
+    <div class="kernel-main">
+
+      <!-- Input -->
+      <div class="kernel-input-area">
+        <div class="kernel-in-header">
+          <span class="kernel-label kernel-label--in">In[<span id="in-n">1</span>]:=</span>
+          <span class="kernel-input-hint">Shift+Enter &middot; evaluar</span>
         </div>
-        <button id="kernel-clear-btn" class="kernel-btn kernel-btn--clear">
-          &#10005; Limpiar historia
-        </button>
+        <textarea id="kernel-input" class="kernel-input" rows="5" spellcheck="false"
+          placeholder="NestList[2#+1&, 1, 5]"></textarea>
+        <div class="kernel-actions">
+          <button id="kernel-eval-btn" class="kernel-btn kernel-btn--eval">&#9654; Evaluar</button>
+          <div class="kernel-sched-wrap">
+            <button id="kernel-sched-btn" class="kernel-btn kernel-btn--sched">&#8635; cada</button>
+            <input type="number" id="sched-interval" class="kernel-sched-iv"
+                   value="30" min="5" max="3600">
+            <span class="kernel-sched-s">s</span>
+          </div>
+          <button id="kernel-clear-btn" class="kernel-btn kernel-btn--clear">&#10005; Limpiar</button>
+        </div>
       </div>
-    </div>
 
-    <!-- ── Scheduled tasks panel ─────────────────────── -->
-    <div id="kernel-sched-panel" class="kernel-sched-panel"></div>
+      <!-- Scheduled tasks -->
+      <div id="kernel-sched-panel" class="kernel-sched-panel"></div>
 
-    <!-- ── Cell history ──────────────────────────────── -->
-    <div id="kernel-cells" class="kernel-cells"></div>
+      <!-- ── Cell output (appends to bottom, scrolls into view) -->
+      <div class="kernel-cells-header">
+        <span>Historial de celdas</span>
+        <code id="kernel-cells-count">0</code> evaluaciones
+      </div>
+      <div id="kernel-cells" class="kernel-cells"></div>
 
-  </div>
+    </div><!-- /kernel-main -->
+  </div><!-- /kernel-layout -->
 </section>
 
-<!-- KaTeX for TeXForm output -->
+<!-- KaTeX -->
 <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/katex@0.16.11/dist/katex.min.css">
 <script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.11/dist/katex.min.js"></script>
 <script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.11/dist/contrib/auto-render.min.js"
-  onload="window._katexReady=true;"></script>
+  onload="window._katexReady=true;window._katexQueue&&window._katexQueue.forEach(function(el){window._doRenderTex(el);});window._katexQueue=null;"></script>
 
 <script>
 (function() {
-  var cellsEl   = document.getElementById('kernel-cells');
-  var inputEl   = document.getElementById('kernel-input');
-  var evalBtn   = document.getElementById('kernel-eval-btn');
-  var schedBtn  = document.getElementById('kernel-sched-btn');
-  var clearBtn  = document.getElementById('kernel-clear-btn');
-  var schedPanel= document.getElementById('kernel-sched-panel');
-  var inNEl     = document.getElementById('in-n');
-  var statusEl  = document.getElementById('kernel-status');
-  var kernelIdEl= document.getElementById('kernel-id');
-  var cellCountEl=document.getElementById('kernel-cells-count');
+  var cellsEl    = document.getElementById('kernel-cells');
+  var inputEl    = document.getElementById('kernel-input');
+  var evalBtn    = document.getElementById('kernel-eval-btn');
+  var schedBtn   = document.getElementById('kernel-sched-btn');
+  var clearBtn   = document.getElementById('kernel-clear-btn');
+  var schedPanel = document.getElementById('kernel-sched-panel');
+  var inNEl      = document.getElementById('in-n');          /* input area label */
+  var heroNEl    = document.getElementById('kernel-next-n'); /* hero meta counter */
+  var statusEl   = document.getElementById('kernel-status');
+  var kernelIdEl = document.getElementById('kernel-id');
+  var countEl    = document.getElementById('kernel-cells-count');
 
-  /* Scheduled task polls: taskId -> intervalId */
   var schedPolls = {};
+  var cellN = 0; /* local counter synced from server */
 
-  function escHtml(s) {
+  /* ── HTML escape ──────────────────────────────────── */
+  function esc(s) {
     return String(s)
       .replace(/&/g,'&amp;').replace(/</g,'&lt;')
       .replace(/>/g,'&gt;').replace(/"/g,'&quot;');
   }
 
+  /* ── Status bar ───────────────────────────────────── */
   function setStatus(msg, cls) {
+    if (!statusEl) return;
     statusEl.textContent = msg;
     statusEl.className = 'kernel-status' + (cls ? ' kernel-status--'+cls : '');
   }
 
-  /* ── Render a KaTeX math expression safely ────────── */
-  function renderTex(el) {
+  /* ── KaTeX rendering (deferred-safe) ─────────────── */
+  window._doRenderTex = function(el) {
     if (!window._katexReady) {
-      setTimeout(function(){ renderTex(el); }, 200);
+      (window._katexQueue = window._katexQueue || []).push(el);
       return;
     }
     try {
       renderMathInElement(el, {
-        delimiters: [
-          {left:'\\[', right:'\\]', display:true},
-          {left:'\\(', right:'\\)', display:false}
+        delimiters:[
+          {left:'\\[',right:'\\]',display:true},
+          {left:'\\(',right:'\\)',display:false}
         ],
-        throwOnError: false
+        throwOnError:false
       });
     } catch(e) {}
-  }
+  };
 
-  /* ── Build output HTML from cell.out ─────────────── */
-  function buildOutHtml(out) {
+  /* ── Build output HTML ────────────────────────────── */
+  function outHtml(out) {
     if (!out) return '<span class="kernel-out-empty">(void)</span>';
-    if (out.type === 'error') {
-      return '<span class="kernel-out-err">$Failed</span>';
-    }
-    var html = '';
-    /* TeXForm if non-trivial */
-    if (out.tex && out.tex.length > 3 && out.type !== 'string') {
-      html += '<div class="kernel-out-tex">\\[' + escHtml(out.tex) + '\\]</div>';
-    }
-    /* OutputForm always */
-    html += '<pre class="kernel-out-text">' + escHtml(out.out || '') + '</pre>';
-    return html;
+    if (out.type === 'error') return '<span class="kernel-out-err">$Failed &mdash; expression returned Null or threw</span>';
+    var h = '';
+    if (out.tex && out.tex.length > 2 && out.type !== 'string')
+      h += '<div class="kernel-out-tex">\\[' + esc(out.tex) + '\\]</div>';
+    h += '<pre class="kernel-out-text">' + esc(out.out || '') + '</pre>';
+    return h;
   }
 
-  /* ── Render one cell into the history ─────────────── */
-  function renderCell(cell) {
-    var div = document.createElement('div');
-    div.className = 'kernel-cell';
-    div.id = 'cell-' + cell.id;
+  /* ── Insert cell at BOTTOM and scroll into view ───── */
+  function renderCell(cell, flash) {
+    var existing = document.getElementById('cell-' + cell.id);
+    if (existing) return; /* skip duplicates */
 
+    var div = document.createElement('div');
+    div.className = 'kernel-cell' + (flash !== false ? ' kernel-cell--new' : '');
+    div.id = 'cell-' + cell.id;
     div.innerHTML =
       '<div class="kernel-cell-in">' +
         '<span class="kernel-label kernel-label--in">In[' + cell.id + ']:=</span>' +
-        '<pre class="kernel-cell-src">' + escHtml(cell.input) + '</pre>' +
+        '<pre class="kernel-cell-src">' + esc(cell.input) + '</pre>' +
         '<div class="kernel-cell-meta">' +
           '<span class="kernel-ms">' + cell.ms + 'ms</span>' +
           '<span class="kernel-ts">' + (cell.tsStr||'') + '</span>' +
@@ -133,32 +191,35 @@
       '</div>' +
       '<div class="kernel-cell-out">' +
         '<span class="kernel-label kernel-label--out">Out[' + cell.id + ']=</span>' +
-        '<div class="kernel-out-body">' + buildOutHtml(cell.out) + '</div>' +
+        '<div class="kernel-out-body">' + outHtml(cell.out) + '</div>' +
       '</div>';
 
-    cellsEl.insertBefore(div, cellsEl.firstChild);
-    renderTex(div);
+    cellsEl.appendChild(div); /* ← APPEND TO BOTTOM */
+    div.scrollIntoView({behavior:'smooth', block:'nearest'});
+    window._doRenderTex(div);
+
+    /* Remove flash class after animation */
+    setTimeout(function(){ div.classList.remove('kernel-cell--new'); }, 900);
   }
 
-  /* ── Evaluate input ───────────────────────────────── */
-  function doEval() {
-    var input = inputEl.value.trim();
+  /* ── Evaluate expression ──────────────────────────── */
+  function doEval(customInput) {
+    var input = customInput || inputEl.value.trim();
     if (!input) return;
     evalBtn.disabled = true;
     setStatus('evaluando\u2026', 'busy');
 
     fetch('/kernel/eval', {
-      method: 'POST',
-      headers: {'Content-Type': 'application/x-www-form-urlencoded'},
-      body: 'input=' + encodeURIComponent(input)
+      method:'POST',
+      headers:{'Content-Type':'application/x-www-form-urlencoded'},
+      body:'input='+encodeURIComponent(input)
     })
     .then(function(r){ return r.json(); })
     .then(function(cell) {
-      renderCell(cell);
-      inNEl.textContent   = cell.id + 1;
-      cellCountEl.textContent = cell.id;
-      kernelIdEl.textContent  = cell.id; /* updated from server */
-      setStatus('ok \u2014 ' + cell.ms + 'ms', 'ok');
+      renderCell(cell, true);
+      cellN = cell.id;
+      if (inNEl) inNEl.textContent = cell.id + 1;      if (heroNEl) heroNEl.textContent = cell.id + 1;      if (countEl) countEl.textContent = cell.id;
+      setStatus('\u2713 ' + cell.ms + 'ms', 'ok');
       evalBtn.disabled = false;
     })
     .catch(function(e) {
@@ -167,152 +228,140 @@
     });
   }
 
-  /* ── Schedule re-evaluation ───────────────────────── */
+  /* ── Schedule periodic re-evaluation ─────────────── */
   function doSchedule() {
     var input = inputEl.value.trim();
-    var iv    = parseInt(document.getElementById('sched-interval').value) || 30;
+    var iv = parseInt(document.getElementById('sched-interval').value) || 30;
     if (!input) return;
     schedBtn.disabled = true;
     setStatus('programando\u2026', 'busy');
 
     fetch('/kernel/schedule', {
-      method: 'POST',
-      headers: {'Content-Type': 'application/x-www-form-urlencoded'},
-      body: 'input=' + encodeURIComponent(input) + '&interval=' + iv
+      method:'POST',
+      headers:{'Content-Type':'application/x-www-form-urlencoded'},
+      body:'input='+encodeURIComponent(input)+'&interval='+iv
     })
     .then(function(r){ return r.json(); })
     .then(function(task) {
-      if (task.error) { setStatus('error: '+task.error,'err'); schedBtn.disabled=false; return; }
+      if (task.error) { setStatus('err: '+task.error,'err'); schedBtn.disabled=false; return; }
       addSchedCard(task);
-      setStatus('programado \u25b6 ' + task.taskId + ' cada ' + iv + 's', 'ok');
+      setStatus('\u25b6 '+task.taskId+' \u0394'+iv+'s', 'ok');
       schedBtn.disabled = false;
-      /* Start polling history */
       startSchedPoll(task.taskId, iv);
     })
-    .catch(function(e) {
-      setStatus('error: '+e,'err'); schedBtn.disabled=false;
-    });
+    .catch(function(e){ setStatus('err: '+e,'err'); schedBtn.disabled=false; });
   }
 
-  /* ── Add scheduled task card to panel ─────────────── */
+  /* ── Scheduled task UI card ───────────────────────── */
   function addSchedCard(task) {
-    var card = document.createElement('div');
-    card.className = 'kernel-sched-card';
-    card.id = 'sched-' + task.taskId;
-    card.innerHTML =
+    var c = document.createElement('div');
+    c.className = 'kernel-sched-card';
+    c.id = 'sched-'+task.taskId;
+    c.innerHTML =
       '<div class="kernel-sched-card-header">' +
-        '<span class="kernel-sched-pulse" id="pulse-' + escHtml(task.taskId) + '">&#9679;</span>' +
-        '<code class="kernel-sched-id">' + escHtml(task.taskId) + '</code>' +
-        '<span class="kernel-sched-iv">\u0394 ' + task.interval + 's</span>' +
-        '<pre class="kernel-sched-src">' + escHtml(task.input) + '</pre>' +
-        '<button class="kernel-sched-stop" data-id="' + escHtml(task.taskId) + '">' +
-          '&#9632; Detener</button>' +
+        '<span class="kernel-sched-pulse" id="pulse-'+esc(task.taskId)+'">&#9679;</span>' +
+        '<code class="kernel-sched-id">'+esc(task.taskId)+'</code>' +
+        '<span class="kernel-sched-iv">\u0394 '+task.interval+'s</span>' +
+        '<pre class="kernel-sched-src">'+esc(task.input)+'</pre>' +
+        '<button class="kernel-sched-stop" data-id="'+esc(task.taskId)+'">&#9632; Stop</button>' +
       '</div>' +
-      '<div class="kernel-sched-history" id="hist-' + escHtml(task.taskId) + '"></div>';
-    schedPanel.insertBefore(card, schedPanel.firstChild);
-    card.querySelector('.kernel-sched-stop').addEventListener('click', function() {
+      '<div class="kernel-sched-history" id="hist-'+esc(task.taskId)+'"></div>';
+    schedPanel.insertBefore(c, schedPanel.firstChild);
+    c.querySelector('.kernel-sched-stop').addEventListener('click', function(){
       stopSchedPoll(this.dataset.id);
     });
   }
 
-  /* ── Poll scheduled task history ─────────────────── */
-  function startSchedPoll(taskId, iv) {
-    if (schedPolls[taskId]) return;
-    schedPolls[taskId] = setInterval(function(){
-      fetchHistory(taskId);
-    }, Math.max(iv * 1000, 5000));
-    /* Immediate first poll */
-    setTimeout(function(){ fetchHistory(taskId); }, iv * 1000 + 500);
+  function startSchedPoll(tid, iv) {
+    if (schedPolls[tid]) return;
+    schedPolls[tid] = setInterval(function(){ fetchHist(tid); }, Math.max(iv*1000, 5000));
+    setTimeout(function(){ fetchHist(tid); }, iv*1000+500);
   }
 
-  function stopSchedPoll(taskId) {
-    if (schedPolls[taskId]) {
-      clearInterval(schedPolls[taskId]);
-      delete schedPolls[taskId];
+  function stopSchedPoll(tid) {
+    clearInterval(schedPolls[tid]); delete schedPolls[tid];
+    var p=document.getElementById('pulse-'+tid); if(p){p.style.color='#555';p.textContent='\u25cb';}
+    var s=document.querySelector('[data-id="'+tid+'"]'); if(s){s.textContent='\u2713 Detenido';s.disabled=true;}
+  }
+
+  function fetchHist(tid) {
+    fetch('/kernel/history',{method:'POST',headers:{'Content-Type':'application/x-www-form-urlencoded'},body:'id='+encodeURIComponent(tid)})
+    .then(function(r){return r.json();})
+    .then(function(d){ updateHistPanel(tid, d.history||[]); }).catch(function(){});
+  }
+
+  function updateHistPanel(tid, entries) {
+    var el=document.getElementById('hist-'+tid); if(!el) return;
+    var pulse=document.getElementById('pulse-'+tid);
+    if(pulse&&entries.length){
+      pulse.style.color='#00ff88';
+      pulse.classList.add('pulse-flash');
+      setTimeout(function(){pulse.classList.remove('pulse-flash');},900);
     }
-    var pulse = document.getElementById('pulse-' + taskId);
-    if (pulse) { pulse.style.color='#555'; pulse.textContent='\u25cb'; }
-    var stop = document.querySelector('[data-id="'+taskId+'"]');
-    if (stop) { stop.textContent = '\u2713 Detenido'; stop.disabled = true; }
-  }
-
-  function fetchHistory(taskId) {
-    fetch('/kernel/history', {
-      method: 'POST',
-      headers: {'Content-Type': 'application/x-www-form-urlencoded'},
-      body: 'id=' + encodeURIComponent(taskId)
-    })
-    .then(function(r){ return r.json(); })
-    .then(function(data) {
-      updateHistoryPanel(taskId, data.history || []);
-    }).catch(function(){});
-  }
-
-  function updateHistoryPanel(taskId, entries) {
-    var histEl = document.getElementById('hist-' + taskId);
-    if (!histEl) return;
-    var pulse  = document.getElementById('pulse-' + taskId);
-    if (pulse && entries.length > 0) {
-      pulse.style.color = '#00ff88';
-      pulse.style.animation = 'kernel-pulse 1s';
-      setTimeout(function(){ pulse.style.animation=''; }, 1100);
-    }
-    /* Show last 6 entries as a timeline */
-    var last6 = entries.slice(-6);
-    histEl.innerHTML = last6.map(function(e, i) {
-      var out = e.out || {};
-      var val = out.type === 'error' ? '<span class="k-err">$Failed</span>'
-              : '<code>' + escHtml((out.out||'').slice(0,120)) + '</code>';
-      var ts  = new Date((e.ts||0)*1000).toLocaleTimeString();
-      return '<div class="kernel-hist-entry">' +
-        '<span class="kernel-hist-ts">' + ts + '</span>' +
-        '<span class="kernel-hist-ms">' + (e.ms||0) + 'ms</span>' +
-        val + '</div>';
+    el.innerHTML = entries.slice(-8).map(function(e){
+      var out=e.out||{};
+      var v=out.type==='error'?'<span class="k-err">$Failed</span>':'<code>'+esc((out.out||'').slice(0,140))+'</code>';
+      var ts=new Date((e.ts||0)*1000).toLocaleTimeString();
+      return '<div class="kernel-hist-entry"><span class="kernel-hist-ts">'+ts+'</span><span class="kernel-hist-ms">'+e.ms+'ms</span>'+v+'</div>';
     }).join('');
   }
 
-  /* ── Fetch kernel info on load ────────────────────── */
+  /* ── Load kernel state on page load ──────────────── */
   fetch('/kernel/cells')
     .then(function(r){ return r.json(); })
     .then(function(d) {
-      kernelIdEl.textContent  = d.kernel || '?';
-      cellCountEl.textContent = d.cellN  || 0;
-      inNEl.textContent       = (d.cellN || 0) + 1;
+      if (kernelIdEl) kernelIdEl.textContent = d.kernel !== undefined ? d.kernel : '?';
+      cellN = d.cellN || 0;
+      if (inNEl)  inNEl.textContent  = cellN + 1;
+      if (heroNEl) heroNEl.textContent = cellN + 1;
+      if (countEl) countEl.textContent = cellN;
+      /* Render existing cells from server (newest last → already in order) */
+      (d.cells || []).slice().reverse().forEach(function(c){ renderCell(c, false); });
     }).catch(function(){});
 
-  /* ── Event bindings ───────────────────────────────── */
-  evalBtn.addEventListener('click', doEval);
+  /* ── Trigger action buttons ───────────────────────── */
+  document.getElementById('kernel-trigger-list').addEventListener('click', function(e) {
+    var btn = e.target.closest('.kernel-trigger-btn');
+    if (!btn) return;
+    var expr = btn.dataset.expr;
+    if (!expr) return;
+    inputEl.value = expr;
+    doEval(expr);
+  });
+
+  /* Custom trigger add */
+  document.getElementById('kta-add-btn').addEventListener('click', function() {
+    var v = document.getElementById('kta-custom-input').value.trim();
+    if (!v) return;
+    inputEl.value = v;
+    doEval(v);
+  });
+  document.getElementById('kta-custom-input').addEventListener('keydown', function(e){
+    if (e.key === 'Enter') { document.getElementById('kta-add-btn').click(); }
+  });
+
+  /* Auto-eval on load */
+  var autoCb = document.getElementById('kta-autoeval');
+  var AUTO_EXPR = '$KernelID';
+  autoCb.addEventListener('change', function() {
+    localStorage.setItem('kAutoEval', autoCb.checked ? '1' : '');
+  });
+  if (localStorage.getItem('kAutoEval')) {
+    autoCb.checked = true;
+    setTimeout(function(){ doEval(AUTO_EXPR); }, 800);
+  }
+
+  /* ── Core event bindings ──────────────────────────── */
+  evalBtn.addEventListener('click', function(){ doEval(); });
   schedBtn.addEventListener('click', doSchedule);
-  clearBtn.addEventListener('click', function() {
+  clearBtn.addEventListener('click', function(){
     cellsEl.innerHTML = '';
-    setStatus('historia limpiada', 'ok');
+    if (countEl) countEl.textContent = '0';
+    setStatus('limpiado', 'ok');
   });
-
-  inputEl.addEventListener('keydown', function(e) {
-    if (e.shiftKey && e.key === 'Enter') {
-      e.preventDefault();
-      doEval();
-    }
+  inputEl.addEventListener('keydown', function(e){
+    if (e.shiftKey && e.key === 'Enter') { e.preventDefault(); doEval(); }
   });
-
-  /* Sample expressions for quick testing */
-  var SAMPLES = [
-    'NestList[2#+1&, 1, 6]',
-    'Integrate[x^2 Sin[x], x]',
-    'Table[Prime[n], {n, 10}]',
-    'Association["kernel" -> $KernelID, "ts" -> TimeObject[Now]]',
-    'CharacteristicPolynomial[{{1,2},{3,4}}, x]',
-    'Fibonacci[20]'
-  ];
-  var sIdx = 0;
-  var sampleBtn = document.createElement('button');
-  sampleBtn.className = 'kernel-btn kernel-btn--sample';
-  sampleBtn.textContent = '\u00bb Ejemplo';
-  sampleBtn.addEventListener('click', function() {
-    inputEl.value = SAMPLES[sIdx % SAMPLES.length];
-    sIdx++;
-  });
-  document.querySelector('.kernel-actions').appendChild(sampleBtn);
 
 })();
 </script>
