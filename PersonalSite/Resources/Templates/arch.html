@@ -328,9 +328,6 @@
 <script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.11/dist/contrib/auto-render.min.js"
   onload="renderMathInElement(document.getElementById('arch-math-section'),{delimiters:[{left:'\\[',right:'\\]',display:true},{left:'\\(',right:'\\)',display:false}]});"></script>
 
-<!-- ── force-graph 2D ─────────────────────────────────────────── -->
-<script src="https://unpkg.com/force-graph@1/dist/force-graph.min.js"></script>
-
 <section id="arch-math-section" class="arch-math-section">
   <div class="section-header">
     <h2>Fundamento Matem&aacute;tico &mdash; NestGraph</h2>
@@ -415,8 +412,65 @@
 (function() {
   var DEPTH_COLOR = ['#ffd700','#eb7a1a','#2db85e','#3389ff'];
   var el = document.getElementById('arch-math-graph');
-  el.style.width  = '100%';
-  el.style.height = '420px';
+
+  /* Canvas2D renderer for NestGraph tree */
+  function renderTree(nodes, links, rules) {
+    var W = (el.offsetWidth || el.parentElement.offsetWidth || 520);
+    var H = 420;
+    var dpr = window.devicePixelRatio || 1;
+    el.innerHTML = '';
+    var canvas = document.createElement('canvas');
+    canvas.width = W*dpr; canvas.height = H*dpr;
+    canvas.style.width = W+'px'; canvas.style.height = H+'px';
+    el.appendChild(canvas);
+    var ctx = canvas.getContext('2d');
+    ctx.scale(dpr, dpr);
+
+    /* Layout: bucket by depth, space evenly */
+    var maxD = 0;
+    nodes.forEach(function(n){ if((n.depth||0)>maxD) maxD=n.depth||0; });
+    var byDepth = [];
+    for (var d=0; d<=maxD; d++) byDepth.push([]);
+    nodes.forEach(function(n){ byDepth[n.depth||0].push(n); });
+    var pos = {};
+    byDepth.forEach(function(row, d) {
+      row.forEach(function(n, i) {
+        pos[n.id] = { x:(i+1)*W/(row.length+1), y:30+d*(H-40)/(maxD||1) };
+      });
+    });
+
+    /* Links */
+    links.forEach(function(l) {
+      var s=pos[l.source], t=pos[l.target]; if(!s||!t) return;
+      var sn=nodes.find(function(x){return x.id===l.source;})||{};
+      var color = DEPTH_COLOR[(sn.depth||0)+1] || '#555';
+      ctx.beginPath(); ctx.moveTo(s.x,s.y+7); ctx.lineTo(t.x,t.y-7);
+      ctx.strokeStyle=color+'60'; ctx.lineWidth=1; ctx.stroke();
+      /* tiny arrow */
+      var dx=t.x-s.x, dy=(t.y-7)-(s.y+7), len=Math.sqrt(dx*dx+dy*dy)||1;
+      var ax=t.x-6*dx/len, ay=t.y-7-6*dy/len;
+      ctx.beginPath();
+      ctx.moveTo(t.x,t.y-7);
+      ctx.lineTo(ax-3*(dy/len),ay+3*(dx/len));
+      ctx.lineTo(ax+3*(dy/len),ay-3*(dx/len));
+      ctx.closePath(); ctx.fillStyle=color+'80'; ctx.fill();
+    });
+
+    /* Nodes */
+    nodes.forEach(function(n) {
+      var p=pos[n.id]; if(!p) return;
+      var color = DEPTH_COLOR[n.depth||0]||'#aaa';
+      var r = n.depth===0 ? 11 : Math.max(5, 10-n.depth*1.5);
+      ctx.beginPath(); ctx.arc(p.x,p.y,r,0,2*Math.PI);
+      ctx.fillStyle=color+'30'; ctx.fill();
+      ctx.strokeStyle=color; ctx.lineWidth=1.5; ctx.stroke();
+      if (r > 7) {
+        ctx.fillStyle=color; ctx.font='bold 8px monospace';
+        ctx.textAlign='center'; ctx.textBaseline='middle';
+        ctx.fillText(n.label, p.x, p.y);
+      }
+    });
+  }
 
   fetch('/arch/math')
     .then(function(r){ return r.json(); })
@@ -425,26 +479,13 @@
         data.total + ' nodos \u00b7 ' + data.links.length +
         ' aristas \u00b7 profundidad ' + data.depth +
         ' \u00b7 reglas: ' + data.rules.join(', ');
-
-      ForceGraph()(el)
-        .width(el.offsetWidth || 520)
-        .height(420)
-        .backgroundColor('#08080a')
-        .nodeLabel(function(n){ return n.label + ' (d=' + n.depth + ')'; })
-        .nodeColor(function(n){ return DEPTH_COLOR[n.depth] || '#aaa'; })
-        .nodeVal(function(n){ return n.depth === 0 ? 10 : Math.max(1, 5 - n.depth); })
-        .linkColor(function(){ return 'rgba(180,190,220,0.35)'; })
-        .linkDirectionalArrowLength(4)
-        .linkDirectionalArrowRelPos(1)
-        .linkLabel(function(l){ return l.op || ''; })
-        .graphData(data);
-
+      renderTree(data.nodes, data.links, data.rules);
       window.addEventListener('resize', function(){
-        /* re-read width on resize */
+        renderTree(data.nodes, data.links, data.rules);
       });
     })
     .catch(function(){
-      el.innerHTML = '<p style="color:#555;padding:2rem;text-align:center">NestGraph data no disponible (start /arch/math backend)</p>';
+      el.innerHTML = '<p style="color:#555;padding:2rem;text-align:center">NestGraph no disponible \u2014 backend iniciando...</p>';
     });
 })();
 </script>
@@ -507,72 +548,143 @@
     system: '#3389ff', theme: '#aa44e0',
     cache:  '#2db85e', flow:  '#00e5ff', user: '#888'
   };
-  var CP_COLOR   = '#ff6b35';
-  var cpSet      = {};
+  var CP_COLOR = '#ff6b35';
+
+  /* Static DAG structure (mirrors Scheduler.wl $taskSpecs) */
+  var DAG_NODES = [
+    {id:'heartbeat',     group:'system', interval:30,  depth:0, cp:true},
+    {id:'cache-warm',    group:'system', interval:300, depth:1, cp:true},
+    {id:'theme-rotate',  group:'theme',  interval:10,  depth:1, cp:false},
+    {id:'cards-refresh', group:'cache',  interval:20,  depth:2, cp:true},
+    {id:'nest-refresh',  group:'flow',   interval:300, depth:2, cp:false},
+    {id:'metric-refresh',group:'cache',  interval:300, depth:3, cp:true}
+  ];
+  var DAG_LINKS = [
+    {source:'heartbeat',    target:'cache-warm'},
+    {source:'heartbeat',    target:'theme-rotate'},
+    {source:'cache-warm',   target:'cards-refresh'},
+    {source:'cache-warm',   target:'nest-refresh'},
+    {source:'cards-refresh',target:'metric-refresh'}
+  ];
 
   var el = document.getElementById('arch-dag-graph');
-  el.style.width  = '100%';
-  el.style.height = '360px';
 
-  fetch('/arch/dag')
-    .then(function(r){ return r.json(); })
-    .then(function(data) {
-      /* Critical path set */
-      (data.critPath || []).forEach(function(id){ cpSet[id] = true; });
+  /* Canvas2D hierarchical DAG renderer */
+  function renderDAGCanvas(nodes, links) {
+    var W = (el.offsetWidth || el.parentElement.offsetWidth || 680);
+    var H = 360;
+    var dpr = window.devicePixelRatio || 1;
+    el.innerHTML = '';
+    var canvas = document.createElement('canvas');
+    canvas.width  = W * dpr;
+    canvas.height = H * dpr;
+    canvas.style.width  = W + 'px';
+    canvas.style.height = H + 'px';
+    el.appendChild(canvas);
+    var ctx = canvas.getContext('2d');
+    ctx.scale(dpr, dpr);
 
-      /* Stats bar */
-      var w = (data.nodes || []).reduce(function(acc, n){
-        return acc + (n.interval ? 1/n.interval : 0);
-      }, 0);
-      document.getElementById('arch-dag-stats').textContent =
-        data.nodeCount + ' tareas \u00b7 ' + data.edgeCount + ' deps \u00b7 ' +
-        'Carga: ' + w.toFixed(4) + ' disp/s';
-
-      /* Topo order strip */
-      var topo = document.getElementById('arch-dag-topo');
-      (data.topoOrder || []).forEach(function(id, i) {
-        var n = (data.nodes || []).find(function(x){ return x.id === id; }) || {};
-        var span = document.createElement('span');
-        span.className = 'dag-topo-node' + (cpSet[id] ? ' dag-topo-cp' : '');
-        span.title = n.label || id;
-        span.textContent = '\u03c0' + (i+1) + ' ' + id;
-        if (i < (data.topoOrder||[]).length - 1) {
-          var arr = document.createElement('span');
-          arr.className = 'dag-topo-arr';
-          arr.textContent = ' \u2192 ';
-          topo.appendChild(span);
-          topo.appendChild(arr);
-        } else {
-          topo.appendChild(span);
-        }
+    /* Layout: bucket nodes by depth */
+    var byDepth = [[],[],[],[]];
+    nodes.forEach(function(n){ byDepth[Math.min(n.depth||0,3)].push(n); });
+    var pos = {};
+    byDepth.forEach(function(row, d) {
+      row.forEach(function(n, i) {
+        pos[n.id] = { x: (i+1) * W / (row.length+1), y: 50 + d * 88 };
       });
-
-      ForceGraph()(el)
-        .width(el.offsetWidth || 520)
-        .height(360)
-        .backgroundColor('#07070a')
-        .nodeLabel(function(n){
-          return n.label + ' [\u0394=' + n.interval + 's]' +
-            (n.cp ? ' \u2605 CP' : '');
-        })
-        .nodeColor(function(n){
-          return cpSet[n.id] ? CP_COLOR : (GROUP_COLOR[n.group] || '#888');
-        })
-        .nodeVal(function(n){ return cpSet[n.id] ? 8 : 4; })
-        .linkColor(function(l){
-          var s = l.source.id || l.source, t = l.target.id || l.target;
-          return (cpSet[s] && cpSet[t]) ? CP_COLOR : 'rgba(180,180,200,0.35)';
-        })
-        .linkWidth(function(l){
-          var s = l.source.id || l.source, t = l.target.id || l.target;
-          return (cpSet[s] && cpSet[t]) ? 2.5 : 1;
-        })
-        .linkDirectionalArrowLength(6)
-        .linkDirectionalArrowRelPos(1)
-        .graphData({ nodes: data.nodes || [], links: data.links || [] });
-
-    }).catch(function(){
-      el.innerHTML = '<p style="color:#555;padding:2rem;text-align:center">DAG no disponible — backend iniciando...</p>';
     });
+
+    /* Draw links */
+    links.forEach(function(l) {
+      var s = pos[l.source], t = pos[l.target]; if (!s||!t) return;
+      var sn = nodes.find(function(x){return x.id===l.source;})||{};
+      var tn = nodes.find(function(x){return x.id===l.target;})||{};
+      var cp = sn.cp && tn.cp;
+      ctx.beginPath();
+      ctx.moveTo(s.x, s.y+18); ctx.lineTo(t.x, t.y-18);
+      ctx.strokeStyle = cp ? CP_COLOR : 'rgba(160,165,190,0.28)';
+      ctx.lineWidth = cp ? 2.5 : 1.2;
+      ctx.stroke();
+      var dx=t.x-s.x, dy=(t.y-18)-(s.y+18), len=Math.sqrt(dx*dx+dy*dy)||1;
+      var ax=t.x-9*dx/len, ay=t.y-18-9*dy/len;
+      ctx.beginPath();
+      ctx.moveTo(t.x,t.y-18);
+      ctx.lineTo(ax-4*(dy/len), ay+4*(dx/len));
+      ctx.lineTo(ax+4*(dy/len), ay-4*(dx/len));
+      ctx.closePath();
+      ctx.fillStyle = cp ? CP_COLOR : 'rgba(160,165,190,0.4)';
+      ctx.fill();
+    });
+
+    /* Draw nodes */
+    nodes.forEach(function(n) {
+      var p = pos[n.id]; if (!p) return;
+      var color = n.cp ? CP_COLOR : (GROUP_COLOR[n.group]||'#888');
+      if (n.running) {
+        ctx.beginPath(); ctx.arc(p.x,p.y,24,0,2*Math.PI);
+        ctx.fillStyle='rgba(0,255,136,0.1)'; ctx.fill();
+      }
+      ctx.beginPath(); ctx.arc(p.x,p.y,17,0,2*Math.PI);
+      ctx.fillStyle = color+'22'; ctx.fill();
+      ctx.strokeStyle = color; ctx.lineWidth = n.cp ? 2.5 : 1.5; ctx.stroke();
+      ctx.fillStyle = color;
+      ctx.font = 'bold 8px monospace';
+      ctx.textAlign='center'; ctx.textBaseline='middle';
+      ctx.fillText('\u0394'+n.interval+'s', p.x, p.y);
+      ctx.fillStyle = n.cp ? '#ffd0b0' : 'rgba(200,205,220,0.7)';
+      ctx.font = '10px monospace'; ctx.textBaseline='top';
+      ctx.fillText(n.id, p.x, p.y+21);
+      if (n.running) {
+        ctx.beginPath(); ctx.arc(p.x+15,p.y-15,4,0,2*Math.PI);
+        ctx.fillStyle='#00ff88'; ctx.fill();
+      }
+    });
+  }
+
+  /* Render immediately with static data */
+  window.addEventListener('load', function(){ renderDAGCanvas(DAG_NODES, DAG_LINKS); });
+  renderDAGCanvas(DAG_NODES, DAG_LINKS);
+
+  /* Fetch live status and overlay */
+  function fetchLive(attempt) {
+    fetch('/arch/dag')
+      .then(function(r){ return r.json(); })
+      .then(function(data) {
+        var liveMap = {};
+        (data.nodes||[]).forEach(function(n){ liveMap[n.id]=n; });
+        var merged = DAG_NODES.map(function(n){
+          var l=liveMap[n.id]||{};
+          return {id:n.id,group:n.group,interval:n.interval,depth:n.depth,cp:n.cp,
+                  running:!!l.running, runs:l.runs||0, label:l.label||n.id};
+        });
+        renderDAGCanvas(merged, DAG_LINKS);
+        /* Stats */
+        var w=(data.nodes||[]).reduce(function(a,n){return a+(n.interval?1/n.interval:0);},0);
+        document.getElementById('arch-dag-stats').textContent =
+          data.nodeCount+' tareas \u00b7 '+data.edgeCount+' deps \u00b7 CP='+
+          data.cpCost+'s \u00b7 W='+w.toFixed(4)+' disp/s';
+        /* Topo strip */
+        var topoEl=document.getElementById('arch-dag-topo');
+        topoEl.innerHTML='';
+        (data.topoOrder||[]).forEach(function(id,i){
+          var l=liveMap[id]||{};
+          var cp=(data.critPath||[]).indexOf(id)>=0;
+          var span=document.createElement('span');
+          span.className='dag-topo-node'+(cp?' dag-topo-cp':'');
+          span.title=(l.label||id)+' \u0394'+(l.interval||'?')+'s runs='+(l.runs||0);
+          span.textContent='\u03c0'+(i+1)+'\u00a0'+id;
+          topoEl.appendChild(span);
+          if (i<(data.topoOrder||[]).length-1){
+            var a=document.createElement('span');
+            a.className='dag-topo-arr'; a.textContent=' \u2192 ';
+            topoEl.appendChild(a);
+          }
+        });
+      })
+      .catch(function(){ if(attempt<6) setTimeout(function(){fetchLive(attempt+1);},3000); });
+  }
+  setTimeout(function(){ fetchLive(0); }, 600);
+
+  window.addEventListener('resize', function(){ renderDAGCanvas(DAG_NODES, DAG_LINKS); });
 })();
 </script>
