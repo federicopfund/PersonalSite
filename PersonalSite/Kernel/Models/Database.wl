@@ -25,13 +25,16 @@ Begin["`Private`"];
 $conn = Null;
 
 (* ── setup[]: resuelve la ruta de la DB y configura $databasePath ──────
-   Siempre copia site.db del paclet a $TemporaryDirectory (escribible en
-   cualquier entorno: Wolfram Cloud, notebooks, etc.).
-   Solo omite la copia si PERSONALSITE_DB ya apunta a un archivo existente. *)
+   En Wolfram Cloud el sandbox Java no puede acceder a $TemporaryDirectory
+   (ruta UUID profunda). Se usa /tmp/personalsite-<hash>.db que es accesible
+   tanto por el kernel WL como por el proceso JDBC Java. *)
 setup[] :=
   Module[{bundled, target, active},
     bundled = FileNameJoin[{PersonalSite`$Root, "data", "site.db"}];
-    target  = FileNameJoin[{$TemporaryDirectory, "personalsite.db"}];
+    (* En Cloud usar /tmp directo (accesible por JDBC); en local usar $TemporaryDirectory *)
+    target = If[TrueQ[$CloudEvaluation],
+      "/tmp/personalsite.db",
+      FileNameJoin[{$TemporaryDirectory, "personalsite.db"}]];
     active  = PersonalSite`Config`$databasePath;
 
     Which[
@@ -77,7 +80,10 @@ diag[] :=
 
 (* Abre la conexion JDBC segun el motor configurado:
    - sqlite     : archivo local (default).
-   - postgresql : servidor externo (produccion stateless), con SSL. *)
+   - postgresql : servidor externo (produccion stateless), con SSL.
+   Para SQLite prueba primero el alias "SQLite" (WE local); si falla intenta
+   la clase explicita "org.sqlite.JDBC" con URL jdbc:sqlite: (necesario en
+   algunos entornos como Wolfram Cloud donde el alias puede no estar registrado). *)
 openConnection[] :=
   If[ToLowerCase[PersonalSite`Config`$dbDriver] === "postgresql",
     OpenSQLConnection[
@@ -88,7 +94,15 @@ openConnection[] :=
           "?sslmode=" <> PersonalSite`Config`$pgSslMode],
       "Username" -> PersonalSite`Config`$pgUser,
       "Password" -> PersonalSite`Config`$pgPassword],
-    OpenSQLConnection[JDBC["SQLite", PersonalSite`Config`$databasePath]]
+    Module[{path = PersonalSite`Config`$databasePath, conn},
+      (* Intento 1: alias "SQLite" (Wolfram Engine local, Docker) *)
+      conn = Quiet[OpenSQLConnection[JDBC["SQLite", path]], All];
+      (* Intento 2: clase JDBC explicita con URL completa (Wolfram Cloud) *)
+      If[Head[conn] =!= SQLConnection,
+        conn = Quiet[OpenSQLConnection[
+          JDBC["org.sqlite.JDBC", "jdbc:sqlite:" <> path]], All]];
+      conn
+    ]
   ];
 
 (* Conexion JDBC persistente por kernel: se abre UNA vez y se reutiliza en cada
