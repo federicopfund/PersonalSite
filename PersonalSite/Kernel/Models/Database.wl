@@ -13,53 +13,66 @@ execute::usage =
 base SQLite y devuelve el resultado de SQLExecute.";
 
 setup::usage =
-  "setup[] prepara la conexion a la base de datos del paclet. En entornos donde \
-el directorio del paclet es de solo lectura (Wolfram Cloud) copia el site.db \
-a $TemporaryDirectory y apunta $databasePath ahi. Devuelve la ruta activa.";
+  "setup[] prepara la conexion a la base de datos del paclet. Copia site.db \
+a $TemporaryDirectory (escribible en Wolfram Cloud) y devuelve la ruta activa.";
+
+diag::usage =
+  "diag[] devuelve un diagnostico del estado de la conexion: ruta, driver, \
+existencia del archivo y resultado de SELECT 1.";
 
 Begin["`Private`"];
 
 $conn = Null;
 
 (* ── setup[]: resuelve la ruta de la DB y configura $databasePath ──────
-   Prioridad:
-     1. PERSONALSITE_DB env var (ya seteada en Config antes de llamar)
-     2. Paclet data/site.db si es escribible
-     3. Copia en $TemporaryDirectory (Wolfram Cloud: paclet es read-only)   *)
+   Siempre copia site.db del paclet a $TemporaryDirectory (escribible en
+   cualquier entorno: Wolfram Cloud, notebooks, etc.).
+   Solo omite la copia si PERSONALSITE_DB ya apunta a un archivo existente. *)
 setup[] :=
-  Module[{bundled, target},
-    (* Ruta del site.db dentro del paclet instalado *)
+  Module[{bundled, target, active},
     bundled = FileNameJoin[{PersonalSite`$Root, "data", "site.db"}];
+    target  = FileNameJoin[{$TemporaryDirectory, "personalsite.db"}];
+    active  = PersonalSite`Config`$databasePath;
 
     Which[
-      (* Ya configurado externamente (env var / override manual) y existe *)
-      FileExistsQ[PersonalSite`Config`$databasePath] &&
-        PersonalSite`Config`$databasePath =!= bundled,
-        Null,   (* usar lo que ya esta *)
+      (* PERSONALSITE_DB apunta a un archivo real: no tocar *)
+      StringQ[active] && FileExistsQ[active] && active =!= bundled,
+        Null,
 
-      (* Bundled existe y su directorio es escribible *)
-      FileExistsQ[bundled] &&
-        Quiet @ Check[WriteString[
-          OpenWrite[bundled, BinaryFormat -> True], ""], $Failed] =!= $Failed,
-        PersonalSite`Config`$databasePath = bundled,
+      (* Copiar la DB bundleada a $TemporaryDirectory *)
+      FileExistsQ[bundled],
+        If[! FileExistsQ[target], CopyFile[bundled, target]];
+        PersonalSite`Config`$databasePath = target,
 
-      (* Fallback: copiar a $TemporaryDirectory (siempre escribible) *)
+      (* Ultimo recurso: crear DB desde init.sql *)
       True,
-        target = FileNameJoin[{$TemporaryDirectory, "personalsite_paclet.db"}];
-        If[FileExistsQ[bundled] && ! FileExistsQ[target],
-          CopyFile[bundled, target]];
-        If[! FileExistsQ[target],
-          (* ultimo recurso: crear DB vacia desde init.sql si sqlite3 disponible *)
-          Module[{sql = FileNameJoin[{PersonalSite`$Root, "data", "init.sql"}]},
-            If[FileExistsQ[sql],
-              Run["sqlite3 " <> target <> " < " <> sql]]]];
+        Module[{sql = FileNameJoin[{PersonalSite`$Root, "data", "init.sql"}]},
+          If[FileExistsQ[sql],
+            Run["sqlite3 " <> target <> " < \"" <> sql <> "\""]]];
         PersonalSite`Config`$databasePath = target
     ];
 
-    (* Reset de la conexion para que use el nuevo path *)
-    Quiet @ CloseSQLConnection[$conn];
+    (* Forzar reconexion con el nuevo path *)
+    Quiet[CloseSQLConnection[$conn]];
     $conn = Null;
+
     PersonalSite`Config`$databasePath
+  ];
+
+(* ── diag[]: diagnostico de conexion ──────────────────────────────────── *)
+diag[] :=
+  Module[{path, ping},
+    path = PersonalSite`Config`$databasePath;
+    ping = Quiet @ Check[execute["SELECT 1"], $Failed];
+    <|
+      "driver"      -> PersonalSite`Config`$dbDriver,
+      "dbPath"      -> path,
+      "fileExists"  -> FileExistsQ[path],
+      "pacletRoot"  -> PersonalSite`$Root,
+      "bundledDb"   -> FileExistsQ[FileNameJoin[{PersonalSite`$Root,"data","site.db"}]],
+      "ping"        -> If[ping === {{1}} || (ListQ[ping] && Length[ping] > 0), "OK", ping],
+      "connHead"    -> Head[$conn]
+    |>
   ];
 
 (* Abre la conexion JDBC segun el motor configurado:
