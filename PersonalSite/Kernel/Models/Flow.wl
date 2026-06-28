@@ -58,8 +58,10 @@ $maxKernels =
   With[{n = Quiet @ ToExpression @ PersonalSite`Config`value["FLOW_MAX_KERNELS", "2"]},
     If[IntegerQ[n] && n > 0, n, 2]];
 
-(* Lanza (una vez) hasta $maxKernels subkernels; idempotente y con tope. *)
-ensureKernels[] :=
+(* Lanza (una vez) hasta $maxKernels subkernels; idempotente y con tope.
+   Declarado en PersonalSite`Flow` (no Private) porque Assets.wl lo llama
+   con ruta completa PersonalSite`Flow`ensureKernels[]. *)
+PersonalSite`Flow`ensureKernels[] :=
   (If[$KernelCount < $maxKernels,
      Quiet @ Check[LaunchKernels[$maxKernels - $KernelCount], Null]];
    $KernelCount);
@@ -95,7 +97,7 @@ PersonalSite`Flow`distribute[] :=
                 DistributeDefinitions); degrada a "session" si no hay kernels. *)
 
 resolveBackend["parallel"] :=
-  With[{n = ensureKernels[]},
+  With[{n = PersonalSite`Flow`ensureKernels[]},
     If[IntegerQ[n] && n > 0, {"parallel", n}, {"session", 0}]];
 resolveBackend["sync"] := {"sync", 0};
 resolveBackend[_]      := {"session", 0};
