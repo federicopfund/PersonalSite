@@ -2,82 +2,117 @@
 
 (* PersonalSite`Scheduler`
    --------------------------------------------------------------------------
-   Tareas de runtime que mantienen el framework "caliente" mientras el kernel
-   del pool de Wolfram Web Engine sigue vivo. Usa RunScheduledTask para correr
-   trabajo periodico en segundo plano sin bloquear el servido de requests.
+   Registra todas las tareas de runtime en PersonalSite`TaskManager` y las
+   arranca. Cada tarea tiene spec completo: label, group, interval, enabled.
 
-   Es idempotente por kernel: start[] solo registra las tareas una vez, de modo
-   que cada kernel del pool corre exactamente un heartbeat y un warm-up. *)
+   Agregar una tarea nueva: anadir una llamada register[] + start[] aqui,
+   o usar POST /tasks/register desde la UI en caliente. *)
 
-BeginPackage["PersonalSite`Scheduler`"];
+BeginPackage["PersonalSite`Scheduler`",
+  {"PersonalSite`TaskManager`"}];
 
-start::usage =
-  "start[] registra (una sola vez por kernel) las ScheduledTask de runtime y \
-devuelve la Association de tareas activas.";
-
-stop::usage =
-  "stop[] elimina todas las ScheduledTask registradas por el sitio.";
-
-status::usage =
-  "status[] devuelve una Association con metricas del runtime: uptime, \
-heartbeats, warm-ups de cache y nombres de tareas activas.";
+start::usage  = "start[] registra e inicia todas las tareas de runtime.";
+stop::usage   = "stop[] detiene todas las tareas.";
+status::usage = "status[] devuelve snapshot del runtime (delega a TaskManager).";
 
 Begin["`Private`"];
 
-$tasks     = <||>;
 $started   = False;
 $startedAt = None;
-$beats     = 0;
-$warms     = 0;
 
-(* App 1 - Cache warm-up: fuerza una consulta para mantener caliente la
-   conexion SQLite y las plantillas ya compiladas en memoria. *)
-warmCache[] :=
-  Quiet @ Check[PersonalSite`Post`recent[10]; $warms++; True, False];
+(* ── Definicion de las tareas del sitio ──────────────────────────────── *)
+(*  Cada spec: label, group, interval (s), enabled, action               *)
 
-(* App 2 - Heartbeat / health check: marca de vida del kernel del pool. *)
-heartbeat[] := ($beats++; True);
+$taskSpecs = {
 
+  (* ── Sistema ─────────────────────────────────────────────────────── *)
+  {"heartbeat", <|
+    "label"    -> "Heartbeat",
+    "group"    -> "system",
+    "interval" -> 30,
+    "enabled"  -> True,
+    "action"   -> Function[True]   (* marca de vida del kernel *)
+  |>},
+
+  {"cache-warm", <|
+    "label"    -> "Cache warm-up",
+    "group"    -> "system",
+    "interval" -> 300,
+    "enabled"  -> True,
+    "action"   -> Function[
+      Quiet @ Check[PersonalSite`Post`recent[10]; True, False]]
+  |>},
+
+  (* ── Tema ────────────────────────────────────────────────────────── *)
+  {"theme-rotate", <|
+    "label"    -> "Theme rotation tick",
+    "group"    -> "theme",
+    "interval" -> 10,
+    "enabled"  -> True,
+    "action"   -> Function[PersonalSite`Theme`tick[]]
+  |>},
+
+  (* ── Assets / cache ─────────────────────────────────────────────── *)
+  {"cards-refresh", <|
+    "label"    -> "Cards refresh (DB)",
+    "group"    -> "cache",
+    "interval" -> 20,
+    "enabled"  -> True,
+    "action"   -> Function[PersonalSite`Assets`refreshCards[]]
+  |>},
+
+  {"metric-refresh", <|
+    "label"    -> "Metric refresh (heavy)",
+    "group"    -> "cache",
+    "interval" -> 300,
+    "enabled"  -> True,
+    "action"   -> Function[PersonalSite`Assets`refreshMetric[]]
+  |>},
+
+  (* ── Flow / NestGraph ───────────────────────────────────────────── *)
+  {"nest-refresh", <|
+    "label"    -> "NestGraph {2x+1, x+14, x-18} depth=3",
+    "group"    -> "flow",
+    "interval" -> 300,
+    "enabled"  -> True,
+    "action"   -> Function[
+      PersonalSite`NestScheduler`run[
+        {2 # + 1 &, # + 14 &, # - 18 &}, {1}, 3, "session"]]
+  |>}
+
+};
+
+(* ── start[] ─────────────────────────────────────────────────────────── *)
 start[] :=
   If[TrueQ[$started],
-    $tasks,
+    PersonalSite`TaskManager`summary[],
     (
-      (* RunScheduledTask[expr, segundos]: el intervalo va como numero de
-         segundos y el cuerpo se mantiene sin evaluar (HoldFirst), corriendo en
-         cada disparo del scheduler preventivo del kernel. *)
-      $tasks = <|
-        "heartbeat"     -> RunScheduledTask[heartbeat[],  30],   (* cada 30 s  *)
-        "cache-warm"    -> RunScheduledTask[warmCache[], 300],   (* cada 5 min *)
-        "theme-rotate"  -> RunScheduledTask[PersonalSite`Theme`tick[], 10],         (* cada 10 s  *)
-        "cards-refresh" -> RunScheduledTask[PersonalSite`Assets`refreshCards[], 20], (* cada 20 s, barato *)
-        "metric-refresh"-> RunScheduledTask[PersonalSite`Assets`refreshMetric[], 300], (* cada 5 min, pesado *)
-        (* NestScheduler: re-ejecuta el NestGraph de referencia cada 5 min.
-           Los resultados quedan en memoria listos para /nest/results (Power BI). *)
-        "nest-refresh"  -> RunScheduledTask[
-          PersonalSite`NestScheduler`run[{2#+1&, #+14&, #-18&}, {1}, 3, "session"],
-          300]  (* cada 5 min *)
-      |>;
+      (* Registrar todas las tareas en el TaskManager *)
+      Scan[Function[pair,
+        PersonalSite`TaskManager`register[First[pair], Last[pair]]],
+        $taskSpecs];
+
+      (* Iniciar todas (solo las enabled -> True) *)
+      PersonalSite`TaskManager`start[];
+
       $startedAt = Now;
       $started   = True;
-      $tasks
+      PersonalSite`TaskManager`summary[]
     )
   ];
 
+(* ── stop[] ──────────────────────────────────────────────────────────── *)
 stop[] :=
-  (
-    RemoveScheduledTask /@ Values[$tasks];
-    $tasks   = <||>;
-    $started = False;
-  );
+  (PersonalSite`TaskManager`stop[];
+   $started = False;);
 
-status[] := <|
-  "running"    -> $started,
-  "startedAt"  -> $startedAt,
-  "uptime"     -> If[$startedAt === None, Quantity[0, "Seconds"], Now - $startedAt],
-  "heartbeats" -> $beats,
-  "cacheWarms" -> $warms,
-  "tasks"      -> Keys[$tasks]
-|>;
+(* ── status[] ────────────────────────────────────────────────────────── *)
+status[] :=
+  <|PersonalSite`TaskManager`summary[],
+    "startedAt" -> $startedAt,
+    "uptime"    -> If[$startedAt === None,
+                     Quantity[0, "Seconds"],
+                     Now - $startedAt]|>;
 
 End[];
 EndPackage[];

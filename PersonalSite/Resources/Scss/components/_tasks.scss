@@ -1,0 +1,288 @@
+// Task Manager Dashboard
+
+// ── Layout ────────────────────────────────────────────────────────────────
+.tm-main {
+  min-height: 100vh;
+  background: var(--bg);
+  padding-bottom: 4rem;
+}
+
+// ── Hero ──────────────────────────────────────────────────────────────────
+.tm-hero {
+  background: linear-gradient(135deg, var(--header-from), var(--header-mid), var(--header-to));
+  padding: 2.5rem 1.5rem 2rem;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  flex-wrap: wrap;
+  gap: 1rem;
+
+  &__inner {
+    h1 {
+      font-size: clamp(1.6rem, 3.5vw, 2.4rem);
+      color: var(--header-text);
+      margin: 0 0 .4rem;
+      display: flex;
+      align-items: center;
+      gap: .75rem;
+    }
+    p { color: var(--header-muted); margin: 0; font-size: .95rem; }
+  }
+
+  &__actions { display: flex; gap: .6rem; }
+}
+
+.tm-kernel-badge {
+  font-size: .65em;
+  font-weight: 700;
+  background: rgba(255,255,255,.18);
+  color: var(--header-text);
+  padding: .15em .55em;
+  border-radius: 20px;
+  vertical-align: middle;
+}
+
+// ── Sección ───────────────────────────────────────────────────────────────
+.tm-section {
+  max-width: 1200px;
+  margin: 2rem auto;
+  padding: 0 1.5rem;
+
+  &__title {
+    font-size: 1rem;
+    font-weight: 700;
+    color: var(--heading);
+    margin: 0 0 1rem;
+  }
+
+  &__head {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    margin-bottom: 1rem;
+  }
+}
+
+// ── Flow Config Grid ──────────────────────────────────────────────────────
+.tm-flow-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
+  gap: 1rem;
+  margin-bottom: 1rem;
+}
+
+.tm-flow-card {
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  padding: 1rem;
+  display: flex;
+  flex-direction: column;
+  gap: .5rem;
+
+  &__label {
+    font-size: .75rem;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: .05em;
+    color: var(--text-muted);
+  }
+}
+
+.tm-flow-actions {
+  display: flex;
+  align-items: center;
+  gap: 1rem;
+}
+
+.tm-cfg-status {
+  font-size: .85rem;
+  font-weight: 600;
+  color: var(--accent);
+}
+
+// ── Input / Select ────────────────────────────────────────────────────────
+.tm-input, .tm-select, .tm-textarea {
+  width: 100%;
+  padding: .4rem .7rem;
+  background: var(--bg-alt);
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  color: var(--text);
+  font-size: .875rem;
+
+  &:focus {
+    outline: none;
+    border-color: var(--accent);
+    box-shadow: 0 0 0 3px color-mix(in srgb, var(--accent) 15%, transparent);
+  }
+}
+
+.tm-textarea { resize: vertical; font-family: var(--font-mono, monospace); }
+
+// ── Tabla ─────────────────────────────────────────────────────────────────
+.tm-table-wrap {
+  overflow-x: auto;
+  border-radius: 10px;
+  border: 1px solid var(--border);
+  box-shadow: 0 2px 8px var(--shadow);
+}
+
+.tm-table {
+  width: 100%;
+  border-collapse: collapse;
+  background: var(--surface);
+  font-size: .875rem;
+
+  th {
+    background: var(--bg-alt);
+    color: var(--text-muted);
+    font-weight: 700;
+    font-size: .72rem;
+    text-transform: uppercase;
+    letter-spacing: .05em;
+    padding: .65rem 1rem;
+    text-align: left;
+    border-bottom: 1px solid var(--border);
+    white-space: nowrap;
+  }
+
+  td {
+    padding: .55rem 1rem;
+    border-bottom: 1px solid var(--border);
+    color: var(--text);
+    vertical-align: middle;
+  }
+
+  tr:last-child td { border-bottom: none; }
+  tr:hover td { background: var(--bg-alt); }
+
+  &--sm td, &--sm th { padding: .4rem .75rem; font-size: .8rem; }
+}
+
+.tm-id   { color: var(--text-muted); font-size: .78rem; }
+.tm-mono { font-family: var(--font-mono, monospace); font-size: .8rem; }
+.tm-err  { color: #e55; font-size: .8rem; }
+.tm-empty {
+  text-align: center;
+  color: var(--text-muted);
+  font-style: italic;
+  padding: 2rem;
+}
+
+// ── Badges ────────────────────────────────────────────────────────────────
+.tm-badge {
+  display: inline-block;
+  padding: .15em .55em;
+  border-radius: 20px;
+  font-size: .7rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: .04em;
+
+  &--on     { background: color-mix(in srgb, #4caf50 18%, transparent); color: #4caf50; }
+  &--off    { background: var(--bg-alt); color: var(--text-muted); }
+  &--system { background: color-mix(in srgb, var(--accent) 15%, transparent); color: var(--accent-strong); }
+  &--flow   { background: color-mix(in srgb, #9c27b0 15%, transparent); color: #ab47bc; }
+  &--cache  { background: color-mix(in srgb, #2196f3 15%, transparent); color: #42a5f5; }
+  &--theme  { background: color-mix(in srgb, #ff9800 15%, transparent); color: #ffa726; }
+  &--user   { background: color-mix(in srgb, #607d8b 15%, transparent); color: #90a4ae; }
+}
+
+// ── Acciones de fila ──────────────────────────────────────────────────────
+.tm-actions { display: flex; gap: .4rem; flex-wrap: nowrap; }
+
+.btn--xs {
+  padding: .2rem .55rem;
+  font-size: .75rem;
+  border-radius: 4px;
+}
+
+.btn--danger {
+  background: color-mix(in srgb, #e53935 15%, transparent);
+  color: #ef5350;
+  border: 1px solid #ef5350;
+
+  &:hover { background: #e53935; color: #fff; }
+}
+
+// ── Historial sparkline ────────────────────────────────────────────────────
+.tm-hist-chart {
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  padding: .75rem 1rem;
+  margin-bottom: 1rem;
+  min-height: 80px;
+  display: flex;
+  align-items: flex-end;
+}
+
+.tm-bars {
+  display: flex;
+  align-items: flex-end;
+  gap: 4px;
+  height: 60px;
+  width: 100%;
+}
+
+.tm-bar {
+  flex: 1;
+  min-width: 8px;
+  background: var(--accent);
+  border-radius: 3px 3px 0 0;
+  opacity: .75;
+  transition: opacity .15s;
+  cursor: default;
+
+  &:hover { opacity: 1; }
+}
+
+// ── Modal ─────────────────────────────────────────────────────────────────
+.tm-modal {
+  position: fixed;
+  inset: 0;
+  background: rgba(0,0,0,.55);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 1000;
+
+  &[hidden] { display: none; }
+
+  &__box {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 12px;
+    padding: 2rem;
+    width: min(480px, 94vw);
+    box-shadow: 0 12px 40px rgba(0,0,0,.3);
+
+    h3 {
+      margin: 0 0 1.5rem;
+      color: var(--heading);
+      font-size: 1.1rem;
+    }
+  }
+
+  &__actions {
+    display: flex;
+    justify-content: flex-end;
+    gap: .6rem;
+    margin-top: 1.25rem;
+  }
+}
+
+.tm-field {
+  margin-bottom: 1rem;
+
+  label {
+    display: block;
+    font-size: .78rem;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: .04em;
+    color: var(--text-muted);
+    margin-bottom: .3rem;
+  }
+}

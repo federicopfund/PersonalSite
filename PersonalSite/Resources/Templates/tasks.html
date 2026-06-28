@@ -1,0 +1,334 @@
+<!DOCTYPE html>
+<html lang="es" data-theme="<*$theme*>"
+      data-theme-mode="<*$themeMode*>"
+      data-theme-order="<*$themeOrder*>"
+      data-theme-interval="<*$themeInterval*>"
+      data-theme-epoch="<*$themeEpoch*>">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Task Manager — Federico</title>
+  <link rel="stylesheet" href="/static/styles.css">
+</head>
+<body>
+  <div class="theme-bar" aria-hidden="true"></div>
+  <nav class="navbar">
+    <div class="nav-container">
+      <a class="nav-brand" href="/">Federico</a>
+      <button class="nav-toggle" id="nt" aria-label="Menú">
+        <span></span><span></span><span></span>
+      </button>
+      <ul class="nav-links" id="nl">
+        <li><a href="/">Inicio</a></li>
+        <li><a href="/flow">Flow</a></li>
+        <li><a href="/nest">NestScheduler</a></li>
+        <li><a class="nav-cta active" href="/tasks">Tasks</a></li>
+        <li><a class="nav-cta" href="/contacto">Contacto</a></li>
+      </ul>
+    </div>
+  </nav>
+
+  <main class="tm-main">
+
+    <!-- ── Hero ────────────────────────────────────────────────────── -->
+    <section class="tm-hero">
+      <div class="tm-hero__inner">
+        <h1>Task Manager <span class="tm-kernel-badge">Kernel #<*$kernelID*></span></h1>
+        <p>Runtime scheduler — <strong id="h-running"><*$running*></strong> activas
+           de <strong><*$taskCount*></strong> registradas. Polling cada 3 s.</p>
+      </div>
+      <div class="tm-hero__actions">
+        <button id="btn-refresh" class="btn btn--ghost">↺ Actualizar</button>
+        <button id="btn-add"     class="btn btn--primary">+ Nueva tarea</button>
+      </div>
+    </section>
+
+    <!-- ── Flow Config Panel ─────────────────────────────────────── -->
+    <section class="tm-section">
+      <h2 class="tm-section__title">⚙ Flow Engine Config</h2>
+      <div class="tm-flow-grid">
+        <div class="tm-flow-card">
+          <span class="tm-flow-card__label">Backend</span>
+          <select id="cfg-backend" class="tm-select">
+            <option value="session"  selected>session (TaskObject)</option>
+            <option value="sync">sync (secuencial)</option>
+            <option value="parallel">parallel (subkernels)</option>
+          </select>
+        </div>
+        <div class="tm-flow-card">
+          <span class="tm-flow-card__label">Max subkernels</span>
+          <input id="cfg-kernels" type="number" min="1" max="8" value="1" class="tm-input">
+        </div>
+        <div class="tm-flow-card">
+          <span class="tm-flow-card__label">NestGraph depth</span>
+          <input id="cfg-depth" type="number" min="1" max="5" value="3" class="tm-input">
+        </div>
+        <div class="tm-flow-card">
+          <span class="tm-flow-card__label">NestGraph seeds</span>
+          <input id="cfg-seeds" type="text" value="1" class="tm-input" placeholder="1,2">
+        </div>
+      </div>
+      <div class="tm-flow-actions">
+        <button id="btn-apply-nest" class="btn btn--primary btn--sm">
+          Aplicar a nest-refresh
+        </button>
+        <span id="cfg-status" class="tm-cfg-status"></span>
+      </div>
+    </section>
+
+    <!-- ── Tabla de tareas ───────────────────────────────────────── -->
+    <section class="tm-section">
+      <h2 class="tm-section__title">📋 TaskObjects registrados</h2>
+      <div class="tm-table-wrap">
+        <table class="tm-table" id="tm-table">
+          <thead>
+            <tr>
+              <th>Tarea</th>
+              <th>Grupo</th>
+              <th>Intervalo</th>
+              <th>Estado</th>
+              <th>Runs</th>
+              <th>Errores</th>
+              <th>Última ejecución</th>
+              <th>Tiempo (ms)</th>
+              <th>Acciones</th>
+            </tr>
+          </thead>
+          <tbody id="tm-tbody">
+            <tr><td colspan="9" class="tm-empty">Cargando…</td></tr>
+          </tbody>
+        </table>
+      </div>
+    </section>
+
+    <!-- ── Historial de una tarea ─────────────────────────────────── -->
+    <section class="tm-section" id="history-section" style="display:none">
+      <div class="tm-section__head">
+        <h2 class="tm-section__title">📈 Historial — <span id="hist-title">—</span></h2>
+        <button id="hist-close" class="btn btn--ghost btn--sm">✕ Cerrar</button>
+      </div>
+      <div id="hist-chart" class="tm-hist-chart"></div>
+      <div class="tm-table-wrap">
+        <table class="tm-table tm-table--sm">
+          <thead><tr><th>Hora</th><th>ms</th><th>OK</th><th>Error</th></tr></thead>
+          <tbody id="hist-tbody"></tbody>
+        </table>
+      </div>
+    </section>
+
+    <!-- ── Modal nueva tarea ──────────────────────────────────────── -->
+    <div id="modal-add" class="tm-modal" hidden>
+      <div class="tm-modal__box">
+        <h3>Registrar nueva tarea</h3>
+        <div class="tm-field">
+          <label>ID (nombre único)</label>
+          <input id="add-id" type="text" class="tm-input" placeholder="mi-tarea">
+        </div>
+        <div class="tm-field">
+          <label>Label</label>
+          <input id="add-label" type="text" class="tm-input" placeholder="Mi tarea custom">
+        </div>
+        <div class="tm-field">
+          <label>Grupo</label>
+          <select id="add-group" class="tm-select">
+            <option value="user">user</option>
+            <option value="system">system</option>
+            <option value="flow">flow</option>
+            <option value="cache">cache</option>
+          </select>
+        </div>
+        <div class="tm-field">
+          <label>Intervalo (segundos)</label>
+          <input id="add-interval" type="number" min="5" value="60" class="tm-input">
+        </div>
+        <div class="tm-field">
+          <label>Código Wolfram (action)</label>
+          <textarea id="add-code" class="tm-textarea" rows="3"
+            placeholder="Function[True] (* se evalua en el kernel *)"></textarea>
+        </div>
+        <div class="tm-modal__actions">
+          <button id="add-cancel" class="btn btn--ghost">Cancelar</button>
+          <button id="add-submit" class="btn btn--primary">Registrar</button>
+        </div>
+      </div>
+    </div>
+
+  </main>
+
+  <footer class="footer">
+    <div class="footer__inner">
+      <span>© 2026 Federico Pfund</span>
+      <span>Task Manager — Wolfram Language Runtime</span>
+    </div>
+  </footer>
+
+<script>
+(function(){
+  const $  = id => document.getElementById(id);
+  const qs = s  => document.querySelector(s);
+
+  /* ── Grupos → color ────────────────────────────────────────────── */
+  const GROUP_CLASS = {
+    system: 'tm-badge--system', flow: 'tm-badge--flow',
+    cache:  'tm-badge--cache',  theme: 'tm-badge--theme',
+    nest:   'tm-badge--flow',   user:  'tm-badge--user'
+  };
+
+  /* ── Render tabla ───────────────────────────────────────────────── */
+  function renderTable(snap){
+    $('h-running').textContent = snap.running;
+    const tasks = snap.tasks || {};
+    const rows  = Object.entries(tasks).map(([id, t]) => {
+      const runCls = t.running ? 'tm-badge--on' : 'tm-badge--off';
+      const grpCls = GROUP_CLASS[t.group] || 'tm-badge--user';
+      const errCls = t.errors > 0 ? 'tm-err' : '';
+      return `<tr data-id="${id}">
+        <td><strong>${t.label}</strong><br><code class="tm-id">${id}</code></td>
+        <td><span class="tm-badge ${grpCls}">${t.group}</span></td>
+        <td>${t.interval} s</td>
+        <td><span class="tm-badge ${runCls}">${t.running?'ACTIVA':'detenida'}</span></td>
+        <td>${t.runs}</td>
+        <td class="${errCls}">${t.errors}</td>
+        <td class="tm-mono">${t.lastRun}</td>
+        <td class="tm-mono">${t.avgMs.toFixed(1)} ms</td>
+        <td class="tm-actions">
+          ${t.running
+            ? `<button class="btn btn--xs btn--danger"  data-action="stop"    data-id="${id}">Stop</button>
+               <button class="btn btn--xs btn--ghost"   data-action="restart" data-id="${id}">↺</button>`
+            : `<button class="btn btn--xs btn--primary" data-action="start"   data-id="${id}">Start</button>`}
+          <button class="btn btn--xs btn--ghost" data-action="history" data-id="${id}">Hist.</button>
+        </td>
+      </tr>`;
+    });
+    $('tm-tbody').innerHTML = rows.join('') ||
+      '<tr><td colspan="9" class="tm-empty">Sin tareas.</td></tr>';
+
+    /* Configurar intervalo live para nest-refresh si existe */
+    if(tasks['nest-refresh']){
+      $('cfg-depth').value = 3;
+    }
+  }
+
+  /* ── Fetch snapshot ─────────────────────────────────────────────── */
+  async function fetchSummary(){
+    try{
+      const r = await fetch('/tasks/summary');
+      if(!r.ok) return;
+      renderTable(await r.json());
+    }catch(e){}
+  }
+
+  /* Polling cada 3 s */
+  fetchSummary();
+  setInterval(fetchSummary, 3000);
+
+  /* ── Acciones de fila (delegación) ──────────────────────────────── */
+  $('tm-tbody').addEventListener('click', async e => {
+    const btn = e.target.closest('[data-action]');
+    if(!btn) return;
+    const {action, id} = btn.dataset;
+
+    if(action === 'history'){ showHistory(id); return; }
+
+    btn.disabled = true;
+    try{
+      await fetch(`/tasks/${action}/${id}`, {method:'POST'});
+      await fetchSummary();
+    }finally{ btn.disabled = false; }
+  });
+
+  /* ── Historial ──────────────────────────────────────────────────── */
+  async function showHistory(id){
+    const r = await fetch(`/tasks/history/${id}`);
+    if(!r.ok) return;
+    const rows = await r.json();
+    $('hist-title').textContent = id;
+    $('history-section').style.display = '';
+
+    /* Mini sparkline */
+    const vals = rows.map(r=>r.ms||0);
+    const max  = Math.max(...vals, 1);
+    const bars = vals.map(v=>`<div class="tm-bar" style="height:${Math.round(v/max*60)}px"
+      title="${v} ms"></div>`).join('');
+    $('hist-chart').innerHTML = `<div class="tm-bars">${bars}</div>`;
+
+    $('hist-tbody').innerHTML = rows.map(r=>`<tr>
+      <td class="tm-mono">${r.at}</td>
+      <td class="tm-mono">${r.ms}</td>
+      <td>${r.ok ? '✓' : '✗'}</td>
+      <td class="tm-err">${r.err||''}</td>
+    </tr>`).join('') || '<tr><td colspan="4" class="tm-empty">Sin historial.</td></tr>';
+
+    $('history-section').scrollIntoView({behavior:'smooth'});
+  }
+  $('hist-close').addEventListener('click',()=>{ $('history-section').style.display='none'; });
+
+  /* ── Aplicar config Flow a nest-refresh ─────────────────────────── */
+  $('btn-apply-nest').addEventListener('click', async ()=>{
+    const btn = $('btn-apply-nest');
+    btn.disabled = true;
+    $('cfg-status').textContent = '…';
+    try{
+      const iv = parseInt($('cfg-interval')?.value||300)||300;
+      const r  = await fetch('/tasks/configure', {
+        method:'POST',
+        headers:{'Content-Type':'application/json'},
+        body: JSON.stringify({id:'nest-refresh', key:'interval', value: iv})
+      });
+      const d = await r.json();
+      $('cfg-status').textContent = d.ok ? '✓ Aplicado' : '✗ Error';
+      if(d.ok) await fetchSummary();
+    }finally{ btn.disabled = false; setTimeout(()=>$('cfg-status').textContent='',3000); }
+  });
+
+  /* ── Actualizar manual ───────────────────────────────────────────── */
+  $('btn-refresh').addEventListener('click', fetchSummary);
+
+  /* ── Modal nueva tarea ───────────────────────────────────────────── */
+  $('btn-add').addEventListener('click', ()=>{ $('modal-add').hidden = false; });
+  $('add-cancel').addEventListener('click',()=>{ $('modal-add').hidden = true; });
+
+  $('add-submit').addEventListener('click', async ()=>{
+    const body = {
+      id:         $('add-id').value.trim(),
+      label:      $('add-label').value.trim(),
+      group:      $('add-group').value,
+      interval:   parseInt($('add-interval').value)||60,
+      actionCode: $('add-code').value.trim() || 'Function[True]',
+      enabled:    true
+    };
+    if(!body.id){ alert('El ID es obligatorio'); return; }
+    const r = await fetch('/tasks/register',{
+      method:'POST',
+      headers:{'Content-Type':'application/json'},
+      body: JSON.stringify(body)
+    });
+    const d = await r.json();
+    if(d.ok){ $('modal-add').hidden=true; await fetchSummary(); }
+    else alert('Error al registrar: ' + (d.error||'desconocido'));
+  });
+
+  /* Nav toggle */
+  const nt=$('nt'), nl=$('nl');
+  if(nt) nt.addEventListener('click',()=>nl.classList.toggle('open'));
+})();
+</script>
+
+<script>
+/* Live theme rotation */
+(function(){
+  const h=document.documentElement,
+        mode=h.dataset.themeMode,
+        order=(h.dataset.themeOrder||'').split(',').filter(Boolean),
+        iv=parseInt(h.dataset.themeInterval)||20,
+        epoch=parseInt(h.dataset.themeEpoch)||0;
+  if(mode!=='auto'||!order.length) return;
+  function pick(){
+    const t=Math.floor((Date.now()/1000-epoch));
+    h.setAttribute('data-theme',order[Math.floor(t/iv)%order.length]);
+  }
+  pick(); setInterval(pick,1000);
+})();
+</script>
+</body>
+</html>
