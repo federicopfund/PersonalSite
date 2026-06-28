@@ -12,8 +12,7 @@
      POST /nest/cancel       → cancela ScheduledTask
    -------------------------------------------------------------------------- *)
 
-BeginPackage["PersonalSite`Controller`",
-  {"PersonalSite`NestScheduler`"}];
+BeginPackage["PersonalSite`Controller`"];
 
 nest::usage    = "nest[req] sirve la UI del NestScheduler.";
 nestRun::usage = "nestRun[req] ejecuta el NestGraph y devuelve JSON.";

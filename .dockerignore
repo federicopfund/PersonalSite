@@ -17,3 +17,4 @@ PersonalSite/Resources/Scss
 
 # Excepcion: la DB sembrada se hornea en la imagen de Code Engine (stateless).
 !data/site.db
+!PersonalSite/data/site.db
