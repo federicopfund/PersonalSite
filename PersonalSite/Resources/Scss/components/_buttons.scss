@@ -5,6 +5,13 @@
 // =============================================================
 @use '../abstracts' as *;
 
+// Propiedad CSS animable para el arco del anillo UX del scheduler
+@property --ring-deg {
+  syntax: '<angle>';
+  initial-value: 0deg;
+  inherits: false;
+}
+
 .btn {
   display: inline-flex;
   align-items: center;
@@ -34,11 +41,56 @@
 }
 
 .btn-ghost {
+  position: relative;
+  isolation: isolate;
   border: 1.5px solid rgba(#fff, .22);
   color: gray(200);
+
+  // Anillo de carga animado — borde conic-gradient via mask-composite
+  // El scheduler task `contact-ux` activa/desactiva la clase .is-running
+  &::before {
+    content: '';
+    position: absolute;
+    inset: -2px;
+    border-radius: inherit;
+    padding: 2px;
+    background: conic-gradient(
+      from var(--ring-deg) at 50% 50%,
+      transparent          0deg,
+      var(--accent)       40deg,
+      var(--accent-strong) 110deg,
+      transparent          180deg
+    );
+    -webkit-mask:
+      linear-gradient(#fff 0 0) content-box,
+      linear-gradient(#fff 0 0);
+    mask:
+      linear-gradient(#fff 0 0) content-box,
+      linear-gradient(#fff 0 0);
+    -webkit-mask-composite: xor;
+    mask-composite: exclude;
+    opacity: 0;
+    animation: ring-spin 2s linear infinite paused;
+    transition: opacity .35s ease;
+    z-index: -1;
+  }
 
   &:hover {
     background: rgba(#fff, .08);
     border-color: rgba(#fff, .4);
   }
+
+  // JS agrega esta clase cuando la tarea `contact-ux` del scheduler esta activa
+  &.is-running {
+    border-color: transparent;
+
+    &::before {
+      opacity: 1;
+      animation-play-state: running;
+    }
+  }
+}
+
+@keyframes ring-spin {
+  to { --ring-deg: 360deg; }
 }

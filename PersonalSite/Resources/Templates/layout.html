@@ -134,5 +134,29 @@
       setInterval(pick, 1000);
     })();
   </script>
+  <script>
+    // Contact UX ring — impulsado por la ScheduledTask `contact-ux` del backend.
+    // Cada 5 s el scheduler escribe ux.contact.active en Settings (0 o 1).
+    // El JS lee /ux/contact (JSON) y alterna la clase .is-running en el boton,
+    // lo que activa la animacion conic-gradient definida en _buttons.scss.
+    (function () {
+      var btn = document.getElementById('btn-contacto');
+      if (!btn) return;
+      function poll() {
+        fetch('/ux/contact')
+          .then(function (r) { return r.json(); })
+          .then(function (d) {
+            if (d.active) {
+              btn.classList.add('is-running');
+            } else {
+              btn.classList.remove('is-running');
+            }
+          })
+          .catch(function () {});
+      }
+      poll();
+      setInterval(poll, 5000);
+    }());
+  </script>
 </body>
 </html>

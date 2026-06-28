@@ -84,6 +84,22 @@ $taskSpecs = {
     "action"   -> Function[
       PersonalSite`NestScheduler`run[
         {2 # + 1 &, # + 14 &, # - 18 &}, {1}, 3, "session"]]
+  |>},
+
+  (* ── UX ─────────────────────────────────────────────────────────── *)
+  (* Regla de color para el boton Contacto: cicla activo/inactivo cada
+     20 segundos. El frontend lee /ux/contact (JSON) y agrega .is-running
+     al boton para disparar la animacion del anillo conic-gradient. *)
+  {"contact-ux", <|
+    "label"    -> "Contact UX ring pulse",
+    "group"    -> "ux",
+    "interval" -> 5,
+    "enabled"  -> True,
+    "deps"     -> {"heartbeat"},
+    "action"   -> Function[
+      Module[{active = If[Mod[Floor[UnixTime[] / 20], 2] === 1, "1", "0"]},
+        PersonalSite`Settings`set["ux.contact.active", active];
+        active === "1"]]
   |>}
 
 };

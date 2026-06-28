@@ -119,6 +119,7 @@ dispatcher[] := Delayed @ URLDispatcher[{
   "/kernel/schedule" ~~ EndOfString :> PersonalSite`Controller`kernelSchedule[HTTPRequestData[]],
   "/kernel/history"  ~~ EndOfString :> PersonalSite`Controller`kernelHistory[HTTPRequestData[]],
   "/kernel"          ~~ EndOfString :> PersonalSite`Controller`kernelPage[HTTPRequestData[]],
+  "/ux/contact"      ~~ EndOfString :> PersonalSite`Controller`uxContactState[HTTPRequestData[]],
   "/"        ~~ EndOfString           :> PersonalSite`Controller`home[HTTPRequestData[]],
   ___ :> HTTPResponse["No encontrado", <|"StatusCode" -> 404|>]
 }];

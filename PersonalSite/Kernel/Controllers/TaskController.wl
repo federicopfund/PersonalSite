@@ -34,6 +34,7 @@ tasksConfigDelete::usage = "tasksConfigDelete[id, req] elimina un config de la D
 tasksConfigApply::usage  = "tasksConfigApply[req] aplica todos los configs de DB al runtime.";
 tasksConfigSeed::usage   = "tasksConfigSeed[req] siembra los defaults en la DB.";
 tasksConfigById::usage   = "tasksConfigById[id, req] devuelve un config por task_id.";
+uxContactState::usage    = "uxContactState[req] devuelve el estado UX del boton Contacto (JSON).";
 
 Begin["`Private`"];
 
@@ -230,6 +231,22 @@ tasksConfigApply[req_] :=
 tasksConfigSeed[req_] :=
   Module[{res = Quiet @ Check[PersonalSite`TaskConfig`seedDefaults[], $Failed]},
     jsonResp[<|"ok"->(res =!= $Failed), "result"->ToString[res]|>]];
+
+(* ── GET /ux/contact  → estado UX del anillo del boton Contacto ─── *)
+(* Retorna {active: bool, runs: n, lastMs: n}.
+   `active` refleja si la tarea `contact-ux` esta en su ventana activa
+   (Mod[Floor[UnixTime[]/20], 2] === 1). El JS del cliente agrega la
+   clase .is-running al boton para disparar la animacion CSS. *)
+uxContactState[req_] :=
+  Module[{active, taskInfo},
+    active   = PersonalSite`Settings`get["ux.contact.active", "0"];
+    taskInfo = Quiet @ Check[PersonalSite`TaskManager`info["contact-ux"], <||>];
+    jsonResp[<|
+      "active" -> (active === "1"),
+      "runs"   -> Lookup[taskInfo, "runs",   0],
+      "lastMs" -> Lookup[taskInfo, "lastMs", 0.]
+    |>]
+  ];
 
 End[];
 EndPackage[];
