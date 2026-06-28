@@ -107,8 +107,10 @@ create[spec_Association] :=
     order = Lookup[spec, "dag_order",  0];
     code  = Lookup[spec, "action_code","Function[True]"];
     If[id === "", Return[$Failed]];
+    (* Reject duplicates explicitly — INSERT OR IGNORE would silently succeed *)
+    If[byId[id] =!= $Failed, Return[$Failed]];
     r = PersonalSite`Database`execute[
-      "INSERT OR IGNORE INTO scheduler_tasks
+      "INSERT INTO scheduler_tasks
          (task_id, label, group_name, interval_s, enabled,
           deps, dag_order, action_code)
        VALUES (?,?,?,?,?,?,?,?)",
