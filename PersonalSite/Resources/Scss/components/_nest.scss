@@ -1,0 +1,324 @@
+// NestScheduler UI — árbol NestGraph paralelo
+
+// ── Layout principal ──────────────────────────────────────────────────────
+.nest-main {
+  min-height: 100vh;
+  background: var(--bg);
+  padding-bottom: 4rem;
+}
+
+// ── Hero ──────────────────────────────────────────────────────────────────
+.nest-hero {
+  background: linear-gradient(135deg, var(--header-from), var(--header-mid), var(--header-to));
+  padding: 3rem 1.5rem 2.5rem;
+
+  &__inner {
+    max-width: 860px;
+    margin: 0 auto;
+  }
+
+  &__title {
+    font-size: clamp(1.8rem, 4vw, 2.8rem);
+    color: var(--header-text);
+    margin: 0 0 .5rem;
+  }
+
+  &__sub {
+    color: var(--header-muted);
+    margin: 0;
+    font-size: .95rem;
+
+    code {
+      background: rgba(255,255,255,.15);
+      padding: .1em .35em;
+      border-radius: 4px;
+      font-size: .9em;
+    }
+  }
+}
+
+// ── Panel ─────────────────────────────────────────────────────────────────
+.nest-panel {
+  max-width: 1100px;
+  margin: 2rem auto;
+  padding: 0 1.5rem;
+
+  &__grid {
+    display: grid;
+    grid-template-columns: 1fr 320px;
+    gap: 1.5rem;
+
+    @media (max-width: 780px) { grid-template-columns: 1fr; }
+  }
+}
+
+// ── Cards ─────────────────────────────────────────────────────────────────
+.nest-card {
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  padding: 1.5rem;
+  box-shadow: 0 2px 8px var(--shadow);
+
+  &__title {
+    font-size: 1rem;
+    font-weight: 600;
+    color: var(--heading);
+    margin: 0 0 1.25rem;
+    padding-bottom: .5rem;
+    border-bottom: 1px solid var(--border);
+  }
+}
+
+// ── Campos de configuración ───────────────────────────────────────────────
+.nest-field {
+  margin-bottom: 1rem;
+
+  label {
+    display: block;
+    font-size: .8rem;
+    font-weight: 600;
+    color: var(--text-muted);
+    text-transform: uppercase;
+    letter-spacing: .04em;
+    margin-bottom: .35rem;
+  }
+
+  input[type="text"],
+  input[type="number"],
+  select {
+    width: 100%;
+    padding: .45rem .75rem;
+    background: var(--bg-alt);
+    border: 1px solid var(--border);
+    border-radius: 6px;
+    color: var(--text);
+    font-size: .9rem;
+
+    &:focus {
+      outline: none;
+      border-color: var(--accent);
+      box-shadow: 0 0 0 3px color-mix(in srgb, var(--accent) 15%, transparent);
+    }
+  }
+}
+
+// ── Reglas ────────────────────────────────────────────────────────────────
+.nest-rules { margin-bottom: .5rem; }
+
+.nest-rule {
+  display: grid;
+  grid-template-columns: 48px 48px 56px 1fr 26px;
+  gap: .4rem;
+  align-items: center;
+  margin-bottom: .5rem;
+
+  input { padding: .35rem .4rem; text-align: center; }
+
+  .rule-preview {
+    font-family: var(--font-mono, monospace);
+    font-size: .8rem;
+    color: var(--accent);
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+
+  .rule-del {
+    background: none;
+    border: 1px solid var(--border);
+    border-radius: 4px;
+    color: var(--text-muted);
+    cursor: pointer;
+    font-size: .9rem;
+    line-height: 1;
+    padding: .2rem .3rem;
+    transition: color .2s, border-color .2s;
+
+    &:hover { color: #e55; border-color: #e55; }
+  }
+}
+
+// ── Acciones ──────────────────────────────────────────────────────────────
+.nest-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: .6rem;
+  margin-top: 1.25rem;
+}
+
+// ── Stats ─────────────────────────────────────────────────────────────────
+.nest-stat-grid {
+  display: grid;
+  grid-template-columns: auto 1fr;
+  gap: .4rem .75rem;
+  margin: 0;
+  font-size: .875rem;
+
+  dt { color: var(--text-muted); font-weight: 500; }
+  dd { margin: 0; color: var(--text); font-weight: 600; }
+}
+
+// ── Badges ────────────────────────────────────────────────────────────────
+.nest-badge {
+  display: inline-block;
+  padding: .15em .55em;
+  border-radius: 20px;
+  font-size: .75rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: .04em;
+
+  &--ok   { background: color-mix(in srgb, var(--accent) 18%, transparent); color: var(--accent-strong); }
+  &--off  { background: var(--bg-alt); color: var(--text-muted); }
+  &--info { background: color-mix(in srgb, #4f9eff 15%, transparent); color: #4f9eff; }
+}
+
+// ── Sección ───────────────────────────────────────────────────────────────
+.nest-section {
+  max-width: 1100px;
+  margin: 2rem auto;
+  padding: 0 1.5rem;
+
+  h2 {
+    font-size: 1.1rem;
+    color: var(--heading);
+    margin: 0 0 1rem;
+    display: flex;
+    align-items: center;
+    gap: .6rem;
+  }
+
+  &__head {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    margin-bottom: 1rem;
+  }
+
+  &__actions {
+    display: flex;
+    gap: .5rem;
+  }
+}
+
+// ── Árbol por niveles ─────────────────────────────────────────────────────
+.nest-tree {
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  padding: 1.5rem;
+  min-height: 120px;
+  box-shadow: 0 2px 8px var(--shadow);
+  overflow-x: auto;
+}
+
+.nest-levels {
+  display: flex;
+  flex-direction: column;
+  gap: 1rem;
+}
+
+.nest-level {
+  display: flex;
+  align-items: center;
+  gap: 1rem;
+
+  &__label {
+    font-size: .72rem;
+    font-weight: 700;
+    color: var(--text-muted);
+    text-transform: uppercase;
+    min-width: 28px;
+    text-align: right;
+  }
+
+  &__nodes {
+    display: flex;
+    flex-wrap: wrap;
+    gap: .5rem;
+  }
+}
+
+.nest-node {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  width: 56px;
+  height: 56px;
+  border-radius: 50%;
+  border: 2px solid var(--border);
+  background: var(--bg-alt);
+  cursor: default;
+  transition: transform .15s, box-shadow .15s;
+
+  &:hover {
+    transform: scale(1.08);
+    box-shadow: 0 4px 12px var(--shadow);
+  }
+
+  &__val {
+    font-size: .78rem;
+    font-weight: 700;
+    color: var(--heading);
+    line-height: 1;
+  }
+
+  &__meta {
+    font-size: .6rem;
+    color: var(--text-muted);
+  }
+
+  // Colores por regla
+  &--root   { border-color: var(--accent); background: color-mix(in srgb, var(--accent) 12%, transparent); }
+  &--rule0  { border-color: var(--accent); }
+  &--rule1  { border-color: var(--link); background: color-mix(in srgb, var(--link) 10%, transparent); }
+  &--rule2  { border-color: var(--accent-strong); background: color-mix(in srgb, var(--accent-strong) 10%, transparent); }
+}
+
+// ── Tabla Power BI ────────────────────────────────────────────────────────
+.nest-table-wrap {
+  overflow-x: auto;
+  border-radius: 10px;
+  border: 1px solid var(--border);
+  box-shadow: 0 2px 8px var(--shadow);
+}
+
+.nest-table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: .875rem;
+  background: var(--surface);
+
+  th {
+    background: var(--bg-alt);
+    color: var(--text-muted);
+    font-weight: 700;
+    font-size: .75rem;
+    text-transform: uppercase;
+    letter-spacing: .05em;
+    padding: .65rem 1rem;
+    text-align: left;
+    border-bottom: 1px solid var(--border);
+  }
+
+  td {
+    padding: .5rem 1rem;
+    border-bottom: 1px solid var(--border);
+    color: var(--text);
+
+    strong { color: var(--accent-strong); }
+  }
+
+  tr:last-child td { border-bottom: none; }
+  tr:hover td { background: var(--bg-alt); }
+}
+
+.nest-empty {
+  text-align: center;
+  color: var(--text-muted);
+  font-style: italic;
+  padding: 2rem;
+  margin: 0;
+}

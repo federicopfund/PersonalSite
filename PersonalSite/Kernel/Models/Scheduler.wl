@@ -50,7 +50,12 @@ start[] :=
         "cache-warm"    -> RunScheduledTask[warmCache[], 300],   (* cada 5 min *)
         "theme-rotate"  -> RunScheduledTask[PersonalSite`Theme`tick[], 10],         (* cada 10 s  *)
         "cards-refresh" -> RunScheduledTask[PersonalSite`Assets`refreshCards[], 20], (* cada 20 s, barato *)
-        "metric-refresh"-> RunScheduledTask[PersonalSite`Assets`refreshMetric[], 300] (* cada 5 min, pesado *)
+        "metric-refresh"-> RunScheduledTask[PersonalSite`Assets`refreshMetric[], 300], (* cada 5 min, pesado *)
+        (* NestScheduler: re-ejecuta el NestGraph de referencia cada 5 min.
+           Los resultados quedan en memoria listos para /nest/results (Power BI). *)
+        "nest-refresh"  -> RunScheduledTask[
+          PersonalSite`NestScheduler`run[{2#+1&, #+14&, #-18&}, {1}, 3, "session"],
+          300]  (* cada 5 min *)
       |>;
       $startedAt = Now;
       $started   = True;

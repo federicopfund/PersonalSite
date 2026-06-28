@@ -1,0 +1,344 @@
+<!DOCTYPE html>
+<html lang="es" data-theme="<*$theme*>"
+      data-theme-mode="<*$themeMode*>"
+      data-theme-order="<*$themeOrder*>"
+      data-theme-interval="<*$themeInterval*>"
+      data-theme-epoch="<*$themeEpoch*>">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>NestScheduler — Federico</title>
+  <link rel="stylesheet" href="/static/styles.css">
+</head>
+<body>
+  <div class="theme-bar" aria-hidden="true"></div>
+  <nav class="navbar">
+    <div class="nav-container">
+      <a class="nav-brand" href="/">Federico</a>
+      <button class="nav-toggle" id="nt" aria-label="Menú">
+        <span></span><span></span><span></span>
+      </button>
+      <ul class="nav-links" id="nl">
+        <li><a href="/">Inicio</a></li>
+        <li><a href="/blog">Blog</a></li>
+        <li><a href="/flow">Flow</a></li>
+        <li><a class="nav-cta active" href="/nest">NestScheduler</a></li>
+        <li><a class="nav-cta" href="/contacto">Contacto</a></li>
+      </ul>
+    </div>
+  </nav>
+
+  <main class="nest-main">
+    <section class="nest-hero">
+      <div class="nest-hero__inner">
+        <h1 class="nest-hero__title">NestScheduler</h1>
+        <p class="nest-hero__sub">
+          Ejecución paralela de árboles <code>NestGraph</code> como
+          <code>TaskObject</code> — cada nivel es una capa de Flow.
+        </p>
+      </div>
+    </section>
+
+    <!-- ── Panel de control ─────────────────────────────────────────── -->
+    <section class="nest-panel">
+      <div class="nest-panel__grid">
+
+        <!-- Config -->
+        <div class="nest-card nest-card--config">
+          <h2 class="nest-card__title">Configuración</h2>
+          <div class="nest-field">
+            <label for="n-seeds">Seeds (separados por coma)</label>
+            <input id="n-seeds" type="text" value="<*$defaultSeeds*>" placeholder="1,2,3">
+          </div>
+          <div class="nest-field">
+            <label for="n-depth">Profundidad (1–5)</label>
+            <input id="n-depth" type="number" min="1" max="5" value="<*$defaultDepth*>">
+          </div>
+          <div class="nest-field">
+            <label for="n-backend">Backend de ejecución</label>
+            <select id="n-backend">
+              <option value="session"  selected>session (TaskObject cooperativo)</option>
+              <option value="sync">sync (secuencial)</option>
+              <option value="parallel">parallel (subkernels)</option>
+            </select>
+          </div>
+          <div class="nest-field">
+            <label>Reglas (f(x) = ax² + bx + c)</label>
+            <div id="n-rules" class="nest-rules">
+              <div class="nest-rule" data-idx="0">
+                <input type="number" placeholder="a" value="0" class="rule-a" step="1">
+                <input type="number" placeholder="b" value="2" class="rule-b" step="1">
+                <input type="number" placeholder="c" value="1" class="rule-c" step="1">
+                <span class="rule-preview">2x + 1</span>
+                <button class="rule-del" title="Eliminar">×</button>
+              </div>
+              <div class="nest-rule" data-idx="1">
+                <input type="number" placeholder="a" value="0" class="rule-a" step="1">
+                <input type="number" placeholder="b" value="1" class="rule-b" step="1">
+                <input type="number" placeholder="c" value="14" class="rule-c" step="1">
+                <span class="rule-preview">x + 14</span>
+                <button class="rule-del" title="Eliminar">×</button>
+              </div>
+              <div class="nest-rule" data-idx="2">
+                <input type="number" placeholder="a" value="0" class="rule-a" step="1">
+                <input type="number" placeholder="b" value="1" class="rule-b" step="1">
+                <input type="number" placeholder="c" value="-18" class="rule-c" step="1">
+                <span class="rule-preview">x − 18</span>
+                <button class="rule-del" title="Eliminar">×</button>
+              </div>
+            </div>
+            <button id="n-add-rule" class="btn btn--ghost btn--sm">+ Agregar regla</button>
+          </div>
+          <div class="nest-actions">
+            <button id="n-run" class="btn btn--primary">▶ Ejecutar</button>
+            <button id="n-schedule" class="btn btn--ghost">⏱ Schedulear (60s)</button>
+            <button id="n-cancel" class="btn btn--ghost">✕ Cancelar tarea</button>
+          </div>
+        </div>
+
+        <!-- Status -->
+        <div class="nest-card nest-card--status">
+          <h2 class="nest-card__title">Estado</h2>
+          <dl class="nest-stat-grid">
+            <dt>ScheduledTask</dt>
+            <dd id="s-active" class="nest-badge nest-badge--<*If[$taskActive == "true", "ok", "off"]*>">
+              <*If[$taskActive == "true", "ACTIVA", "inactiva"]*>
+            </dd>
+            <dt>Ejecuciones</dt>
+            <dd id="s-runs"><*$runCount*></dd>
+            <dt>Última ejecución</dt>
+            <dd id="s-last"><*$lastRun*></dd>
+            <dt>Nodos</dt>
+            <dd id="s-nodes"><*$nodeCount*></dd>
+            <dt>Profundidad</dt>
+            <dd id="s-depth"><*$depth*></dd>
+            <dt>Tiempo</dt>
+            <dd id="s-elapsed"><*$elapsed*></dd>
+            <dt>Backend</dt>
+            <dd id="s-backend"><*$backend*></dd>
+          </dl>
+        </div>
+
+      </div>
+    </section>
+
+    <!-- ── Árbol visual ─────────────────────────────────────────────── -->
+    <section class="nest-section">
+      <div class="nest-section__head">
+        <h2>Árbol NestGraph</h2>
+        <div class="nest-section__actions">
+          <a id="dl-json" href="/nest/results" class="btn btn--ghost btn--sm" download="nestgraph.json">
+            ↓ JSON (Power BI)
+          </a>
+          <a id="dl-csv" href="/nest/export.csv" class="btn btn--ghost btn--sm" download="nestgraph.csv">
+            ↓ CSV (Power BI)
+          </a>
+        </div>
+      </div>
+      <div id="nest-tree" class="nest-tree">
+        <p class="nest-empty">Ejecutá el NestGraph para ver el árbol.</p>
+      </div>
+    </section>
+
+    <!-- ── Tabla Power BI ───────────────────────────────────────────── -->
+    <section class="nest-section">
+      <h2>Tabla de resultados <span class="nest-badge nest-badge--info">Power BI ready</span></h2>
+      <div class="nest-table-wrap">
+        <table id="nest-table" class="nest-table">
+          <thead>
+            <tr>
+              <th>ID</th><th>Nivel</th><th>Valor</th>
+              <th>Padre</th><th>Regla</th><th>Resultado</th>
+            </tr>
+          </thead>
+          <tbody id="nest-tbody">
+            <tr><td colspan="6" class="nest-empty">Sin datos.</td></tr>
+          </tbody>
+        </table>
+      </div>
+    </section>
+  </main>
+
+  <footer class="footer">
+    <div class="footer__inner">
+      <span>© 2026 Federico Pfund</span>
+      <span>NestScheduler — Wolfram Language</span>
+    </div>
+  </footer>
+
+  <script>
+  (function(){
+    /* ── Utils ────────────────────────────────────────────────────── */
+    const $ = id => document.getElementById(id);
+    const setStatus = (key, val) => { const el = $(key); if(el) el.textContent = val; };
+
+    /* ── Leer reglas del formulario ─────────────────────────────── */
+    function getRules(){
+      return Array.from(document.querySelectorAll('.nest-rule')).map(row => [
+        Number(row.querySelector('.rule-a').value)||0,
+        Number(row.querySelector('.rule-b').value)||0,
+        Number(row.querySelector('.rule-c').value)||0
+      ]);
+    }
+
+    function getConfig(){
+      const seedStr = $('n-seeds').value.trim();
+      const seeds   = seedStr.split(',').map(Number).filter(n=>!isNaN(n));
+      return {
+        seeds:   seeds.length ? seeds : [1],
+        depth:   Math.min(5, Math.max(1, parseInt($('n-depth').value)||3)),
+        backend: $('n-backend').value,
+        rules:   getRules()
+      };
+    }
+
+    /* ── Preview de regla ────────────────────────────────────────── */
+    function rulePreview(row){
+      const a = Number(row.querySelector('.rule-a').value)||0;
+      const b = Number(row.querySelector('.rule-b').value)||0;
+      const c = Number(row.querySelector('.rule-c').value)||0;
+      const terms = [];
+      if(a) terms.push(`${a}x²`);
+      if(b) terms.push(`${b>0&&terms.length?'+':''}${b}x`);
+      if(c) terms.push(`${c>0&&terms.length?'+':''}${c}`);
+      row.querySelector('.rule-preview').textContent = terms.join(' ')||'0';
+    }
+
+    document.querySelectorAll('.nest-rule').forEach(row=>{
+      row.querySelectorAll('input').forEach(i=>i.addEventListener('input',()=>rulePreview(row)));
+      row.querySelector('.rule-del').addEventListener('click',()=>row.remove());
+    });
+
+    $('n-add-rule').addEventListener('click',()=>{
+      const wrap = $('n-rules');
+      const div  = document.createElement('div');
+      div.className = 'nest-rule';
+      div.innerHTML = `<input type="number" placeholder="a" value="0" class="rule-a" step="1">
+        <input type="number" placeholder="b" value="1" class="rule-b" step="1">
+        <input type="number" placeholder="c" value="0" class="rule-c" step="1">
+        <span class="rule-preview">x</span>
+        <button class="rule-del" title="Eliminar">×</button>`;
+      wrap.appendChild(div);
+      div.querySelectorAll('input').forEach(i=>i.addEventListener('input',()=>rulePreview(div)));
+      div.querySelector('.rule-del').addEventListener('click',()=>div.remove());
+    });
+
+    /* ── Render árbol BFS ─────────────────────────────────────────── */
+    function renderTree(nodes){
+      const tree  = $('nest-tree');
+      const tbody = $('nest-tbody');
+      if(!nodes.length){ tree.innerHTML='<p class="nest-empty">Sin datos.</p>'; return; }
+
+      /* Agrupar por nivel */
+      const levels = {};
+      nodes.forEach(n=>{ (levels[n.level]=levels[n.level]||[]).push(n); });
+
+      let html = '<div class="nest-levels">';
+      Object.keys(levels).sort((a,b)=>a-b).forEach(lv=>{
+        html += `<div class="nest-level"><span class="nest-level__label">L${lv}</span><div class="nest-level__nodes">`;
+        levels[lv].forEach(n=>{
+          const cls = n.level===0 ? 'nest-node--root' : `nest-node--rule${n.ruleIdx%3}`;
+          html += `<div class="nest-node ${cls}" title="ID ${n.id} | padre ${n.parent??'—'} | regla ${n.ruleIdx}">
+            <span class="nest-node__val">${n.result??n.value}</span>
+            <span class="nest-node__meta">L${n.level}</span>
+          </div>`;
+        });
+        html += '</div></div>';
+      });
+      html += '</div>';
+      tree.innerHTML = html;
+
+      /* Tabla */
+      tbody.innerHTML = nodes.map(n=>`<tr>
+        <td>${n.id}</td><td>${n.level}</td><td>${n.value}</td>
+        <td>${n.parent??'—'}</td><td>${n.ruleIdx}</td>
+        <td><strong>${n.result??'—'}</strong></td>
+      </tr>`).join('');
+    }
+
+    /* ── Fetch resultados ──────────────────────────────────────────── */
+    async function fetchResults(){
+      try{
+        const r = await fetch('/nest/results');
+        if(!r.ok) return;
+        const nodes = await r.json();
+        if(Array.isArray(nodes)) renderTree(nodes);
+      }catch(e){}
+    }
+
+    /* ── Ejecutar ─────────────────────────────────────────────────── */
+    $('n-run').addEventListener('click', async ()=>{
+      const btn = $('n-run');
+      btn.disabled = true; btn.textContent = '⏳ Ejecutando…';
+      try{
+        const cfg = getConfig();
+        const r   = await fetch('/nest/run', {
+          method:'POST',
+          headers:{'Content-Type':'application/json'},
+          body: JSON.stringify(cfg)
+        });
+        const d = await r.json();
+        if(d.ok){
+          setStatus('s-nodes',   d.nodeCount);
+          setStatus('s-depth',   d.depth);
+          setStatus('s-elapsed', d.elapsed.toFixed(3)+' s');
+          setStatus('s-backend', d.backend);
+          setStatus('s-last',    new Date().toLocaleString());
+          setStatus('s-runs',    (parseInt($('s-runs').textContent)||0)+1);
+          await fetchResults();
+        }
+      }finally{
+        btn.disabled = false; btn.textContent = '▶ Ejecutar';
+      }
+    });
+
+    /* ── Schedulear ───────────────────────────────────────────────── */
+    $('n-schedule').addEventListener('click', async ()=>{
+      const cfg = {...getConfig(), interval: 60};
+      const r   = await fetch('/nest/schedule', {
+        method:'POST',
+        headers:{'Content-Type':'application/json'},
+        body: JSON.stringify(cfg)
+      });
+      const d = await r.json();
+      if(d.ok){
+        $('s-active').textContent = 'ACTIVA';
+        $('s-active').className   = 'nest-badge nest-badge--ok';
+      }
+    });
+
+    /* ── Cancelar ─────────────────────────────────────────────────── */
+    $('n-cancel').addEventListener('click', async ()=>{
+      const r = await fetch('/nest/cancel',{method:'POST'});
+      const d = await r.json();
+      $('s-active').textContent = d.ok ? 'inactiva' : 'ACTIVA';
+      $('s-active').className   = `nest-badge nest-badge--${d.ok?'off':'ok'}`;
+    });
+
+    /* Cargar datos si ya hay resultados del servidor */
+    fetchResults();
+
+    /* Nav toggle */
+    const nt = $('nt'), nl = $('nl');
+    if(nt) nt.addEventListener('click',()=>nl.classList.toggle('open'));
+  })();
+  </script>
+
+  <script>
+  /* Live theme rotation (igual que layout.html) */
+  (function(){
+    const h=document.documentElement,
+          mode=h.dataset.themeMode,
+          order=(h.dataset.themeOrder||'').split(',').filter(Boolean),
+          iv=parseInt(h.dataset.themeInterval)||20,
+          epoch=parseInt(h.dataset.themeEpoch)||0;
+    if(mode!=='auto'||!order.length) return;
+    function pick(){
+      const t=Math.floor((Date.now()/1000-epoch));
+      h.setAttribute('data-theme',order[Math.floor(t/iv)%order.length]);
+    }
+    pick(); setInterval(pick,1000);
+  })();
+  </script>
+</body>
+</html>

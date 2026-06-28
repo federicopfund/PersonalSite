@@ -82,8 +82,14 @@ dispatcher[] := Delayed @ URLDispatcher[{
   "/ask"     ~~ EndOfString           :> PersonalSite`Controller`ask[HTTPRequestData[]],
   "/contacto" ~~ EndOfString          :> PersonalSite`Controller`contact[HTTPRequestData[]],
   "/apariencia" ~~ EndOfString        :> PersonalSite`Controller`appearance[HTTPRequestData[]],
-  "/flow"     ~~ EndOfString           :> PersonalSite`Controller`flow[HTTPRequestData[]],
-  "/perf"     ~~ EndOfString           :> PersonalSite`Controller`perf[HTTPRequestData[]],
+  "/flow"          ~~ EndOfString :> PersonalSite`Controller`flow[HTTPRequestData[]],
+  "/perf"          ~~ EndOfString :> PersonalSite`Controller`perf[HTTPRequestData[]],
+  "/nest/run"       ~~ EndOfString :> PersonalSite`Controller`nestRun[HTTPRequestData[]],
+  "/nest/results"   ~~ EndOfString :> PersonalSite`Controller`nestResults[HTTPRequestData[]],
+  "/nest/export.csv"~~ EndOfString :> PersonalSite`Controller`nestExport[HTTPRequestData[]],
+  "/nest/schedule"  ~~ EndOfString :> PersonalSite`Controller`nestSchedule[HTTPRequestData[]],
+  "/nest/cancel"    ~~ EndOfString :> PersonalSite`Controller`nestCancel[HTTPRequestData[]],
+  "/nest"           ~~ EndOfString :> PersonalSite`Controller`nest[HTTPRequestData[]],
   "/"        ~~ EndOfString           :> PersonalSite`Controller`home[HTTPRequestData[]],
   ___ :> HTTPResponse["No encontrado", <|"StatusCode" -> 404|>]
 }];
