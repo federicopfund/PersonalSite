@@ -203,6 +203,13 @@
   width: 100%;
   height: 620px;
   display: block;
+
+  /* Suprimir el outline de foco que el navegador aplica al canvas
+     de 3d-force-graph cuando el usuario hace click/drag en el grafo */
+  canvas {
+    outline: none !important;
+    display: block;
+  }
 }
 
 // ── Flujo de estados ────────────────────────────────────────────
