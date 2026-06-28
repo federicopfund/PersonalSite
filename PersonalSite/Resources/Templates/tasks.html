@@ -269,11 +269,11 @@
     btn.disabled = true;
     $('cfg-status').textContent = '…';
     try{
-      const iv = parseInt($('cfg-interval')?.value||300)||300;
+      const iv = parseInt($('cfg-depth')?.value||3)||3;
       const r  = await fetch('/tasks/configure', {
         method:'POST',
-        headers:{'Content-Type':'application/json'},
-        body: JSON.stringify({id:'nest-refresh', key:'interval', value: iv})
+        headers:{'Content-Type':'application/x-www-form-urlencoded'},
+        body: new URLSearchParams({id:'nest-refresh', key:'interval', value: 300})
       });
       const d = await r.json();
       $('cfg-status').textContent = d.ok ? '✓ Aplicado' : '✗ Error';
@@ -289,19 +289,16 @@
   $('add-cancel').addEventListener('click',()=>{ $('modal-add').hidden = true; });
 
   $('add-submit').addEventListener('click', async ()=>{
-    const body = {
-      id:         $('add-id').value.trim(),
-      label:      $('add-label').value.trim(),
-      group:      $('add-group').value,
-      interval:   parseInt($('add-interval').value)||60,
-      actionCode: $('add-code').value.trim() || 'Function[True]',
-      enabled:    true
-    };
-    if(!body.id){ alert('El ID es obligatorio'); return; }
+    const id         = $('add-id').value.trim();
+    const label      = $('add-label').value.trim();
+    const group      = $('add-group').value;
+    const interval   = parseInt($('add-interval').value)||60;
+    const actionCode = $('add-code').value.trim() || 'Function[True]';
+    if(!id){ alert('El ID es obligatorio'); return; }
     const r = await fetch('/tasks/register',{
       method:'POST',
-      headers:{'Content-Type':'application/json'},
-      body: JSON.stringify(body)
+      headers:{'Content-Type':'application/x-www-form-urlencoded'},
+      body: new URLSearchParams({id, label, group, interval, actionCode, enabled:'true'})
     });
     const d = await r.json();
     if(d.ok){ $('modal-add').hidden=true; await fetchSummary(); }

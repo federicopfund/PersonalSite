@@ -15,8 +15,7 @@
    -------------------------------------------------------------------------- *)
 
 BeginPackage["PersonalSite`Controller`",
-  {"PersonalSite`TaskManager`",
-   "PersonalSite`Views`"}];
+  {"PersonalSite`TaskManager`"}];
 
 tasks::usage         = "tasks[req] sirve el dashboard de TaskObjects.";
 tasksSummary::usage  = "tasksSummary[req] devuelve JSON snapshot.";
@@ -29,28 +28,31 @@ tasksRegister::usage = "tasksRegister[req] registra una tarea nueva.";
 
 Begin["`Private`"];
 
+(* WolframWebEngine no expone JSON bodies (Body->None).
+   Leer desde FormRules (application/x-www-form-urlencoded)
+   o desde Query (query string), en ese orden. *)
 parseBody[req_] :=
-  Quiet @ Check[
-    ImportString[req["Body"], "JSON"] /.
-      {r_Rule :> r, l_List :> Association[l]},
+  Module[{fd = req["FormRules"], qp = req["Query"]},
+    If[ListQ[fd] && Length[fd] > 0, Return[Association[fd]]];
+    If[ListQ[qp] && Length[qp] > 0, Return[Association[qp]]];
     <||>];
 
 jsonResp[data_, code_: 200] :=
   HTTPResponse[
-    ExportString[data, "JSON"],
+    Quiet @ Check[
+      Developer`WriteRawJSONString[data],
+      Quiet @ Check[ExportString[data, "JSON"], "{\"ok\":false}"]],
     <|"StatusCode" -> code,
       "Headers" -> <|"Content-Type" -> "application/json"|>|>];
 
 (* ── GET /tasks ────────────────────────────────────────────────────── *)
 tasks[req_] :=
-  Module[{snap = PersonalSite`TaskManager`summary[], shared},
-    shared = PersonalSite`Views`shared[];
-    PersonalSite`Views`render["tasks",
-      Join[shared, <|
-        "kernelID"   -> ToString[snap["kernelID"]],
+  Module[{snap = PersonalSite`TaskManager`summary[]},
+    PersonalSite`View`render["tasks",
+      <|"kernelID"   -> ToString[snap["kernel"]],
         "taskCount"  -> ToString[snap["taskCount"]],
         "running"    -> ToString[snap["running"]]
-      |>]]
+      |>]
   ];
 
 (* ── GET /tasks/summary ────────────────────────────────────────────── *)
@@ -59,7 +61,9 @@ tasksSummary[req_] :=
 
 (* ── GET /tasks/history/:id ────────────────────────────────────────── *)
 tasksHistory[id_String, req_] :=
-  jsonResp[PersonalSite`TaskManager`history[id]];
+  If[PersonalSite`TaskManager`info[id] === $Failed,
+    jsonResp[<|"ok" -> False, "error" -> "task not found"|>, 404],
+    jsonResp[PersonalSite`TaskManager`history[id]]];
 
 (* ── POST /tasks/start/:id ─────────────────────────────────────────── *)
 tasksStart[id_String, req_] :=
@@ -107,8 +111,11 @@ tasksRegister[req_] :=
     spec = <|
       "label"    -> Lookup[body, "label", id],
       "group"    -> Lookup[body, "group", "user"],
-      "interval" -> Lookup[body, "interval", 60],
-      "enabled"  -> TrueQ[Lookup[body, "enabled", True]],
+      "interval" -> Quiet @ Check[
+                     With[{iv = Lookup[body, "interval", "60"]},
+                       If[IntegerQ[iv], iv, ToExpression[ToString[iv]]]],
+                     60],
+      "enabled"  -> ! MemberQ[{"false", "False", "0"}, Lookup[body, "enabled", "true"]],
       "action"   -> fn
     |>;
     res = Quiet @ Check[

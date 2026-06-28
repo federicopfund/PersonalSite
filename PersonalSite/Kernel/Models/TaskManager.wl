@@ -48,8 +48,8 @@ configure::usage =
   "configure[name, key, value] actualiza una clave del spec (p.ej. intervalo). \
 Reinicia la tarea si estaba corriendo.";
 
-all::usage =
-  "all[] devuelve la Association completa de specs + states.";
+allTasks::usage =
+  "allTasks[] devuelve la Association completa de specs + states.";
 
 info::usage =
   "info[name] devuelve el estado actual de una tarea.";
@@ -76,7 +76,7 @@ initState[] := <|
   "lastRun" -> None,
   "lastMs"  -> 0.,
   "avgMs"   -> 0.,
-  "lastErr" -> None,
+  "lastErr" -> Null,
   "history" -> {}
 |>;
 
@@ -90,15 +90,16 @@ register[name_String, spec_Association] :=
 (* ── Monitor wrapper ────────────────────────────────────────────────── *)
 (* Envuelve la accion original: mide tiempo, captura errores, actualiza state. *)
 monitoredRun[name_String] :=
-  Module[{t0 = AbsoluteTime[], result, ms, ok = True, errMsg = None},
+  Module[{t0 = AbsoluteTime[], result, ms, ok = True, errMsg = Null},
     result = Quiet @ Check[
       $specs[name]["action"][],
       (ok = False; $Failed)];
-    If[result === $Failed, errMsg = "execution returned $Failed"];
+    If[result === $Failed, errMsg = "execution returned $Failed"; ok = False];
     ms = 1000. * (AbsoluteTime[] - t0);
 
     (* Actualizar state *)
-    With[{s = $states[name], prev = $states[name]["avgMs"]},
+    With[{s = $states[name], prev = $states[name]["avgMs"],
+          atStr = TimeString[Now], errStr = If[ok, "", errMsg]},
       $states[name] = <|s,
         "runs"    -> s["runs"] + 1,
         "errors"  -> s["errors"] + If[ok, 0, 1],
@@ -108,11 +109,10 @@ monitoredRun[name_String] :=
         "lastErr" -> If[ok, s["lastErr"], errMsg],
         "history" -> Take[
           Prepend[s["history"],
-            <|"at" -> DateString[Now, {"Hour24", ":", "Minute", ":", "Second"}],
-              "ms" -> Round[ms, .1], "ok" -> ok, "err" -> errMsg|>],
+            <|"at" -> atStr, "ms" -> Round[ms, .1],
+              "ok" -> ok, "err" -> errStr|>],
           Min[$histLen, Length[s["history"]] + 1]]
       |>];
-    ];
     result
   ];
 
@@ -158,7 +158,7 @@ configure[name_String, key_String, value_] :=
   ];
 
 (* ── Consultas ────────────────────────────────────────────────────────── *)
-all[] :=
+allTasks[] :=
   Association @ KeyValueMap[
     Function[{name, spec},
       name -> <|spec, "state" -> $states[name]|>],
@@ -170,36 +170,63 @@ info[name_String] :=
     $Failed];
 
 history[name_String] :=
-  If[KeyExistsQ[$states, name], $states[name]["history"], {}];
+  If[KeyExistsQ[$states, name],
+    Map[
+      Function[h, <|
+        "at"  -> ToString @ Lookup[h, "at",  ""],
+        "ms"  -> N @ Lookup[h, "ms", 0],
+        "ok"  -> TrueQ @ Lookup[h, "ok", False],
+        "err" -> If[Lookup[h, "err", ""] === None || Lookup[h, "err", ""] === Null,
+                   "", ToString @ Lookup[h, "err", ""]]
+      |>],
+      $states[name]["history"]],
+    {}];
 
 (* ── Snapshot JSON-serializable ─────────────────────────────────────── *)
-msStr[ms_] := ToString[Round[ms, .1]] <> " ms";
+
+(* Garantiza que cualquier valor sea String, Integer, Real o Bool. *)
+toJ[x_] := Which[
+  x === True || x === False, x,
+  IntegerQ[x],               x,
+  NumberQ[x],                N[x],
+  StringQ[x],                x,
+  x === None || x === Null,  "",
+  True,                      ToString[x]];
 
 summary[] :=
-  <|"kernelID"  -> $KernelID,
-    "taskCount" -> Length[$specs],
-    "running"   -> Length[Select[$states, TrueQ[#["running"]] &]],
-    "tasks"     -> Association @ KeyValueMap[
+  Module[{tsk},
+    tsk = Association @ KeyValueMap[
       Function[{name, spec},
         name -> <|
-          "label"    -> Lookup[spec, "label", name],
-          "group"    -> Lookup[spec, "group", "user"],
-          "interval" -> Lookup[spec, "interval", 60],
-          "enabled"  -> Lookup[spec, "enabled", True],
+          "label"    -> toJ @ Lookup[spec, "label", name],
+          "group"    -> toJ @ Lookup[spec, "group", "user"],
+          "interval" -> toJ @ Lookup[spec, "interval", 60],
+          "enabled"  -> TrueQ @ Lookup[spec, "enabled", True],
           "running"  -> TrueQ[$states[name]["running"]],
-          "runs"     -> $states[name]["runs"],
-          "errors"   -> $states[name]["errors"],
-          "lastRun"  -> If[$states[name]["lastRun"] === None, "—",
+          "runs"     -> toJ[$states[name]["runs"]],
+          "errors"   -> toJ[$states[name]["errors"]],
+          "lastRun"  -> If[$states[name]["lastRun"] === None, "",
                           DateString[$states[name]["lastRun"],
                             {"Hour24", ":", "Minute", ":", "Second"}]],
-          "lastMs"   -> $states[name]["lastMs"],
-          "avgMs"    -> $states[name]["avgMs"],
-          "lastErr"  -> If[$states[name]["lastErr"] === None, Null,
-                           $states[name]["lastErr"]],
-          "history"  -> $states[name]["history"]
+          "lastMs"   -> N @ $states[name]["lastMs"],
+          "avgMs"    -> N @ $states[name]["avgMs"],
+          "lastErr"  -> toJ @ $states[name]["lastErr"],
+          "history"  -> Map[
+            Function[h, <|
+              "at"  -> toJ @ Lookup[h, "at",  ""],
+              "ms"  -> N @ Lookup[h, "ms", 0],
+              "ok"  -> TrueQ @ Lookup[h, "ok", False],
+              "err" -> toJ @ Lookup[h, "err", ""]
+            |>],
+            $states[name]["history"]]
         |>],
-      $specs]
-  |>;
+      $specs];
+    <|"kernel"    -> $KernelID,
+      "taskCount" -> Length[$specs],
+      "running"   -> Length @ Select[$states, TrueQ[#["running"]] &],
+      "tasks"     -> tsk
+    |>
+  ];
 
 End[];
 EndPackage[];

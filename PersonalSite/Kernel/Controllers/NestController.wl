@@ -13,8 +13,7 @@
    -------------------------------------------------------------------------- *)
 
 BeginPackage["PersonalSite`Controller`",
-  {"PersonalSite`NestScheduler`",
-   "PersonalSite`Views`"}];
+  {"PersonalSite`NestScheduler`"}];
 
 nest::usage    = "nest[req] sirve la UI del NestScheduler.";
 nestRun::usage = "nestRun[req] ejecuta el NestGraph y devuelve JSON.";
@@ -28,10 +27,13 @@ $defaultSeeds   = {1};
 $defaultDepth   = 3;
 $defaultBackend = "session";
 
-(* Lee el body JSON del request; devuelve Association o <||> si falla. *)
+(* WolframWebEngine no expone JSON bodies (Body->None).
+   Leer desde FormRules (application/x-www-form-urlencoded)
+   o desde Query (query string), en ese orden. *)
 parseBody[req_] :=
-  Quiet @ Check[
-    ImportString[req["Body"], "JSON"] /. {r_Rule :> r, l_List :> Association[l]},
+  Module[{fd = req["FormRules"], qp = req["Query"]},
+    If[ListQ[fd] && Length[fd] > 0, Return[Association[fd]]];
+    If[ListQ[qp] && Length[qp] > 0, Return[Association[qp]]];
     <||>];
 
 (* Extrae la lista de reglas desde el body o usa las por defecto.
@@ -61,12 +63,9 @@ bodyBackend[body_Association] :=
 (* ---- GET /nest --------------------------------------------------------- *)
 nest[req_] :=
   Module[{info = PersonalSite`NestScheduler`taskInfo[],
-          last = PersonalSite`NestScheduler`results[],
-          shared},
-    shared = PersonalSite`Views`shared[];
-    PersonalSite`Views`render["nest",
-      Join[shared, <|
-        "taskActive"  -> If[info["active"], "true", "false"],
+          last = PersonalSite`NestScheduler`results[]},
+    PersonalSite`View`render["nest",
+      <|"taskActive"  -> If[info["active"], "true", "false"],
         "runCount"    -> ToString[info["runCount"]],
         "lastRun"     -> If[info["lastRun"] === None, "—", DateString[info["lastRun"]]],
         "nodeCount"   -> If[KeyExistsQ[last, "built"],
@@ -79,7 +78,7 @@ nest[req_] :=
         "defaultDepth"  -> ToString[$defaultDepth],
         "defaultSeeds"  -> StringRiffle[ToString /@ $defaultSeeds, ","],
         "ruleCount"     -> ToString[Length[$defaultRules]]
-      |>]]
+      |>]
   ];
 
 (* ---- POST /nest/run ---------------------------------------------------- *)

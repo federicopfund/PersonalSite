@@ -16,7 +16,7 @@ services:
       PERSONALSITE_NAME: "Federico"
       PERSONALSITE_DB: /data/site.db
       PERSONALSITE_ROOT: /app
-      POOLSIZE: "2"
+      POOLSIZE: "1"
       # Wolfram|Alpha Simple API (graficas /wa-img)
       # Obtene tu AppID gratis en: https://developer.wolframalpha.com/
       WOLFRAM_ALPHA_APPID: "Q2X7HGK6X9"
