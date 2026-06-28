@@ -1,10 +1,10 @@
 <section class="arch-hero">
   <div class="arch-hero-inner">
     <div class="arch-hero-text">
-      <span class="arch-badge">Graph 3D &bull; Wolfram Language</span>
+      <span class="arch-badge">Graph 3D &bull; Wolfram Language &bull; Live Heartbeat</span>
       <h1>Arquitectura del Sistema</h1>
-      <p>Flujo de estados y dependencias &mdash; 25 nodos, 33 aristas dirigidas.<br>
-         Arrastr&aacute; para rotar &bull; Scroll para hacer zoom &bull; Click en un nodo para resaltar.</p>
+      <p>40 nodos &bull; 58+ aristas &bull; Heartbeat en tiempo real &bull; Flujos aut&oacute;nomos convergentes.<br>
+         Arrastr&aacute; para rotar &bull; Scroll para zoom &bull; Hover para resaltar vecinos.</p>
     </div>
     <div class="arch-legend">
       <span class="arch-leg arch-leg--entry">HTTP Entry / Response</span>
@@ -13,6 +13,8 @@
       <span class="arch-leg arch-leg--model">Models</span>
       <span class="arch-leg arch-leg--view">Renderer</span>
       <span class="arch-leg arch-leg--ext">External / Data</span>
+      <span class="arch-leg arch-leg--nest-rt">NestScheduler RT</span>
+      <span class="arch-leg arch-leg--sentinel">&#x29BF; Confluent State</span>
     </div>
   </div>
 </section>
@@ -21,8 +23,11 @@
   <div id="arch-graph-container">
     <div id="arch-sim-bar">
       <button id="arch-sim-btn" class="arch-sim-btn">&#9654; Simular NestSchedule</button>
+      <button id="arch-hb-btn" class="arch-sim-btn arch-hb-btn">&#9679; Heartbeat ON</button>
       <span id="arch-sim-label" class="arch-sim-label"></span>
+      <span id="arch-hb-ts" class="arch-hb-ts"></span>
     </div>
+    <div id="arch-health-panel" class="arch-health-panel"></div>
     <div id="arch-graph"></div>
   </div>
 </section>
@@ -79,8 +84,33 @@
   var COLOR = {
     entry:'#3389ff', router:'#7a7a85', ctrl:'#eb7a1a',
     model:'#2db85e', view:'#aa44e0',   ext:'#d93535',
-    'nest-rt':'#00e5ff'
+    'nest-rt':'#00e5ff', sentinel:'#ffd700'
   };
+  var HB_COLOR = { ok:'#00ff88', warn:'#ffcc00', err:'#ff3333', idle:'#555566', unknown:'#7777aa' };
+  var healthData = {};
+  var pulsePhase = {};
+
+  function blendToWhite(hex, factor) {
+    var r = parseInt(hex.slice(1,3),16);
+    var g = parseInt(hex.slice(3,5),16);
+    var b = parseInt(hex.slice(5,7),16);
+    r = Math.round(r * (1 - factor * 0.5));
+    g = Math.round(g * (1 - factor * 0.5));
+    b = Math.round(b * (1 - factor * 0.5));
+    return 'rgb('+r+','+g+','+b+')';
+  }
+
+  function nodeDisplayColor(node) {
+    var h = healthData[node.id];
+    if (!h) return COLOR[node.group] || '#aaa';
+    var base = HB_COLOR[h.status] || COLOR[node.group] || '#aaa';
+    if (h.status === 'ok' && pulsePhase[node.id]) {
+      var t = (Date.now() - pulsePhase[node.id]) % 2400;
+      var bright = 0.65 + 0.35 * Math.sin(Math.PI * t / 1200);
+      return blendToWhite(base, 1 - bright);
+    }
+    return base;
+  }
 
   /* Secuencia de simulacion: nodo + descripcion del paso */
   var SIM_STEPS = [
@@ -117,9 +147,12 @@
         .nodeLabel(function(n){ return n.label || n.id; })
         .nodeColor(function(n){
           if(highlighted.size && !highlighted.has(n.id)) return 'rgba(80,80,80,0.2)';
-          return COLOR[n.group] || '#aaa';
+          return nodeDisplayColor(n);
         })
-        .nodeVal(function(n){ return ({entry:10,router:8,view:8})[n.group] || 5; })
+        .nodeVal(function(n){
+          if(n.group==='sentinel') return 14;
+          return ({entry:10,router:8,view:8})[n.group] || 5;
+        })
         .linkColor(function(l){
           if(!highlighted.size) return 'rgba(160,160,170,0.5)';
           var s = l.source.id||l.source, t = l.target.id||l.target;
@@ -189,6 +222,94 @@
             }
           }, i * 480));
         });
+      });
+
+      /* ── Heartbeat real-time health ─────────────────────────── */
+      var hbActive   = true;
+      var hbInterval = null;
+
+      var hbBtn  = document.getElementById('arch-hb-btn');
+      var hbTs   = document.getElementById('arch-hb-ts');
+      var panel  = document.getElementById('arch-health-panel');
+
+      function fetchHealth() {
+        fetch('/arch/health')
+          .then(function(r){ return r.json(); })
+          .then(function(d) {
+            healthData = d.nodes || {};
+            /* Update pulse timestamps for ok nodes */
+            Object.keys(healthData).forEach(function(id) {
+              if (healthData[id].status === 'ok') {
+                if (!pulsePhase[id]) pulsePhase[id] = Date.now();
+              } else {
+                delete pulsePhase[id];
+              }
+            });
+            /* Timestamp */
+            var dt = new Date(d.ts * 1000);
+            hbTs.textContent = 'Actualizado: ' + dt.toLocaleTimeString();
+            /* Health panel */
+            renderPanel(d);
+            /* Refresh graph colors */
+            Graph.nodeColor(Graph.nodeColor())
+                 .linkColor(Graph.linkColor())
+                 .linkDirectionalParticles(Graph.linkDirectionalParticles());
+          }).catch(function(){});
+      }
+
+      function renderPanel(d) {
+        if (!d.nodes) return;
+        var groups = { ok:[], warn:[], err:[], idle:[], unknown:[] };
+        Object.keys(d.nodes).forEach(function(id) {
+          var s = d.nodes[id].status;
+          if (groups[s]) groups[s].push(id);
+        });
+        var html = '';
+        var order = ['err','warn','ok','idle','unknown'];
+        var icons = { ok:'&#9679;', warn:'&#9651;', err:'&#9679;', idle:'&#9675;', unknown:'&#8981;' };
+        order.forEach(function(s) {
+          if (!groups[s].length) return;
+          html += '<div class="hb-group hb-group--'+s+'">';
+          html += '<span class="hb-group-label">'+icons[s]+' '+s.toUpperCase()+'</span>';
+          groups[s].forEach(function(id) {
+            var msg = d.nodes[id].msg || '';
+            html += '<span class="hb-node" title="'+msg+'">'+id+'</span>';
+          });
+          html += '</div>';
+        });
+        panel.innerHTML = html;
+      }
+
+      /* Pulse animation loop */
+      function animLoop() {
+        if (hbActive && Object.keys(pulsePhase).length > 0) {
+          Graph.nodeColor(Graph.nodeColor());
+        }
+        requestAnimationFrame(animLoop);
+      }
+      animLoop();
+
+      /* Start heartbeat polling */
+      fetchHealth();
+      hbInterval = setInterval(fetchHealth, 3000);
+
+      hbBtn.addEventListener('click', function() {
+        hbActive = !hbActive;
+        if (hbActive) {
+          hbInterval = setInterval(fetchHealth, 3000);
+          hbBtn.textContent = '\u25CF Heartbeat ON';
+          hbBtn.classList.remove('off');
+        } else {
+          clearInterval(hbInterval);
+          healthData = {};
+          pulsePhase = {};
+          panel.innerHTML = '';
+          hbTs.textContent = '';
+          hbBtn.textContent = '\u25CB Heartbeat OFF';
+          hbBtn.classList.add('off');
+          Graph.nodeColor(Graph.nodeColor())
+               .linkColor(Graph.linkColor());
+        }
       });
 
       window.addEventListener('resize', function(){

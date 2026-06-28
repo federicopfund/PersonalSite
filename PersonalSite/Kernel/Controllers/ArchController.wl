@@ -10,6 +10,7 @@ BeginPackage["PersonalSite`Controller`"];
 
 arch::usage     = "arch[req] renderiza /arch: arquitectura del sistema.";
 archData::usage = "archData[req] sirve los datos JSON del grafo.";
+archHealth::usage = "archHealth[req] sirve el estado de salud en tiempo real.";
 
 Begin["`Private`"];
 
@@ -56,7 +57,12 @@ buildArchJSON[] :=
       <|"id"->"FlowLN",      "group"->"nest-rt", "label"->"Layer N \[DoubleVerticalBar] rule(LN-1)"|>,
       <|"id"->"NestStore",   "group"->"nest-rt", "label"->"$lastResults"|>,
       <|"id"->"SchedLoop",   "group"->"nest-rt", "label"->"ScheduledTask (every N s)"|>,
-      <|"id"->"NestAPI",     "group"->"nest-rt", "label"->"GET /nest/results"|>
+      <|"id"->"NestAPI",     "group"->"nest-rt", "label"->"GET /nest/results"|>,
+      (* ── Confluent sentinels (convergencia de salud por capa) ── *)
+      <|"id"->"SentCtrl",  "group"->"sentinel", "label"->"⦿ Ctrl Health"|>,
+      <|"id"->"SentModel", "group"->"sentinel", "label"->"⦿ Model Health"|>,
+      <|"id"->"SentExt",   "group"->"sentinel", "label"->"⦿ Ext Health"|>,
+      <|"id"->"SysState",  "group"->"sentinel", "label"->"⦿ System State"|>
     };
     links = {
       (* ── Aristas base ──────────────────────────────────────────── *)
@@ -105,7 +111,30 @@ buildArchJSON[] :=
       <|"source"->"NestStore", "target"->"SchedLoop",    "rt"->True|>,
       <|"source"->"SchedLoop", "target"->"Nest",         "rt"->True|>,
       <|"source"->"NestStore", "target"->"NestAPI",      "rt"->True|>,
-      <|"source"->"NestAPI",   "target"->"Response",     "rt"->True|>
+      <|"source"->"NestAPI",   "target"->"Response",     "rt"->True|>,
+      (* ── Heartbeat self-loops (un ciclo por nodo monitoreado) ── *)
+      <|"source"->"Router",    "target"->"Router",    "hb"->True|>,
+      <|"source"->"Database",  "target"->"Database",  "hb"->True|>,
+      <|"source"->"NestSched", "target"->"NestSched", "hb"->True|>,
+      <|"source"->"TaskMgr",   "target"->"TaskMgr",   "hb"->True|>,
+      <|"source"->"Scheduler", "target"->"Scheduler", "hb"->True|>,
+      <|"source"->"Cache",     "target"->"Cache",     "hb"->True|>,
+      <|"source"->"Renderer",  "target"->"Renderer",  "hb"->True|>,
+      (* ── Convergencia hacia sentinels ─────────────────────────── *)
+      <|"source"->"Home",    "target"->"SentCtrl",  "conv"->True|>,
+      <|"source"->"Blog",    "target"->"SentCtrl",  "conv"->True|>,
+      <|"source"->"Nest",    "target"->"SentCtrl",  "conv"->True|>,
+      <|"source"->"Tasks",   "target"->"SentCtrl",  "conv"->True|>,
+      <|"source"->"Database","target"->"SentModel", "conv"->True|>,
+      <|"source"->"NestSched","target"->"SentModel","conv"->True|>,
+      <|"source"->"TaskMgr", "target"->"SentModel", "conv"->True|>,
+      <|"source"->"Cache",   "target"->"SentModel", "conv"->True|>,
+      <|"source"->"SQLite",  "target"->"SentExt",   "conv"->True|>,
+      <|"source"->"WAAPI",   "target"->"SentExt",   "conv"->True|>,
+      <|"source"->"SMTP",    "target"->"SentExt",   "conv"->True|>,
+      <|"source"->"SentCtrl", "target"->"SysState", "conv"->True|>,
+      <|"source"->"SentModel","target"->"SysState", "conv"->True|>,
+      <|"source"->"SentExt",  "target"->"SysState", "conv"->True|>
     };
     data = <|"nodes" -> nodes, "links" -> links|>;
     Quiet @ Check[
@@ -114,135 +143,7 @@ buildArchJSON[] :=
     ]
   ];
 
-(* ELIMINADO: buildArchPNG[] — reemplazado por JSON + JS client-side *)
-buildArchPNG[] :=
-  Module[{verts, edges, coords, vStyle, eStyle, g, bytes},
-
-    verts = {
-      (* Entrada *)
-      "HTTP",
-      (* Router *)
-      "Router",
-      (* Controllers *)
-      "Home",  "Blog",   "Contacto", "WA\[Dash]ctrl",
-      "Nest",  "Tasks",  "Perf",     "Theme",
-      (* Models *)
-      "Database", "Post",      "Mailer",    "WA\[Dash]model",
-      "NestSched","TaskMgr",   "Scheduler", "Cache",
-      "Assets",   "ThemeM",
-      (* View *)
-      "Renderer",
-      (* Externos *)
-      "SQLite",   "WA\[Dash]API", "SMTP",
-      (* Salida *)
-      "Response"
-    };
-
-    edges = {
-      (* Entry -> Router *)
-      "HTTP" -> "Router",
-      (* Router -> Controllers *)
-      "Router" -> "Home",      "Router" -> "Blog",
-      "Router" -> "Contacto",  "Router" -> "WA\[Dash]ctrl",
-      "Router" -> "Nest",      "Router" -> "Tasks",
-      "Router" -> "Perf",      "Router" -> "Theme",
-      (* Controllers -> Models *)
-      "Home"      -> "Database",    "Home"      -> "Cache",
-      "Blog"      -> "Post",        "Post"      -> "Database",
-      "Contacto"  -> "Mailer",
-      "WA\[Dash]ctrl"  -> "WA\[Dash]model",
-      "Nest"      -> "NestSched",
-      "Tasks"     -> "TaskMgr",     "Scheduler" -> "TaskMgr",
-      "Perf"      -> "Cache",       "Perf"      -> "Assets",
-      "Theme"     -> "ThemeM",
-      (* Controllers -> Renderer *)
-      "Home" -> "Renderer",  "Blog"     -> "Renderer",
-      "Contacto" -> "Renderer", "Nest" -> "Renderer",
-      "Tasks" -> "Renderer", "Perf"     -> "Renderer",
-      "Theme" -> "Renderer",
-      (* Models -> Externos *)
-      "Database" -> "SQLite",
-      "Mailer"   -> "SMTP",
-      "WA\[Dash]model" -> "WA\[Dash]API",
-      (* View -> Salida *)
-      "Renderer" -> "Response"
-    };
-
-    (* Coordenadas 3D por capa (z define la profundidad del flujo) *)
-    coords = {
-      "HTTP"           -> {0,  0,  5},
-      "Router"         -> {0,  0,  4},
-      (* Controllers: 8 nodos en dos filas, z=3 *)
-      "Home"           -> {-3.5, -1,  3},  "Blog"          -> {-1.5, -1,  3},
-      "Contacto"       -> {0.5,  -1,  3},  "WA\[Dash]ctrl" -> {2.5,  -1,  3},
-      "Nest"           -> {-3.5,  1,  3},  "Tasks"         -> {-1.5,  1,  3},
-      "Perf"           -> {0.5,   1,  3},  "Theme"         -> {2.5,   1,  3},
-      (* Models: z=2 *)
-      "Database"       -> {-3.5, -1,  2},  "Post"          -> {-1.5, -1,  2},
-      "Mailer"         -> {0.5,  -1,  2},  "WA\[Dash]model"-> {2.5,  -1,  2},
-      "NestSched"      -> {-3.5,  1,  2},  "TaskMgr"       -> {-1.5,  1,  2},
-      "Scheduler"      -> {0,     2.8, 2.5},  (* flota sobre los modelos *)
-      "Cache"          -> {0.5,   1,  2},  "Assets"        -> {2.5,   1,  2},
-      "ThemeM"         -> {3.5,   0,  2},
-      (* View: centro, z=1 *)
-      "Renderer"       -> {0,  0,  1},
-      (* Externos: z=0 *)
-      "SQLite"         -> {-3,  0,  0},
-      "WA\[Dash]API"   -> { 3,  0,  0},
-      "SMTP"           -> { 0, -2,  0},
-      (* Salida: z=-1 *)
-      "Response"       -> {0,  0, -1}
-    };
-
-    (* Colores por capa *)
-    vStyle = Flatten[{
-      (* Entrada / Salida: azul *)
-      {"HTTP","Response"} -> Directive[RGBColor[0.2,0.55,1.0], Specularity[White,20], EdgeForm[None]],
-      (* Router: gris *)
-      "Router" -> Directive[RGBColor[0.5,0.5,0.55], Specularity[White,20], EdgeForm[None]],
-      (* Controllers: naranja *)
-      (# -> Directive[RGBColor[0.92,0.5,0.1], Specularity[White,20], EdgeForm[None]] &) /@
-        {"Home","Blog","Contacto","WA\[Dash]ctrl","Nest","Tasks","Perf","Theme"},
-      (* Models: verde *)
-      (# -> Directive[RGBColor[0.2,0.72,0.38], Specularity[White,20], EdgeForm[None]] &) /@
-        {"Database","Post","Mailer","WA\[Dash]model",
-         "NestSched","TaskMgr","Scheduler","Cache","Assets","ThemeM"},
-      (* Renderer: purpura *)
-      "Renderer" -> Directive[RGBColor[0.72,0.28,0.88], Specularity[White,20], EdgeForm[None]],
-      (* Externos: rojo *)
-      (# -> Directive[RGBColor[0.88,0.22,0.22], Specularity[White,20], EdgeForm[None]] &) /@
-        {"SQLite","WA\[Dash]API","SMTP"}
-    }, 1];
-
-    eStyle = Directive[RGBColor[0.55,0.55,0.6], Opacity[0.55], Thickness[0.004]];
-
-    g = Graph3D[
-      verts, edges,
-      VertexCoordinates -> coords,
-      VertexLabels   -> (# -> Placed[#, Above,
-                           Style[#, White, Bold, FontSize -> 10]] & /@ verts),
-      VertexStyle    -> vStyle,
-      VertexSize     -> Join[
-        {"HTTP"->0.42,"Router"->0.38,"Renderer"->0.38,"Response"->0.42},
-        (# -> 0.28 & /@ {"Home","Blog","Contacto","WA\[Dash]ctrl",
-                          "Nest","Tasks","Perf","Theme"}),
-        (# -> 0.22 & /@ {"Database","Post","Mailer","WA\[Dash]model",
-                          "NestSched","TaskMgr","Scheduler",
-                          "Cache","Assets","ThemeM"}),
-        (# -> 0.22 & /@ {"SQLite","WA\[Dash]API","SMTP"})
-      ],
-      EdgeStyle      -> eStyle,
-      Background     -> GrayLevel[0.06],
-      Lighting       -> {{"Ambient", GrayLevel[0.4]},
-                         {"Directional", White, {1,1,3}},
-                         {"Directional", GrayLevel[0.3], {-1,-1,2}}},
-      PlotRange      -> {{-4.5,4.5},{-3,3.5},{-1.5,5.5}},
-      Boxed          -> False,
-      ImageSize      -> {1000, 640}
-    ];
-
-    Quiet @ Check[ExportByteArray[g, "PNG"], $Failed]
-  ];
+(* ELIMINADO buildArchPNG — código muerto, sin referencias *)
 
 (* ── Endpoints ────────────────────────────────────────────────────────── *)
 
@@ -252,6 +153,111 @@ archData[req_] :=
     "Content-Type"  -> "application/json; charset=utf-8",
     "Cache-Control" -> "public, max-age=3600"
   |>|>];
+
+(* GET /arch/health  →  estado de salud de cada nodo en tiempo real *)
+archHealth[req_] :=
+  Module[{taskSnap, nestInfo, cacheStats, dbOk, ts, nodes, groups},
+    ts        = UnixTime[];
+    taskSnap  = Quiet @ Check[PersonalSite`TaskManager`summary[], <||>];
+    nestInfo  = Quiet @ Check[PersonalSite`NestScheduler`taskInfo[], <||>];
+    cacheStats= Quiet @ Check[PersonalSite`Cache`stats[], <||>];
+    dbOk      = Quiet @ Check[
+      (PersonalSite`Database`execute["SELECT 1", {}]; True), False];
+
+    nodes = <|
+      "HTTP"       -> hOk["entry"],
+      "Router"     -> hOk["routing · " <> ToString[Round[1000 AbsoluteTime[], 1]] <> " epoch"],
+      "Home"       -> hOk["ctrl"],     "Blog"       -> hOk["ctrl"],
+      "Contacto"   -> hOk["ctrl"],     "WActrl"     -> hOk["ctrl"],
+      "Nest"       -> hOk["ctrl"],     "Tasks"      -> hOk["ctrl"],
+      "Perf"       -> hOk["ctrl"],     "Theme"      -> hOk["ctrl"],
+      "Database"   -> If[dbOk, hOk["SQLite ok"], hErr["DB unreachable"]],
+      "Post"       -> hOk["model"],
+      "Mailer"     -> hOk["model"],
+      "WAmodel"    -> hOk["model"],
+      "NestSched"  -> nestNodeHealth[nestInfo],
+      "TaskMgr"    -> taskMgrHealth[taskSnap],
+      "Scheduler"  -> If[TrueQ[Lookup[taskSnap, "running", 0] > 0],
+                       hOk[ToString[Lookup[taskSnap,"running",0]] <> " tasks"],
+                       hWarn["0 tasks running"]],
+      "Cache"      -> cacheNodeHealth[cacheStats],
+      "Assets"     -> hOk["model"],
+      "ThemeM"     -> hOk["model"],
+      "Renderer"   -> hOk["view"],
+      "SQLite"     -> If[dbOk, hOk["connected"], hErr["unreachable"]],
+      "WAAPI"      -> hUnknown["external API"],
+      "SMTP"       -> hUnknown["external SMTP"],
+      "Response"   -> hOk["exit"],
+      (* NestScheduler runtime *)
+      "NestTrigger"-> hOk["trigger ready"],
+      "RulesParser"-> hOk["parser"],
+      "RecordsBuild"-> hOk["builder"],
+      "SpecConvert"-> hOk["converter"],
+      "FlowL0"     -> hOk["Layer 0"],
+      "FlowL1"     -> hOk["Layer 1"],
+      "FlowL2"     -> hOk["Layer 2"],
+      "FlowLN"     -> hOk["Layer N"],
+      "NestStore"  -> If[Lookup[nestInfo,"runCount",0]>0,
+                       hOk[ToString[Lookup[nestInfo,"runCount",0]]<>" stored"],
+                       hIdle["no results yet"]],
+      "SchedLoop"  -> If[TrueQ[Lookup[nestInfo,"active",False]],
+                       hOk["scheduled"],
+                       hIdle["not scheduled"]],
+      "NestAPI"    -> hOk["results API"],
+      (* Confluent sentinels *)
+      "SentCtrl"   -> hOk["ctrl layer"],
+      "SentModel"  -> If[dbOk, hOk["model layer"], hWarn["DB warn"]],
+      "SentExt"    -> hUnknown["ext systems"],
+      "SysState"   -> If[dbOk && Lookup[taskSnap,"running",0]>0,
+                       hOk["system ok"],
+                       hWarn["degraded"]]
+    |>;
+
+    groups = <|
+      "entry"   -> "ok",
+      "ctrl"    -> "ok",
+      "model"   -> If[dbOk, "ok", "warn"],
+      "ext"     -> "unknown",
+      "nest-rt" -> If[TrueQ[Lookup[nestInfo,"active",False]], "ok", "idle"],
+      "sentinel"-> If[dbOk, "ok", "warn"]
+    |>;
+
+    Quiet @ Check[
+      HTTPResponse[
+        Developer`WriteRawJSONString[<|"ts"->ts, "nodes"->nodes, "groups"->groups|>],
+        <|"Headers" -> <|
+          "Content-Type"  -> "application/json; charset=utf-8",
+          "Cache-Control" -> "no-store"
+        |>|>],
+      HTTPResponse["{}", <|"Headers" -> <|"Content-Type" -> "application/json"|>|>]
+    ]
+  ];
+
+(* ── Health helpers ──────────────────────────────────────────────────── *)
+hOk[msg_String]      := <|"status"->"ok",      "msg"->msg|>;
+hWarn[msg_String]    := <|"status"->"warn",    "msg"->msg|>;
+hErr[msg_String]     := <|"status"->"err",     "msg"->msg|>;
+hIdle[msg_String]    := <|"status"->"idle",    "msg"->msg|>;
+hUnknown[msg_String] := <|"status"->"unknown", "msg"->msg|>;
+
+nestNodeHealth[info_] :=
+  If[TrueQ[Lookup[info,"active",False]],
+    hOk[ToString[Lookup[info,"runCount",0]] <> " runs"],
+    hIdle["not scheduled"]];
+
+taskMgrHealth[snap_] :=
+  Module[{n = Lookup[snap,"taskCount",0], r = Lookup[snap,"running",0]},
+    Which[
+      n == 0, hWarn["no tasks registered"],
+      r < n,  hWarn[ToString[r]<>"/"<>ToString[n]<>" running"],
+      True,   hOk[ToString[r]<>"/"<>ToString[n]<>" running"]]];
+
+cacheNodeHealth[stats_] :=
+  Module[{ratio = Lookup[stats,"ratio",0.]},
+    Which[
+      ratio > 0.5, hOk[ToString[Round[100 ratio]]<>"% hit"],
+      ratio > 0,   hWarn[ToString[Round[100 ratio]]<>"% hit"],
+      True,        hIdle["cache empty"]]];
 
 (* GET /arch  →  pagina HTML con el grafo 3D interactivo *)
 arch[req_] :=

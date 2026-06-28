@@ -84,6 +84,7 @@
   &--model  { background: #2db85e; }
   &--view   { background: #aa44e0; }
   &--nest-rt { background: #00b8cc; }
+  &--sentinel { background: #c8a000; }
 }
 
 // ── Simulation bar ─────────────────────────────────────────────
@@ -116,6 +117,16 @@
     border-color: #ff4444;
     color: #ff4444;
   }
+
+  &.arch-hb-btn {
+    border-color: #ffd700;
+    color: #ffd700;
+    &:hover { background: rgba(#ffd700, .12); }
+    &.off {
+      border-color: #555;
+      color: #555;
+    }
+  }
 }
 
 .arch-sim-label {
@@ -123,6 +134,58 @@
   color: rgba(#fff, .7);
   font-family: $font-mono;
   flex: 1;
+}
+
+.arch-hb-ts {
+  font-size: .72rem;
+  color: rgba(#ffd700, .65);
+  font-family: $font-mono;
+}
+
+// ── Health Panel ────────────────────────────────────────────────
+.arch-health-panel {
+  display: flex;
+  flex-wrap: wrap;
+  gap: .5rem 1.25rem;
+  padding: .65rem 1.25rem;
+  background: rgba(#fff, .025);
+  border-bottom: 1px solid rgba(#fff, .06);
+  min-height: 2.4rem;
+}
+
+.hb-group {
+  display: flex;
+  align-items: center;
+  gap: .4rem;
+  flex-wrap: wrap;
+}
+
+.hb-group-label {
+  font-size: .7rem;
+  font-weight: 800;
+  letter-spacing: .08em;
+  padding: .15rem .45rem;
+  border-radius: radius(pill);
+
+  .hb-group--ok &    { background: rgba(#00ff88, .18); color: #00ff88; }
+  .hb-group--warn &  { background: rgba(#ffcc00, .18); color: #ffcc00; }
+  .hb-group--err &   { background: rgba(#ff3333, .18); color: #ff3333; }
+  .hb-group--idle &  { background: rgba(#aaa, .1);     color: #777;    }
+  .hb-group--unknown &{ background: rgba(#7777aa, .15); color: #9999cc; }
+}
+
+.hb-node {
+  font-size: .7rem;
+  font-family: $font-mono;
+  padding: .1rem .4rem;
+  border-radius: 3px;
+  cursor: default;
+
+  .hb-group--ok &    { background: rgba(#00ff88, .08); color: rgba(#00ff88, .85); }
+  .hb-group--warn &  { background: rgba(#ffcc00, .08); color: rgba(#ffcc00, .85); }
+  .hb-group--err &   { background: rgba(#ff3333, .1);  color: rgba(#ff5555, .9);  }
+  .hb-group--idle &  { background: rgba(#fff, .04);    color: rgba(#fff, .35);    }
+  .hb-group--unknown &{ background: rgba(#7777aa,.08); color: rgba(#aaa, .6);     }
 }
 
 // ── Graph container (3d-force-graph / WebGL) ───────────────────
