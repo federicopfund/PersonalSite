@@ -12,6 +12,22 @@
   backdrop-filter: blur(16px);
   -webkit-backdrop-filter: blur(16px);
   border-bottom: 1px solid rgba(#fff, .08);
+
+  /* Sombra de perfil centrada: concentra oscuridad en el centro
+     y se desvanece hacia los extremos, dando profundidad */
+  &::after {
+    content: '';
+    position: absolute;
+    bottom: -1px;
+    left: 50%;
+    transform: translateX(-50%);
+    width: 55%;
+    height: 1px;
+    border-radius: 50%;
+    box-shadow: 0 0 56px 14px rgba(#000, .92);
+    pointer-events: none;
+    z-index: -1;
+  }
 }
 
 .nav-container {
