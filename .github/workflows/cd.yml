@@ -216,13 +216,13 @@ jobs:
           [ "$STATUS" = "200" ] || (echo "::error::/blog devolvio HTTP $STATUS"; exit 1)
           echo "OK — /blog responde."
 
-      - name: GET /contact — formulario de contacto
+      - name: GET /contacto — formulario de contacto
         run: |
           STATUS=$(curl -sf --max-time 30 -w "%{http_code}" -o /dev/null \
-            "https://personalsite.2bmiodwwso2z.us-south.codeengine.appdomain.cloud/contact")
+            "https://personalsite.2bmiodwwso2z.us-south.codeengine.appdomain.cloud/contacto")
           echo "HTTP $STATUS"
-          [ "$STATUS" = "200" ] || (echo "::error::/contact devolvio HTTP $STATUS"; exit 1)
-          echo "OK — /contact responde."
+          [ "$STATUS" = "200" ] || (echo "::error::/contacto devolvio HTTP $STATUS"; exit 1)
+          echo "OK — /contacto responde."
 
       - name: GET /static/styles.css — assets estaticos
         run: |
