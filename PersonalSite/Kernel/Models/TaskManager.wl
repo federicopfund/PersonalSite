@@ -60,6 +60,9 @@ history::usage =
 summary::usage =
   "summary[] devuelve un JSON-serializable snapshot del runtime.";
 
+dagData::usage =
+  "dagData[] devuelve el grafo DAG de dependencias entre tareas como JSON.";
+
 Begin["`Private`"];
 
 (* ── Almacenamiento ─────────────────────────────────────────────────── *)
@@ -184,8 +187,6 @@ history[name_String] :=
 
 (* ── Snapshot JSON-serializable ─────────────────────────────────────── *)
 
-(* Garantiza que cualquier valor sea String, Integer, Real o Bool. *)
-toJ[x_] := Which[
   x === True || x === False, x,
   IntegerQ[x],               x,
   NumberQ[x],                N[x],
@@ -225,6 +226,72 @@ summary[] :=
       "taskCount" -> Length[$specs],
       "running"   -> Length @ Select[$states, TrueQ[#["running"]] &],
       "tasks"     -> tsk
+    |>
+  ];
+
+(* ── DAG de dependencias ──────────────────────────────────────────────── *)
+dagData[] :=
+  Module[{ids, links, intervals, depEdges, g, topo, depthOf, dist, cp, best},
+    ids = Keys[$specs];
+    If[Length[ids] == 0,
+      Return[<|"nodes"->{}, "links"->{}, "topoOrder"->{},
+               "critPath"->{}, "nodeCount"->0, "edgeCount"->0|>]];
+
+    intervals = Association @ KeyValueMap[
+      Function[{name, spec}, name -> Lookup[spec, "interval", 60]], $specs];
+
+    links = Flatten @ KeyValueMap[
+      Function[{name, spec},
+        Map[Function[dep, <|"source"->dep, "target"->name|>],
+            Lookup[spec, "deps", {}]]],
+      $specs];
+
+    (* Topological sort via WL built-in graph *)
+    depEdges = Map[Function[e, DirectedEdge[e["source"], e["target"]]], links];
+    g    = Graph[ids, depEdges];
+    topo = Quiet @ Check[TopologicalSort[g], ids];
+
+    (* Depth = longest path from roots (recursive, memoized inline) *)
+    depthOf[name_String] :=
+      With[{pars = Select[links, #["target"] === name &][[All, "source"]]},
+        If[pars === {}, 0, 1 + Max[depthOf /@ pars]]];
+
+    (* Critical path: max cumulative interval by topo order *)
+    dist = AssociationThread[ids, ConstantArray[0, Length[ids]]];
+    Scan[Function[u,
+      Scan[Function[e,
+        If[e["source"] === u,
+           With[{w = dist[u] + Lookup[intervals, e["target"], 0]},
+             If[w > dist[e["target"]], dist[e["target"]] = w]]]],
+        links]],
+      topo];
+    best = First @ MaximalBy[ids, Lookup[dist, #, 0] &];
+    (* Trace back path *)
+    cp = Module[{path = {best}, cur = best, pars},
+      While[True,
+        pars = Select[links, #["target"] === cur &][[All, "source"]];
+        If[pars === {}, Break[]];
+        cur = First @ MaximalBy[pars, Lookup[dist, #, 0] &];
+        PrependTo[path, cur]];
+      path];
+
+    <|
+      "nodes" -> Map[Function[name,
+        <|"id"       -> name,
+          "label"    -> toJ @ Lookup[$specs[name], "label", name],
+          "group"    -> toJ @ Lookup[$specs[name], "group", "user"],
+          "interval" -> toJ @ Lookup[$specs[name], "interval", 60],
+          "enabled"  -> TrueQ @ Lookup[$specs[name], "enabled", True],
+          "running"  -> TrueQ[$states[name]["running"]],
+          "runs"     -> toJ[$states[name]["runs"]],
+          "depth"    -> Quiet @ Check[depthOf[name], 0],
+          "cp"       -> TrueQ[MemberQ[cp, name]]
+        |>], ids],
+      "links"    -> links,
+      "topoOrder"-> topo,
+      "critPath" -> cp,
+      "nodeCount"-> Length[ids],
+      "edgeCount"-> Length[links]
     |>
   ];
 

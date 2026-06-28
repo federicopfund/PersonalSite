@@ -100,6 +100,7 @@ dispatcher[] := Delayed @ URLDispatcher[{
   "/arch/data"       ~~ EndOfString :> PersonalSite`Controller`archData[HTTPRequestData[]],
   "/arch/health"     ~~ EndOfString :> PersonalSite`Controller`archHealth[HTTPRequestData[]],
   "/arch/math"       ~~ EndOfString :> PersonalSite`Controller`archMath[HTTPRequestData[]],
+  "/arch/dag"        ~~ EndOfString :> PersonalSite`Controller`archDag[HTTPRequestData[]],
   "/arch"            ~~ EndOfString :> PersonalSite`Controller`arch[HTTPRequestData[]],
   "/"        ~~ EndOfString           :> PersonalSite`Controller`home[HTTPRequestData[]],
   ___ :> HTTPResponse["No encontrado", <|"StatusCode" -> 404|>]

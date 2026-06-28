@@ -448,3 +448,131 @@
     });
 })();
 </script>
+
+<!-- ══════════════════════════════════════════════════════════════
+     DAG — Task dependency graph
+════════════════════════════════════════════════════════════════ -->
+<section id="arch-dag-section" class="arch-dag-section">
+  <div class="section-header">
+    <h2>Task DAG &mdash; Grafo de Dependencias</h2>
+    <p class="arch-dag-subtitle">
+      Orden topol&oacute;gico &bull; Camino cr&iacute;tico &bull; Intervalo de cada tarea en segundos
+    </p>
+  </div>
+
+  <div class="arch-dag-inner">
+
+    <!-- KaTeX equations for DAG theory -->
+    <div class="arch-dag-eqs">
+      <div class="arch-eq-block arch-eq-block--dag">
+        <h4>Grafo ac&iacute;clico dirigido (DAG)</h4>
+        \[ G = (V, E), \quad (u,v) \in E \Rightarrow u \prec v \]
+      </div>
+      <div class="arch-eq-block arch-eq-block--dag">
+        <h4>Orden topol&oacute;gico (Kahn)</h4>
+        \[ \forall (u,v) \in E : \pi(u) < \pi(v), \quad \pi : V \to \mathbb{N} \]
+      </div>
+      <div class="arch-eq-block arch-eq-block--dag">
+        <h4>Camino cr&iacute;tico (tiempo m&aacute;ximo)</h4>
+        \[ CP = \arg\max_{p \in \text{paths}(G)} \sum_{v \in p} \Delta_v \]
+      </div>
+      <div class="arch-eq-block arch-eq-block--dag">
+        <h4>Carga total del scheduler</h4>
+        \[ W = \sum_{v \in V} \frac{1}{\Delta_v} \text{ (disparos/s)} \]
+      </div>
+    </div>
+
+    <!-- 2D DAG graph -->
+    <div class="arch-dag-graph-wrap">
+      <div class="arch-dag-graph-header">
+        <span id="arch-dag-stats" class="arch-dag-stats"></span>
+        <span class="arch-dag-legend">
+          <span class="arch-dleg arch-dleg--system">system</span>
+          <span class="arch-dleg arch-dleg--theme">theme</span>
+          <span class="arch-dleg arch-dleg--cache">cache</span>
+          <span class="arch-dleg arch-dleg--flow">flow</span>
+          <span class="arch-dleg arch-dleg--cp">&#9654; Critical Path</span>
+        </span>
+      </div>
+      <div id="arch-dag-graph"></div>
+      <div id="arch-dag-topo" class="arch-dag-topo"></div>
+    </div>
+
+  </div>
+</section>
+
+<script>
+(function() {
+  var GROUP_COLOR = {
+    system: '#3389ff', theme: '#aa44e0',
+    cache:  '#2db85e', flow:  '#00e5ff', user: '#888'
+  };
+  var CP_COLOR   = '#ff6b35';
+  var cpSet      = {};
+
+  var el = document.getElementById('arch-dag-graph');
+  el.style.width  = '100%';
+  el.style.height = '360px';
+
+  fetch('/arch/dag')
+    .then(function(r){ return r.json(); })
+    .then(function(data) {
+      /* Critical path set */
+      (data.critPath || []).forEach(function(id){ cpSet[id] = true; });
+
+      /* Stats bar */
+      var w = (data.nodes || []).reduce(function(acc, n){
+        return acc + (n.interval ? 1/n.interval : 0);
+      }, 0);
+      document.getElementById('arch-dag-stats').textContent =
+        data.nodeCount + ' tareas \u00b7 ' + data.edgeCount + ' deps \u00b7 ' +
+        'Carga: ' + w.toFixed(4) + ' disp/s';
+
+      /* Topo order strip */
+      var topo = document.getElementById('arch-dag-topo');
+      (data.topoOrder || []).forEach(function(id, i) {
+        var n = (data.nodes || []).find(function(x){ return x.id === id; }) || {};
+        var span = document.createElement('span');
+        span.className = 'dag-topo-node' + (cpSet[id] ? ' dag-topo-cp' : '');
+        span.title = n.label || id;
+        span.textContent = '\u03c0' + (i+1) + ' ' + id;
+        if (i < (data.topoOrder||[]).length - 1) {
+          var arr = document.createElement('span');
+          arr.className = 'dag-topo-arr';
+          arr.textContent = ' \u2192 ';
+          topo.appendChild(span);
+          topo.appendChild(arr);
+        } else {
+          topo.appendChild(span);
+        }
+      });
+
+      ForceGraph()(el)
+        .width(el.offsetWidth || 520)
+        .height(360)
+        .backgroundColor('#07070a')
+        .nodeLabel(function(n){
+          return n.label + ' [\u0394=' + n.interval + 's]' +
+            (n.cp ? ' \u2605 CP' : '');
+        })
+        .nodeColor(function(n){
+          return cpSet[n.id] ? CP_COLOR : (GROUP_COLOR[n.group] || '#888');
+        })
+        .nodeVal(function(n){ return cpSet[n.id] ? 8 : 4; })
+        .linkColor(function(l){
+          var s = l.source.id || l.source, t = l.target.id || l.target;
+          return (cpSet[s] && cpSet[t]) ? CP_COLOR : 'rgba(180,180,200,0.35)';
+        })
+        .linkWidth(function(l){
+          var s = l.source.id || l.source, t = l.target.id || l.target;
+          return (cpSet[s] && cpSet[t]) ? 2.5 : 1;
+        })
+        .linkDirectionalArrowLength(6)
+        .linkDirectionalArrowRelPos(1)
+        .graphData({ nodes: data.nodes || [], links: data.links || [] });
+
+    }).catch(function(){
+      el.innerHTML = '<p style="color:#555;padding:2rem;text-align:center">DAG no disponible — backend iniciando...</p>';
+    });
+})();
+</script>

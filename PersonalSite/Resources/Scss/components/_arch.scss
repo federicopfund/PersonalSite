@@ -409,3 +409,125 @@
   color: rgba(#fff, .85);
   font-family: $font-mono;
 }
+
+// ── DAG section ────────────────────────────────────────────────
+.arch-dag-section {
+  background: #07070a;
+  padding: 3rem 0 2rem;
+  border-top: 1px solid rgba(#fff, .07);
+
+  .section-header {
+    text-align: center;
+    margin-bottom: 2.5rem;
+    h2 { color: #ff6b35; }
+  }
+}
+
+.arch-dag-subtitle {
+  font-size: .85rem;
+  color: rgba(#fff, .5);
+  margin-top: .5rem;
+}
+
+.arch-dag-inner {
+  display: grid;
+  grid-template-columns: 1fr;
+  gap: 2rem;
+  max-width: 1100px;
+  margin: 0 auto;
+  padding: 0 1.5rem;
+
+  @include breakpoint(lg) {
+    grid-template-columns: 380px 1fr;
+    align-items: start;
+  }
+}
+
+.arch-dag-eqs {
+  display: flex;
+  flex-direction: column;
+  gap: 1.1rem;
+}
+
+.arch-eq-block--dag {
+  border-left-color: rgba(#ff6b35, .55);
+  border-color: rgba(#ff6b35, .18);
+  h4 { color: rgba(#ff6b35, .75); }
+}
+
+.arch-dag-graph-wrap {
+  background: #07070a;
+  border: 1px solid rgba(#fff, .08);
+  border-radius: radius(lg);
+  overflow: hidden;
+}
+
+.arch-dag-graph-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  flex-wrap: wrap;
+  gap: .5rem;
+  padding: .75rem 1rem;
+  background: rgba(#fff, .03);
+  border-bottom: 1px solid rgba(#fff, .06);
+}
+
+.arch-dag-stats {
+  font-family: $font-mono;
+  font-size: .7rem;
+  color: rgba(#ff6b35, .8);
+}
+
+.arch-dag-legend {
+  display: flex;
+  gap: .4rem;
+  flex-wrap: wrap;
+}
+
+.arch-dleg {
+  font-size: .65rem;
+  font-weight: 700;
+  padding: .15rem .45rem;
+  border-radius: radius(pill);
+  &--system { background: rgba(#3389ff,.18); color: #3389ff; }
+  &--theme  { background: rgba(#aa44e0,.18); color: #aa44e0; }
+  &--cache  { background: rgba(#2db85e,.18); color: #2db85e; }
+  &--flow   { background: rgba(#00e5ff,.18); color: #00e5ff; }
+  &--cp     { background: rgba(#ff6b35,.2);  color: #ff6b35; }
+}
+
+#arch-dag-graph {
+  width: 100%;
+  height: 360px;
+  canvas { display: block; }
+}
+
+.arch-dag-topo {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: .25rem;
+  padding: .65rem 1rem;
+  border-top: 1px solid rgba(#fff, .05);
+  font-size: .7rem;
+  font-family: $font-mono;
+}
+
+.dag-topo-node {
+  padding: .1rem .4rem;
+  border-radius: 3px;
+  background: rgba(#fff, .05);
+  color: rgba(#fff, .6);
+  cursor: default;
+
+  &.dag-topo-cp {
+    background: rgba(#ff6b35, .15);
+    color: #ff6b35;
+    font-weight: 700;
+  }
+}
+
+.dag-topo-arr {
+  color: rgba(#fff, .25);
+}

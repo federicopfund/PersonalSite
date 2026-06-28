@@ -12,6 +12,7 @@ arch::usage     = "arch[req] renderiza /arch: arquitectura del sistema.";
 archData::usage = "archData[req] sirve los datos JSON del grafo.";
 archHealth::usage = "archHealth[req] sirve el estado de salud en tiempo real.";
 archMath::usage   = "archMath[req] sirve el arbol NestGraph como JSON para visualizacion matematica.";
+archDag::usage    = "archDag[req] sirve el DAG de dependencias de tareas como JSON.";
 
 Begin["`Private`"];
 
@@ -300,6 +301,63 @@ archMath[req_] :=
         "depth" -> maxDepth,
         "total" -> Length[allNodes]
       |>],
+      <|"Content-Type" -> "application/json"|>
+    ]
+  ];
+
+(* GET /arch/dag  →  DAG de dependencias entre tareas del Scheduler *)
+archDag[req_] :=
+  Module[{snap, taskMap, dagNodes, links, cp, cpSet, result},
+    snap    = Quiet @ Check[PersonalSite`TaskManager`summary[], <||>];
+    taskMap = If[AssociationQ[snap], Lookup[snap, "tasks", <||>], <||>];
+
+    dagNodes = {
+      <|"id"->"heartbeat",     "group"->"system","interval"->30,  "depth"->0, "deps"->{}|>,
+      <|"id"->"cache-warm",    "group"->"system","interval"->300, "depth"->1, "deps"->{"heartbeat"}|>,
+      <|"id"->"theme-rotate",  "group"->"theme", "interval"->10,  "depth"->1, "deps"->{"heartbeat"}|>,
+      <|"id"->"cards-refresh", "group"->"cache", "interval"->20,  "depth"->2, "deps"->{"cache-warm"}|>,
+      <|"id"->"metric-refresh","group"->"cache", "interval"->300, "depth"->3, "deps"->{"cards-refresh"}|>,
+      <|"id"->"nest-refresh",  "group"->"flow",  "interval"->300, "depth"->2, "deps"->{"cache-warm"}|>
+    };
+
+    links = Flatten[Table[
+      Module[{n = dagNodes[[i]], nid},
+        nid = Lookup[n, "id", ""];
+        Map[Function[{d}, <|"source"->d, "target"->nid|>], Lookup[n,"deps",{}]]
+      ], {i, Length[dagNodes]}]];
+
+    cp    = {"heartbeat", "cache-warm", "cards-refresh", "metric-refresh"};
+    cpSet = AssociationThread[cp, ConstantArray[True, Length[cp]]];
+
+    result = <|
+      "nodes" -> Table[
+        Module[{n = dagNodes[[i]], id, grp, iv, dep, live},
+          id   = Lookup[n, "id",       ""];
+          grp  = Lookup[n, "group",    "user"];
+          iv   = Lookup[n, "interval", 60];
+          dep  = Lookup[n, "depth",    0];
+          live = Lookup[taskMap, id, <||>];
+          <|"id"       -> id,
+            "label"    -> If[StringQ @ Lookup[live,"label",id], Lookup[live,"label",id], id],
+            "group"    -> grp,
+            "interval" -> iv,
+            "running"  -> TrueQ @ Lookup[live, "running", False],
+            "runs"     -> If[IntegerQ @ Lookup[live,"runs",0], Lookup[live,"runs",0], 0],
+            "enabled"  -> TrueQ @ Lookup[live, "enabled", True],
+            "depth"    -> dep,
+            "cp"       -> TrueQ @ Lookup[cpSet, id, False]
+          |>],
+        {i, Length[dagNodes]}],
+      "links"    -> links,
+      "topoOrder"-> {"heartbeat","theme-rotate","cache-warm","cards-refresh","nest-refresh","metric-refresh"},
+      "critPath" -> cp,
+      "nodeCount"-> Length[dagNodes],
+      "edgeCount"-> Length[links],
+      "cpCost"   -> 620
+    |>;
+
+    HTTPResponse[
+      Developer`WriteRawJSONString[result],
       <|"Content-Type" -> "application/json"|>
     ]
   ];

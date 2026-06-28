@@ -31,6 +31,7 @@ $taskSpecs = {
     "group"    -> "system",
     "interval" -> 30,
     "enabled"  -> True,
+    "deps"     -> {},
     "action"   -> Function[True]   (* marca de vida del kernel *)
   |>},
 
@@ -39,6 +40,7 @@ $taskSpecs = {
     "group"    -> "system",
     "interval" -> 300,
     "enabled"  -> True,
+    "deps"     -> {"heartbeat"},
     "action"   -> Function[
       Quiet @ Check[PersonalSite`Post`recent[10]; True, False]]
   |>},
@@ -49,6 +51,7 @@ $taskSpecs = {
     "group"    -> "theme",
     "interval" -> 10,
     "enabled"  -> True,
+    "deps"     -> {"heartbeat"},
     "action"   -> Function[PersonalSite`Theme`tick[]]
   |>},
 
@@ -58,6 +61,7 @@ $taskSpecs = {
     "group"    -> "cache",
     "interval" -> 20,
     "enabled"  -> True,
+    "deps"     -> {"cache-warm"},
     "action"   -> Function[PersonalSite`Assets`refreshCards[]]
   |>},
 
@@ -66,6 +70,7 @@ $taskSpecs = {
     "group"    -> "cache",
     "interval" -> 300,
     "enabled"  -> True,
+    "deps"     -> {"cards-refresh"},
     "action"   -> Function[PersonalSite`Assets`refreshMetric[]]
   |>},
 
@@ -75,6 +80,7 @@ $taskSpecs = {
     "group"    -> "flow",
     "interval" -> 300,
     "enabled"  -> True,
+    "deps"     -> {"cache-warm"},
     "action"   -> Function[
       PersonalSite`NestScheduler`run[
         {2 # + 1 &, # + 14 &, # - 18 &}, {1}, 3, "session"]]
