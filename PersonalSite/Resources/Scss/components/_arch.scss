@@ -86,44 +86,21 @@
   &--ext    { background: #d93535; }
 }
 
-// ── Graph image ────────────────────────────────────────────────
+// ── Graph container (3d-force-graph / WebGL) ───────────────────
 .arch-section {
-  background: #{gray(950)};
-  padding: 2rem 0;
+  background: #0f0f10;
+  padding: 0;
 }
 
-.arch-graph-wrap {
-  position: relative;
-  text-align: center;
-
-  &.arch-err {
-    .arch-graph-img      { display: none; }
-    .arch-graph-loading  { display: none; }
-    .arch-graph-err-msg  { display: block; }
-  }
+#arch-graph-container {
+  width: 100%;
+  overflow: hidden;
 }
 
-.arch-graph-img {
-  max-width: 100%;
-  width: 1000px;
-  height: auto;
+#arch-graph {
+  width: 100%;
+  height: 620px;
   display: block;
-  margin: 0 auto;
-
-  & + .arch-graph-loading { display: none; }
-}
-
-.arch-graph-loading {
-  color: gray(400);
-  font-size: .9rem;
-  padding: 4rem 0;
-}
-
-.arch-graph-err-msg {
-  display: none;
-  color: #d93535;
-  font-size: .9rem;
-  padding: 3rem 0;
 }
 
 // ── Flujo de estados ────────────────────────────────────────────

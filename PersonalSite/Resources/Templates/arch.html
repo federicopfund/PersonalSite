@@ -1,8 +1,143 @@
 <section class="arch-hero">
   <div class="arch-hero-inner">
     <div class="arch-hero-text">
-      <span class="arch-badge">Graph 3D</span>
+      <span class="arch-badge">Graph 3D &bull; Wolfram Language</span>
       <h1>Arquitectura del Sistema</h1>
+      <p>Flujo de estados y dependencias &mdash; 25 nodos, 33 aristas dirigidas.<br>
+         Arrastr&aacute; para rotar &bull; Scroll para hacer zoom &bull; Click en un nodo para resaltar.</p>
+    </div>
+    <div class="arch-legend">
+      <span class="arch-leg arch-leg--entry">HTTP Entry / Response</span>
+      <span class="arch-leg arch-leg--router">Router</span>
+      <span class="arch-leg arch-leg--ctrl">Controllers</span>
+      <span class="arch-leg arch-leg--model">Models</span>
+      <span class="arch-leg arch-leg--view">Renderer</span>
+      <span class="arch-leg arch-leg--ext">External / Data</span>
+    </div>
+  </div>
+</section>
+
+<section class="arch-section">
+  <div id="arch-graph-container">
+    <div id="arch-graph"></div>
+  </div>
+</section>
+
+<section class="section section-alt">
+  <div class="section-inner">
+    <div class="section-header">
+      <h2>Flujo de Estado</h2>
+      <p>Recorrido de una petici&oacute;n HTTP a trav&eacute;s del sistema</p>
+    </div>
+    <div class="arch-flow">
+      <div class="arch-flow-step arch-flow-step--entry">
+        <div class="arch-flow-icon">&#8594;</div>
+        <strong>HTTP Request</strong>
+        <p>Petici&oacute;n entrante al servidor WolframWebEngine (POOLSIZE=1)</p>
+      </div>
+      <div class="arch-flow-arrow">&#8595;</div>
+      <div class="arch-flow-step arch-flow-step--router">
+        <div class="arch-flow-icon">&#9654;</div>
+        <strong>Router &mdash; URLDispatcher</strong>
+        <p>Match de path a controller v&iacute;a expresiones regulares WL</p>
+      </div>
+      <div class="arch-flow-arrow">&#8595;</div>
+      <div class="arch-flow-step arch-flow-step--ctrl">
+        <div class="arch-flow-icon">&#9632;</div>
+        <strong>Controllers (8)</strong>
+        <p>Home &bull; Blog &bull; Contacto &bull; Wolfram&alpha; &bull; Nest &bull; Tasks &bull; Perf &bull; Theme</p>
+      </div>
+      <div class="arch-flow-arrow">&#8595;</div>
+      <div class="arch-flow-step arch-flow-step--model">
+        <div class="arch-flow-icon">&#9670;</div>
+        <strong>Models (10)</strong>
+        <p>Database &bull; Post &bull; Mailer &bull; WolframAlpha &bull; TaskManager &bull; NestScheduler &bull; Scheduler &bull; Cache &bull; Assets &bull; ThemeModel</p>
+      </div>
+      <div class="arch-flow-arrow">&#8595;</div>
+      <div class="arch-flow-step arch-flow-step--view">
+        <div class="arch-flow-icon">&#9711;</div>
+        <strong>Renderer &mdash; View</strong>
+        <p>StringTemplate: layout.html + vista espec&iacute;fica + datos compartidos</p>
+      </div>
+      <div class="arch-flow-arrow">&#8595;</div>
+      <div class="arch-flow-step arch-flow-step--entry">
+        <div class="arch-flow-icon">&#8592;</div>
+        <strong>HTTP Response</strong>
+        <p>Content-Type: text/html; charset=utf-8 &mdash; 200 OK</p>
+      </div>
+    </div>
+  </div>
+</section>
+
+<script src="https://unpkg.com/3d-force-graph@1/dist/3d-force-graph.min.js"></script>
+<script>
+(function() {
+  var COLOR = {
+    entry:'#3389ff', router:'#7a7a85', ctrl:'#eb7a1a',
+    model:'#2db85e', view:'#aa44e0',   ext:'#d93535'
+  };
+  var el = document.getElementById('arch-graph');
+  el.style.height = '620px';
+
+  fetch('/arch/data')
+    .then(function(r){ return r.json(); })
+    .then(function(data) {
+      var highlighted = new Set();
+
+      var Graph = ForceGraph3D()(el)
+        .width(el.parentElement.offsetWidth || window.innerWidth)
+        .height(620)
+        .backgroundColor('#0f0f10')
+        .graphData(data)
+        .nodeLabel(function(n){ return n.label || n.id; })
+        .nodeColor(function(n){
+          if(highlighted.size && !highlighted.has(n.id)) return 'rgba(80,80,80,0.2)';
+          return COLOR[n.group] || '#aaa';
+        })
+        .nodeVal(function(n){ return ({entry:10,router:8,view:8})[n.group] || 5; })
+        .linkColor(function(l){
+          if(!highlighted.size) return 'rgba(160,160,170,0.5)';
+          var s = l.source.id||l.source, t = l.target.id||l.target;
+          return (highlighted.has(s)&&highlighted.has(t)) ? '#fff' : 'rgba(80,80,80,0.1)';
+        })
+        .linkWidth(1.5)
+        .linkDirectionalArrowLength(5)
+        .linkDirectionalArrowRelPos(1)
+        .linkDirectionalParticles(function(l){
+          var s = l.source.id||l.source;
+          return highlighted.has(s) ? 3 : 0;
+        })
+        .linkDirectionalParticleSpeed(0.005)
+        .onNodeHover(function(node){
+          el.style.cursor = node ? 'pointer' : 'default';
+          highlighted.clear();
+          if(node){
+            highlighted.add(node.id);
+            data.links.forEach(function(l){
+              var s = l.source.id||l.source, t = l.target.id||l.target;
+              if(s===node.id) highlighted.add(t);
+              if(t===node.id) highlighted.add(s);
+            });
+          }
+          Graph.nodeColor(Graph.nodeColor())
+               .linkColor(Graph.linkColor())
+               .linkDirectionalParticles(Graph.linkDirectionalParticles());
+        })
+        .onNodeClick(function(node){
+          Graph.cameraPosition(
+            {x:node.x*1.8, y:node.y*1.8, z:node.z*1.8+80},
+            node, 800);
+        });
+
+      window.addEventListener('resize', function(){
+        Graph.width(el.parentElement.offsetWidth || window.innerWidth);
+      });
+    })
+    .catch(function(){
+      el.innerHTML='<p style="color:#d93535;padding:3rem;text-align:center">Error cargando datos del grafo.</p>';
+    });
+})();
+</script>
       <p>Flujo de estados y dependencias del sitio &mdash; generado con Wolfram Language <code>Graph3D</code></p>
     </div>
     <div class="arch-legend">

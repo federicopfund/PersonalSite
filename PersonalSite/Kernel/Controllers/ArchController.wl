@@ -2,20 +2,91 @@
 
 (* PersonalSite`Controller`  (parte: arch)
    --------------------------------------------------------------------------
-   Pagina /arch: Graph3D del flujo de estados y arquitectura del sistema.
-   La imagen PNG se genera una vez por kernel (memoizada) y se sirve desde
-   /arch/graph como Content-Type: image/png. *)
+   Pagina /arch: Graph3D interactivo (3d-force-graph / WebGL).
+   /arch/data  →  JSON {nodes, links}  (instantaneo, sin computo pesado)
+   /arch       →  HTML  con el grafo embebido via CDN JS                 *)
 
 BeginPackage["PersonalSite`Controller`"];
 
-arch::usage      = "arch[req] renderiza /arch: arquitectura del sistema.";
-archGraph::usage = "archGraph[req] sirve el PNG del Graph3D (cacheado).";
+arch::usage     = "arch[req] renderiza /arch: arquitectura del sistema.";
+archData::usage = "archData[req] sirve los datos JSON del grafo.";
 
 Begin["`Private`"];
 
-(* ── Construccion del grafo (se evalua una vez, luego memoizado) ─────── *)
-$archPNG := $archPNG = buildArchPNG[];
+(* ── Datos del grafo (estaticos, memoizados) ──────────────────────────── *)
+$archJSON := $archJSON = buildArchJSON[];
 
+buildArchJSON[] :=
+  Module[{nodes, links, data},
+    nodes = {
+      <|"id"->"HTTP",      "group"->"entry",   "label"->"HTTP Request"|>,
+      <|"id"->"Router",    "group"->"router",  "label"->"Router"|>,
+      <|"id"->"Home",      "group"->"ctrl",    "label"->"HomeController"|>,
+      <|"id"->"Blog",      "group"->"ctrl",    "label"->"BlogController"|>,
+      <|"id"->"Contacto",  "group"->"ctrl",    "label"->"ContactController"|>,
+      <|"id"->"WActrl",    "group"->"ctrl",    "label"->"WolframController"|>,
+      <|"id"->"Nest",      "group"->"ctrl",    "label"->"NestController"|>,
+      <|"id"->"Tasks",     "group"->"ctrl",    "label"->"TaskController"|>,
+      <|"id"->"Perf",      "group"->"ctrl",    "label"->"PerfController"|>,
+      <|"id"->"Theme",     "group"->"ctrl",    "label"->"ThemeController"|>,
+      <|"id"->"Database",  "group"->"model",   "label"->"Database"|>,
+      <|"id"->"Post",      "group"->"model",   "label"->"Post"|>,
+      <|"id"->"Mailer",    "group"->"model",   "label"->"Mailer"|>,
+      <|"id"->"WAmodel",   "group"->"model",   "label"->"WolframAlpha"|>,
+      <|"id"->"NestSched", "group"->"model",   "label"->"NestScheduler"|>,
+      <|"id"->"TaskMgr",   "group"->"model",   "label"->"TaskManager"|>,
+      <|"id"->"Scheduler", "group"->"model",   "label"->"Scheduler"|>,
+      <|"id"->"Cache",     "group"->"model",   "label"->"Cache"|>,
+      <|"id"->"Assets",    "group"->"model",   "label"->"Assets"|>,
+      <|"id"->"ThemeM",    "group"->"model",   "label"->"ThemeModel"|>,
+      <|"id"->"Renderer",  "group"->"view",    "label"->"Renderer"|>,
+      <|"id"->"SQLite",    "group"->"ext",     "label"->"SQLite"|>,
+      <|"id"->"WAAPI",     "group"->"ext",     "label"->"WA API"|>,
+      <|"id"->"SMTP",      "group"->"ext",     "label"->"SMTP"|>,
+      <|"id"->"Response",  "group"->"entry",   "label"->"HTTP Response"|>
+    };
+    links = {
+      <|"source"->"HTTP",      "target"->"Router"|>,
+      <|"source"->"Router",    "target"->"Home"|>,
+      <|"source"->"Router",    "target"->"Blog"|>,
+      <|"source"->"Router",    "target"->"Contacto"|>,
+      <|"source"->"Router",    "target"->"WActrl"|>,
+      <|"source"->"Router",    "target"->"Nest"|>,
+      <|"source"->"Router",    "target"->"Tasks"|>,
+      <|"source"->"Router",    "target"->"Perf"|>,
+      <|"source"->"Router",    "target"->"Theme"|>,
+      <|"source"->"Home",      "target"->"Database"|>,
+      <|"source"->"Home",      "target"->"Cache"|>,
+      <|"source"->"Blog",      "target"->"Post"|>,
+      <|"source"->"Post",      "target"->"Database"|>,
+      <|"source"->"Contacto",  "target"->"Mailer"|>,
+      <|"source"->"WActrl",    "target"->"WAmodel"|>,
+      <|"source"->"Nest",      "target"->"NestSched"|>,
+      <|"source"->"Tasks",     "target"->"TaskMgr"|>,
+      <|"source"->"Scheduler", "target"->"TaskMgr"|>,
+      <|"source"->"Perf",      "target"->"Cache"|>,
+      <|"source"->"Perf",      "target"->"Assets"|>,
+      <|"source"->"Theme",     "target"->"ThemeM"|>,
+      <|"source"->"Home",      "target"->"Renderer"|>,
+      <|"source"->"Blog",      "target"->"Renderer"|>,
+      <|"source"->"Contacto",  "target"->"Renderer"|>,
+      <|"source"->"Nest",      "target"->"Renderer"|>,
+      <|"source"->"Tasks",     "target"->"Renderer"|>,
+      <|"source"->"Perf",      "target"->"Renderer"|>,
+      <|"source"->"Theme",     "target"->"Renderer"|>,
+      <|"source"->"Database",  "target"->"SQLite"|>,
+      <|"source"->"Mailer",    "target"->"SMTP"|>,
+      <|"source"->"WAmodel",   "target"->"WAAPI"|>,
+      <|"source"->"Renderer",  "target"->"Response"|>
+    };
+    data = <|"nodes" -> nodes, "links" -> links|>;
+    Quiet @ Check[
+      Developer`WriteRawJSONString[data],
+      ExportString[data, "JSON"]
+    ]
+  ];
+
+(* ELIMINADO: buildArchPNG[] — reemplazado por JSON + JS client-side *)
 buildArchPNG[] :=
   Module[{verts, edges, coords, vStyle, eStyle, g, bytes},
 
@@ -147,19 +218,14 @@ buildArchPNG[] :=
 
 (* ── Endpoints ────────────────────────────────────────────────────────── *)
 
-(* GET /arch/graph  →  PNG del grafo (cacheado en memoria) *)
-archGraph[req_] :=
-  Module[{bytes = $archPNG},
-    If[bytes === $Failed,
-      HTTPResponse["Graph generation failed", <|"StatusCode" -> 500|>],
-      HTTPResponse[bytes, <|"Headers" -> <|
-        "Content-Type"  -> "image/png",
-        "Cache-Control" -> "public, max-age=7200"
-      |>|>]
-    ]
-  ];
+(* GET /arch/data  →  JSON {nodes, links} para 3d-force-graph *)
+archData[req_] :=
+  HTTPResponse[$archJSON, <|"Headers" -> <|
+    "Content-Type"  -> "application/json; charset=utf-8",
+    "Cache-Control" -> "public, max-age=3600"
+  |>|>];
 
-(* GET /arch  →  pagina HTML con el grafo embebido *)
+(* GET /arch  →  pagina HTML con el grafo 3D interactivo *)
 arch[req_] :=
   PersonalSite`View`render["arch", <||>];
 
