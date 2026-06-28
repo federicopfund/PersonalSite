@@ -83,7 +83,46 @@
   &--ctrl   { background: #eb7a1a; }
   &--model  { background: #2db85e; }
   &--view   { background: #aa44e0; }
-  &--ext    { background: #d93535; }
+  &--nest-rt { background: #00b8cc; }
+}
+
+// ── Simulation bar ─────────────────────────────────────────────
+#arch-sim-bar {
+  display: flex;
+  align-items: center;
+  gap: 1rem;
+  padding: .75rem 1.25rem;
+  background: rgba(#fff, .04);
+  border-bottom: 1px solid rgba(#fff, .08);
+  flex-wrap: wrap;
+}
+
+.arch-sim-btn {
+  font-size: .8rem;
+  font-weight: 700;
+  letter-spacing: .06em;
+  padding: .45rem 1.1rem;
+  border-radius: radius(pill);
+  border: 1px solid #00e5ff;
+  background: transparent;
+  color: #00e5ff;
+  cursor: pointer;
+  transition: background $ease, color $ease;
+
+  &:hover { background: rgba(#00e5ff, .15); }
+
+  &.running {
+    background: rgba(#ff4444, .15);
+    border-color: #ff4444;
+    color: #ff4444;
+  }
+}
+
+.arch-sim-label {
+  font-size: .78rem;
+  color: rgba(#fff, .7);
+  font-family: $font-mono;
+  flex: 1;
 }
 
 // ── Graph container (3d-force-graph / WebGL) ───────────────────

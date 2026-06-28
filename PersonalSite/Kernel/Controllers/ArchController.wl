@@ -19,6 +19,7 @@ $archJSON := $archJSON = buildArchJSON[];
 buildArchJSON[] :=
   Module[{nodes, links, data},
     nodes = {
+      (* ── Capa base ─────────────────────────────────────────────── *)
       <|"id"->"HTTP",      "group"->"entry",   "label"->"HTTP Request"|>,
       <|"id"->"Router",    "group"->"router",  "label"->"Router"|>,
       <|"id"->"Home",      "group"->"ctrl",    "label"->"HomeController"|>,
@@ -43,9 +44,22 @@ buildArchJSON[] :=
       <|"id"->"SQLite",    "group"->"ext",     "label"->"SQLite"|>,
       <|"id"->"WAAPI",     "group"->"ext",     "label"->"WA API"|>,
       <|"id"->"SMTP",      "group"->"ext",     "label"->"SMTP"|>,
-      <|"id"->"Response",  "group"->"entry",   "label"->"HTTP Response"|>
+      <|"id"->"Response",  "group"->"entry",   "label"->"HTTP Response"|>,
+      (* ── NestScheduler runtime (POST /nest/schedule trigger) ────── *)
+      <|"id"->"NestTrigger", "group"->"nest-rt", "label"->"POST /nest/schedule"|>,
+      <|"id"->"RulesParser", "group"->"nest-rt", "label"->"Parse rules / seeds / depth"|>,
+      <|"id"->"RecordsBuild","group"->"nest-rt", "label"->"buildRecords[rules,seeds,depth]"|>,
+      <|"id"->"SpecConvert", "group"->"nest-rt", "label"->"recordsToSpec[records,rules]"|>,
+      <|"id"->"FlowL0",      "group"->"nest-rt", "label"->"Layer 0 \[DoubleVerticalBar] Seeds"|>,
+      <|"id"->"FlowL1",      "group"->"nest-rt", "label"->"Layer 1 \[DoubleVerticalBar] rule(seed)"|>,
+      <|"id"->"FlowL2",      "group"->"nest-rt", "label"->"Layer 2 \[DoubleVerticalBar] rule(L1)"|>,
+      <|"id"->"FlowLN",      "group"->"nest-rt", "label"->"Layer N \[DoubleVerticalBar] rule(LN-1)"|>,
+      <|"id"->"NestStore",   "group"->"nest-rt", "label"->"$lastResults"|>,
+      <|"id"->"SchedLoop",   "group"->"nest-rt", "label"->"ScheduledTask (every N s)"|>,
+      <|"id"->"NestAPI",     "group"->"nest-rt", "label"->"GET /nest/results"|>
     };
     links = {
+      (* ── Aristas base ──────────────────────────────────────────── *)
       <|"source"->"HTTP",      "target"->"Router"|>,
       <|"source"->"Router",    "target"->"Home"|>,
       <|"source"->"Router",    "target"->"Blog"|>,
@@ -77,7 +91,21 @@ buildArchJSON[] :=
       <|"source"->"Database",  "target"->"SQLite"|>,
       <|"source"->"Mailer",    "target"->"SMTP"|>,
       <|"source"->"WAmodel",   "target"->"WAAPI"|>,
-      <|"source"->"Renderer",  "target"->"Response"|>
+      <|"source"->"Renderer",  "target"->"Response"|>,
+      (* ── NestScheduler runtime trigger ─────────────────────────── *)
+      <|"source"->"NestTrigger","target"->"Router",      "rt"->True|>,
+      <|"source"->"Nest",       "target"->"RulesParser", "rt"->True|>,
+      <|"source"->"RulesParser","target"->"RecordsBuild","rt"->True|>,
+      <|"source"->"RecordsBuild","target"->"SpecConvert","rt"->True|>,
+      <|"source"->"SpecConvert","target"->"FlowL0",      "rt"->True|>,
+      <|"source"->"FlowL0",    "target"->"FlowL1",       "rt"->True|>,
+      <|"source"->"FlowL1",    "target"->"FlowL2",       "rt"->True|>,
+      <|"source"->"FlowL2",    "target"->"FlowLN",       "rt"->True|>,
+      <|"source"->"FlowLN",    "target"->"NestStore",    "rt"->True|>,
+      <|"source"->"NestStore", "target"->"SchedLoop",    "rt"->True|>,
+      <|"source"->"SchedLoop", "target"->"Nest",         "rt"->True|>,
+      <|"source"->"NestStore", "target"->"NestAPI",      "rt"->True|>,
+      <|"source"->"NestAPI",   "target"->"Response",     "rt"->True|>
     };
     data = <|"nodes" -> nodes, "links" -> links|>;
     Quiet @ Check[

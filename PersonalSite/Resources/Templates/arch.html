@@ -19,6 +19,10 @@
 
 <section class="arch-section">
   <div id="arch-graph-container">
+    <div id="arch-sim-bar">
+      <button id="arch-sim-btn" class="arch-sim-btn">&#9654; Simular NestSchedule</button>
+      <span id="arch-sim-label" class="arch-sim-label"></span>
+    </div>
     <div id="arch-graph"></div>
   </div>
 </section>
@@ -74,8 +78,29 @@
 (function() {
   var COLOR = {
     entry:'#3389ff', router:'#7a7a85', ctrl:'#eb7a1a',
-    model:'#2db85e', view:'#aa44e0',   ext:'#d93535'
+    model:'#2db85e', view:'#aa44e0',   ext:'#d93535',
+    'nest-rt':'#00e5ff'
   };
+
+  /* Secuencia de simulacion: nodo + descripcion del paso */
+  var SIM_STEPS = [
+    {id:'NestTrigger', desc:'HTTP POST /nest/schedule recibido'},
+    {id:'Router',      desc:'URLDispatcher: match "/nest/schedule"'},
+    {id:'Nest',        desc:'NestController.nestSchedule handler'},
+    {id:'RulesParser', desc:'Parsear rules, seeds, depth desde FormRules'},
+    {id:'RecordsBuild',desc:'buildRecords[ ] — construye árbol BFS de nodos'},
+    {id:'SpecConvert', desc:'recordsToSpec[ ] — convierte a spec de Flow'},
+    {id:'FlowL0',      desc:'Layer 0 ∥ — ejecuta seeds en paralelo'},
+    {id:'FlowL1',      desc:'Layer 1 ∥ — rule(seed) para cada rama'},
+    {id:'FlowL2',      desc:'Layer 2 ∥ — rule(L1) para cada rama'},
+    {id:'FlowLN',      desc:'Layer N ∥ — última capa, resultados finales'},
+    {id:'NestStore',   desc:'Resultados guardados en $lastResults'},
+    {id:'SchedLoop',   desc:'ScheduledTask registrado — se repite cada N s'},
+    {id:'Nest',        desc:'Re-trigger: SchedLoop → NestController (loop)'},
+    {id:'NestAPI',     desc:'GET /nest/results — JSON disponible para Power BI'},
+    {id:'Response',    desc:'HTTP 200 OK — flujo completo'}
+  ];
+  var simTimer = [], simActive = false;
   var el = document.getElementById('arch-graph');
   el.style.height = '620px';
 
@@ -129,6 +154,43 @@
             node, 800);
         });
 
+      /* ── Simulacion NestSchedule ──────────────────────────── */
+      var simBtn   = document.getElementById('arch-sim-btn');
+      var simLabel = document.getElementById('arch-sim-label');
+
+      function clearSim() {
+        simTimer.forEach(clearTimeout); simTimer = [];
+        simActive = false;
+        highlighted.clear();
+        simBtn.textContent = '\u25B6 Simular NestSchedule';
+        simBtn.classList.remove('running');
+        simLabel.textContent = '';
+        Graph.nodeColor(Graph.nodeColor())
+             .linkColor(Graph.linkColor())
+             .linkDirectionalParticles(Graph.linkDirectionalParticles());
+      }
+
+      simBtn.addEventListener('click', function() {
+        if (simActive) { clearSim(); return; }
+        simActive = true;
+        simBtn.textContent = '\u25A0 Detener';
+        simBtn.classList.add('running');
+        highlighted.clear();
+
+        SIM_STEPS.forEach(function(step, i) {
+          simTimer.push(setTimeout(function() {
+            highlighted.add(step.id);
+            simLabel.textContent = 'Paso ' + (i+1) + '/' + SIM_STEPS.length + ': ' + step.desc;
+            Graph.nodeColor(Graph.nodeColor())
+                 .linkColor(Graph.linkColor())
+                 .linkDirectionalParticles(Graph.linkDirectionalParticles());
+            if (i === SIM_STEPS.length - 1) {
+              simTimer.push(setTimeout(clearSim, 2500));
+            }
+          }, i * 480));
+        });
+      });
+
       window.addEventListener('resize', function(){
         Graph.width(el.parentElement.offsetWidth || window.innerWidth);
       });
@@ -138,73 +200,3 @@
     });
 })();
 </script>
-      <p>Flujo de estados y dependencias del sitio &mdash; generado con Wolfram Language <code>Graph3D</code></p>
-    </div>
-    <div class="arch-legend">
-      <span class="arch-leg arch-leg--entry">HTTP Entry / Response</span>
-      <span class="arch-leg arch-leg--router">Router</span>
-      <span class="arch-leg arch-leg--ctrl">Controllers</span>
-      <span class="arch-leg arch-leg--model">Models</span>
-      <span class="arch-leg arch-leg--view">Renderer</span>
-      <span class="arch-leg arch-leg--ext">External / Data</span>
-    </div>
-  </div>
-</section>
-
-<section class="section arch-section">
-  <div class="arch-graph-wrap">
-    <img src="/arch/graph"
-         alt="Graph3D arquitectura del sistema"
-         class="arch-graph-img"
-         loading="lazy"
-         onerror="this.closest('.arch-graph-wrap').classList.add('arch-err')">
-    <p class="arch-graph-loading">Generando grafo&hellip; (primera carga ~5 s)</p>
-    <p class="arch-graph-err-msg">Error al generar el grafo.</p>
-  </div>
-</section>
-
-<section class="section section-alt">
-  <div class="section-inner">
-    <div class="section-header">
-      <h2>Flujo de Estado</h2>
-      <p>Recorrido de una petici&oacute;n HTTP a trav&eacute;s del sistema</p>
-    </div>
-    <div class="arch-flow">
-      <div class="arch-flow-step arch-flow-step--entry">
-        <div class="arch-flow-icon">&#8594;</div>
-        <strong>HTTP Request</strong>
-        <p>Petici&oacute;n entrante al servidor WolframWebEngine</p>
-      </div>
-      <div class="arch-flow-arrow">&#8595;</div>
-      <div class="arch-flow-step arch-flow-step--router">
-        <div class="arch-flow-icon">&#9654;</div>
-        <strong>Router</strong>
-        <p>URLDispatcher: match de path a controller</p>
-      </div>
-      <div class="arch-flow-arrow">&#8595;</div>
-      <div class="arch-flow-step arch-flow-step--ctrl">
-        <div class="arch-flow-icon">&#9632;</div>
-        <strong>Controller</strong>
-        <p>Home &bull; Blog &bull; Contacto &bull; Wolfram&alpha; &bull; Nest &bull; Tasks &bull; Perf &bull; Theme</p>
-      </div>
-      <div class="arch-flow-arrow">&#8595;</div>
-      <div class="arch-flow-step arch-flow-step--model">
-        <div class="arch-flow-icon">&#9670;</div>
-        <strong>Models</strong>
-        <p>Database &bull; Post &bull; Mailer &bull; WolframAlpha &bull; TaskManager &bull; NestScheduler &bull; Cache</p>
-      </div>
-      <div class="arch-flow-arrow">&#8595;</div>
-      <div class="arch-flow-step arch-flow-step--view">
-        <div class="arch-flow-icon">&#9711;</div>
-        <strong>Renderer</strong>
-        <p>StringTemplate: layout.html + vista + datos compartidos</p>
-      </div>
-      <div class="arch-flow-arrow">&#8595;</div>
-      <div class="arch-flow-step arch-flow-step--entry">
-        <div class="arch-flow-icon">&#8592;</div>
-        <strong>HTTP Response</strong>
-        <p>Content-Type: text/html &mdash; 200 OK</p>
-      </div>
-    </div>
-  </div>
-</section>
