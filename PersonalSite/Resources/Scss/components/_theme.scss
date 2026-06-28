@@ -1,0 +1,271 @@
+// =============================================================
+//  components/_theme.scss
+//  Sistema de temas en runtime. Cada tema redefine 20 variables CSS
+//  (tokens de diseño) que los componentes consumen con var(). La
+//  ScheduledTask `theme-rotate` cambia el tema activo en el tiempo, de
+//  modo que las 20 variables cambian de golpe en runtime.
+// =============================================================
+@use '../abstracts' as *;
+@use 'sass:map';
+
+// --- Tokens por tema (single source of truth): 20 valores ----
+$themes: (
+  slate: (
+    bg: #ffffff, bg-alt: #fafafa, surface: #ffffff,
+    text: #18181b, text-muted: #71717a, heading: #09090b, border: #e4e4e7,
+    accent: #3f3f46, accent-strong: #18181b, accent-contrast: #ffffff,
+    header-from: #0a0a0b, header-mid: #18181b, header-to: #27272a,
+    header-text: #ffffff, header-muted: #a1a1aa,
+    link: #18181b, link-hover: #000000,
+    code-bg: #18181b, code-text: #e4e4e7,
+    shadow: rgba(0, 0, 0, .12),
+  ),
+  sand: (
+    bg: #fbf8f4, bg-alt: #f3ebe0, surface: #fffdfa,
+    text: #2a2018, text-muted: #8a7965, heading: #1c130a, border: #e7dccb,
+    accent: #a9763f, accent-strong: #855a2c, accent-contrast: #ffffff,
+    header-from: #271a0f, header-mid: #3a2917, header-to: #4f3a22,
+    header-text: #fdf6ec, header-muted: #cbb89f,
+    link: #8a5a2c, link-hover: #5e3c1a,
+    code-bg: #271a0f, code-text: #ecd9c2,
+    shadow: rgba(60, 40, 15, .16),
+  ),
+  forest: (
+    bg: #f4f8f5, bg-alt: #e7f0ea, surface: #ffffff,
+    text: #15241c, text-muted: #5d7568, heading: #0c1f16, border: #d2e2d8,
+    accent: #2f6b4f, accent-strong: #1f4a37, accent-contrast: #ffffff,
+    header-from: #0c1f16, header-mid: #143527, header-to: #1f4a37,
+    header-text: #effaf3, header-muted: #a9c7b6,
+    link: #2f6b4f, link-hover: #173a2a,
+    code-bg: #0c1f16, code-text: #cde6d8,
+    shadow: rgba(15, 50, 35, .16),
+  ),
+  rose: (
+    bg: #fcf5f8, bg-alt: #f6e6ee, surface: #fffafc,
+    text: #2a1620, text-muted: #8a6675, heading: #1f0f17, border: #ecd6e0,
+    accent: #b23a6b, accent-strong: #8a2b52, accent-contrast: #ffffff,
+    header-from: #2a0f1c, header-mid: #3e1729, header-to: #561f38,
+    header-text: #fceef4, header-muted: #d2a8bd,
+    link: #b23a6b, link-hover: #7e2549,
+    code-bg: #2a0f1c, code-text: #ecccdb,
+    shadow: rgba(60, 15, 40, .16),
+  ),
+  ocean: (
+    bg: #f3f7fb, bg-alt: #e5eef6, surface: #ffffff,
+    text: #16222e, text-muted: #5d7184, heading: #0c1925, border: #d3e0ec,
+    accent: #2f6196, accent-strong: #21496e, accent-contrast: #ffffff,
+    header-from: #0c1925, header-mid: #142c40, header-to: #1f496e,
+    header-text: #eef5fb, header-muted: #a7c2da,
+    link: #2f6196, link-hover: #1c3c5c,
+    code-bg: #0c1925, code-text: #cadcec,
+    shadow: rgba(15, 35, 60, .16),
+  ),
+);
+
+// Defaults en :root = tema slate (cuando no hay data-theme).
+:root {
+  @each $k, $v in map.get($themes, slate) {
+    --#{$k}: #{$v};
+  }
+}
+
+// Cada tema sobreescribe las 20 variables + helpers para las muestras.
+@each $name, $tokens in $themes {
+  [data-theme='#{$name}'] {
+    @each $k, $v in $tokens {
+      --#{$k}: #{$v};
+    }
+  }
+  .theme-#{$name} {
+    --swatch:    #{map.get($tokens, accent)};
+    --sw-bg:     #{map.get($tokens, bg)};
+    --sw-header: #{map.get($tokens, header-mid)};
+  }
+}
+
+// --- Barra de acento superior (indica el tema vigente) --------
+.theme-bar {
+  height: 4px;
+  width: 100%;
+  background: linear-gradient(90deg, var(--accent), var(--accent-strong));
+}
+
+// --- Aplicacion de tokens a elementos visibles ---------------
+::selection { background: var(--accent); color: var(--accent-contrast); }
+
+[data-theme] {
+  .nav-cta {
+    background: var(--accent);
+    border-color: var(--accent);
+    color: var(--accent-contrast) !important;
+
+    &:hover { background: var(--accent-strong); border-color: var(--accent-strong); }
+  }
+
+  .more { color: var(--accent); }
+
+  .article-body a {
+    color: var(--accent);
+    text-decoration-color: var(--accent);
+  }
+}
+
+// Transicion suave de color al rotar el tema en vivo (modo auto).
+.card,
+.nav-cta,
+.btn-primary,
+.theme-bar,
+.theme-swatch,
+.article-body pre {
+  transition: background-color .4s ease, border-color .4s ease, color .4s ease;
+}
+
+// --- Utilidad global -----------------------------------------
+.is-hidden { display: none !important; }
+
+// --- Pagina /apariencia --------------------------------------
+.appearance { max-width: 680px; }
+
+.theme-tokens-note {
+  margin: 0 0 1.5rem;
+  padding: .85rem 1.1rem;
+  border-left: 3px solid var(--accent);
+  background: var(--bg-alt);
+  border-radius: radius(sm);
+  font-size: .88rem;
+  color: var(--text-muted);
+
+  strong { color: var(--heading); }
+}
+
+.theme-state {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 1.5rem 2rem;
+  margin-bottom: 2rem;
+  padding: 1.25rem 1.5rem;
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: radius(md);
+}
+
+.theme-state__item {
+  display: flex;
+  flex-direction: column;
+  gap: .35rem;
+}
+
+.theme-state__label {
+  font-size: .72rem;
+  font-weight: 700;
+  letter-spacing: .06em;
+  text-transform: uppercase;
+  color: var(--text-muted);
+}
+
+.theme-chip {
+  display: inline-flex;
+  align-items: center;
+  gap: .5rem;
+  font-weight: 700;
+  color: var(--heading);
+
+  &__dot {
+    width: 12px;
+    height: 12px;
+    border-radius: 50%;
+    background: var(--swatch, var(--accent));
+    box-shadow: 0 0 0 3px var(--shadow);
+  }
+}
+
+.appearance-form {
+  fieldset {
+    border: none;
+    padding: 0;
+    margin: 0 0 1.5rem;
+  }
+
+  legend {
+    font-size: .78rem;
+    font-weight: 700;
+    letter-spacing: .05em;
+    text-transform: uppercase;
+    color: var(--text-muted);
+    margin-bottom: .6rem;
+  }
+
+  .form-field { margin-bottom: 1.5rem; }
+}
+
+.theme-mode {
+  display: grid;
+  gap: .6rem;
+}
+
+.form-radio {
+  display: flex;
+  align-items: center;
+  gap: .65rem;
+  padding: .8rem 1rem;
+  border: 1.5px solid var(--border);
+  border-radius: radius(sm);
+  cursor: pointer;
+  transition: border-color $ease, background $ease;
+
+  &:hover { border-color: var(--accent); }
+
+  input { accent-color: var(--accent); }
+
+  span { font-size: .95rem; color: var(--text-muted); }
+  strong { color: var(--heading); }
+}
+
+.theme-swatches {
+  display: flex;
+  flex-wrap: wrap;
+  gap: .5rem;
+  margin-top: .85rem;
+}
+
+.theme-swatch {
+  display: inline-flex;
+  align-items: center;
+  gap: .55rem;
+  padding: .4rem .7rem;
+  border: 1.5px solid var(--border);
+  border-radius: radius(pill);
+  background: var(--surface);
+  font-size: .85rem;
+  font-weight: 600;
+  color: var(--text);
+  transition: border-color $ease, box-shadow $ease;
+
+  &:hover { border-color: var(--accent); }
+
+  &.is-active {
+    border-color: var(--swatch, var(--accent));
+    box-shadow: 0 0 0 2px var(--shadow);
+  }
+
+  // Mini paleta: header + fondo + acento del tema de la muestra.
+  &__pal {
+    display: inline-flex;
+    width: 38px;
+    height: 16px;
+    border-radius: 4px;
+    overflow: hidden;
+    border: 1px solid var(--border);
+
+    i { flex: 1; display: block; }
+    i:nth-child(1) { background: var(--sw-header); }
+    i:nth-child(2) { background: var(--sw-bg); }
+    i:nth-child(3) { background: var(--swatch); }
+  }
+}
+
+.form-hint {
+  font-size: .82rem;
+  color: var(--text-muted);
+  margin-top: .5rem;
+}

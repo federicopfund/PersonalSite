@@ -81,6 +81,9 @@ dispatcher[] := Delayed @ URLDispatcher[{
   "/blog"    ~~ EndOfString           :> PersonalSite`Controller`blogIndex[HTTPRequestData[]],
   "/ask"     ~~ EndOfString           :> PersonalSite`Controller`ask[HTTPRequestData[]],
   "/contacto" ~~ EndOfString          :> PersonalSite`Controller`contact[HTTPRequestData[]],
+  "/apariencia" ~~ EndOfString        :> PersonalSite`Controller`appearance[HTTPRequestData[]],
+  "/flow"     ~~ EndOfString           :> PersonalSite`Controller`flow[HTTPRequestData[]],
+  "/perf"     ~~ EndOfString           :> PersonalSite`Controller`perf[HTTPRequestData[]],
   "/"        ~~ EndOfString           :> PersonalSite`Controller`home[HTTPRequestData[]],
   ___ :> HTTPResponse["No encontrado", <|"StatusCode" -> 404|>]
 }];

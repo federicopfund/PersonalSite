@@ -20,6 +20,7 @@ PersonalSite`$Root =
 
 (* --- 2. Carga de modulos en orden de dependencias ----------------------- *)
 (*  Config  ->  Database  ->  Post  ->  WolframAlpha  ->  Mailer
+              ->  Settings  ->  Theme  ->  Scheduler
               ->  View  ->  Controllers  ->  Routing                     *)
 With[{load = Function[parts,
        Get[FileNameJoin[Join[{PersonalSite`$Root, "Kernel"}, parts]]]]},
@@ -28,11 +29,20 @@ With[{load = Function[parts,
   load[{"Models", "Post.wl"}];
   load[{"Models", "WolframAlpha.wl"}];
   load[{"Models", "Mailer.wl"}];
+  load[{"Models", "Settings.wl"}];
+  load[{"Models", "Theme.wl"}];
+  load[{"Models", "Flow.wl"}];
+  load[{"Models", "Cache.wl"}];
+  load[{"Models", "Assets.wl"}];
+  load[{"Models", "Scheduler.wl"}];
   load[{"Views", "Renderer.wl"}];
   load[{"Controllers", "HomeController.wl"}];
   load[{"Controllers", "BlogController.wl"}];
   load[{"Controllers", "WolframController.wl"}];
   load[{"Controllers", "ContactController.wl"}];
+  load[{"Controllers", "ThemeController.wl"}];
+  load[{"Controllers", "FlowController.wl"}];
+  load[{"Controllers", "PerfController.wl"}];
   load[{"Router.wl"}];
 ];
 

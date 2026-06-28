@@ -21,9 +21,11 @@ postItem::usage =
 
 Begin["`Private`"];
 
-(* Carga y compila una plantilla por nombre (sin extension). *)
+(* Carga y compila una plantilla por nombre (sin extension). MEMOIZADA: cada
+   plantilla se lee de disco y se compila UNA sola vez por kernel; los renders
+   siguientes reutilizan el StringTemplate ya compilado (sin I/O ni recompilar). *)
 template[name_String] :=
-  StringTemplate[
+  template[name] = StringTemplate[
     ReadString[FileNameJoin[{
       PersonalSite`$Root, "Resources", "Templates", name <> ".html"}]],
     Delimiters -> {"<*", "*>"}];
@@ -37,7 +39,20 @@ fragment[partial_String, data_Association] :=
   TemplateApply[template[partial], data];
 
 (* Variables compartidas, inyectadas tanto en la vista como en el layout. *)
-shared[] := <|"siteName" -> PersonalSite`Config`$siteName, "year" -> DateValue[Now, "Year"]|>;
+shared[] :=
+  Module[{cfg},
+    cfg = Quiet @ Check[PersonalSite`Theme`clientConfig[],
+      <|"theme" -> "slate", "mode" -> "manual", "order" -> "slate", "interval" -> 20, "epoch" -> 0|>];
+    <|
+      "siteName"      -> PersonalSite`Config`$siteName,
+      "year"          -> DateValue[Now, "Year"],
+      "theme"         -> cfg["theme"],
+      "themeMode"     -> cfg["mode"],
+      "themeOrder"    -> cfg["order"],
+      "themeInterval" -> ToString @ cfg["interval"],
+      "themeEpoch"    -> ToString @ cfg["epoch"]
+    |>
+  ];
 
 render[view_String, data_Association] :=
   Module[{ctx = shared[], viewHtml, page},
@@ -54,6 +69,12 @@ postItem[post_Association] :=
     "summary" -> escape[post["summary"]],
     "date"    -> PersonalSite`Post`formatDate[post["date"]]
   |>];
+
+(* Warm-up: precompila (y memoiza) las plantillas conocidas una vez por kernel
+   al cargar el modulo, para que ningun request pague la compilacion. *)
+Quiet @ Scan[template, {
+  "layout", "home", "blog/index", "blog/item", "blog/post",
+  "contact", "ask", "apariencia", "flow", "perf"}];
 
 End[];
 EndPackage[];

@@ -19,7 +19,7 @@ Begin["`Private`"];
 contact[request_] :=
   If[contactMethod[request] === "POST",
     contactSubmit[request],
-    contactForm["", "", "", ""]
+    contactForm[<||>, ""]
   ];
 
 (* Metodo HTTP en mayusculas; por defecto GET. *)
@@ -29,54 +29,105 @@ contactMethod[request_] :=
     Except[_String] -> "GET"
   ];
 
-(* Renderiza la vista; status es un bloque HTML opcional (caja de estado). *)
-contactForm[name_String, email_String, message_String, status_String] :=
-  PersonalSite`View`render["contact", <|
-    "name"    -> PersonalSite`View`escape[name],
-    "email"   -> PersonalSite`View`escape[email],
-    "message" -> PersonalSite`View`escape[message],
-    "status"  -> status
-  |>];
+(* Valores por defecto del formulario. "kind" distingue entre enviar un
+   mensaje ("message") y planificar una reunion ("meeting"). *)
+$contactDefaults = <|
+  "name" -> "", "email" -> "", "message" -> "",
+  "kind" -> "message", "date" -> "", "time" -> ""
+|>;
+
+(* Normaliza el tipo de consulta a "meeting" o "message". *)
+contactKind[k_] := If[StringTrim @ ToString[k] === "meeting", "meeting", "message"];
+
+(* Renderiza la vista; status es un bloque HTML opcional (caja de estado).
+   fields preserva los valores ingresados al re-renderizar tras un error. *)
+contactForm[fields_Association, status_String] :=
+  Module[{f = Join[$contactDefaults, fields], kind},
+    kind = contactKind[f["kind"]];
+    PersonalSite`View`render["contact", <|
+      "name"         -> PersonalSite`View`escape[f["name"]],
+      "email"        -> PersonalSite`View`escape[f["email"]],
+      "message"      -> PersonalSite`View`escape[f["message"]],
+      "date"         -> PersonalSite`View`escape[f["date"]],
+      "time"         -> PersonalSite`View`escape[f["time"]],
+      "selMessage"   -> If[kind === "meeting", "", "selected"],
+      "selMeeting"   -> If[kind === "meeting", "selected", ""],
+      "meetingClass" -> If[kind === "meeting", "", " is-hidden"],
+      "status"       -> status
+    |>]
+  ];
 
 contactSubmit[request_] :=
-  Module[{fields, name, email, message, honeypot, error, result},
+  Module[{fields, name, email, message, honeypot, kind, date, time, state, error, payload, result},
     fields   = contactFields[request];
     name     = StringTrim @ Lookup[fields, "name", ""];
     email    = StringTrim @ Lookup[fields, "email", ""];
     message  = StringTrim @ Lookup[fields, "message", ""];
     honeypot = StringTrim @ Lookup[fields, "website", ""];
+    kind     = contactKind @ Lookup[fields, "kind", "message"];
+    date     = StringTrim @ Lookup[fields, "date", ""];
+    time     = StringTrim @ Lookup[fields, "time", ""];
+
+    (* Estado a preservar si hay error de validacion o de envio. *)
+    state = <|"name" -> name, "email" -> email, "message" -> message,
+              "kind" -> kind, "date" -> date, "time" -> time|>;
 
     (* Bot detectado: el honeypot debe quedar vacio. Fingimos exito sin enviar. *)
     If[honeypot =!= "",
-      Return @ contactForm["", "", "",
+      Return @ contactForm[<||>,
         contactStatusBox[True, "\[Checkmark] Gracias, tu mensaje fue recibido."]]];
 
-    error = contactValidate[name, email, message];
+    error = contactValidate[name, email, message, kind, date];
     If[error =!= "",
-      Return @ contactForm[name, email, message, contactStatusBox[False, error]]];
+      Return @ contactForm[state, contactStatusBox[False, error]]];
 
-    result = PersonalSite`Mailer`send[<|
-      "name" -> name, "email" -> email, "message" -> message|>];
+    payload = <|"name" -> name, "email" -> email, "message" -> message|>;
+    If[kind === "meeting",
+      payload = Join[payload, <|"kind" -> "meeting", "date" -> date, "time" -> time|>]];
+
+    result = PersonalSite`Mailer`send[payload];
 
     If[TrueQ[result["ok"]],
-      contactForm["", "", "",
-        contactStatusBox[True,
-          "Gracias " <> name <> ", tu mensaje fue enviado. Te respondere a la brevedad."]],
-      contactForm[name, email, message,
+      contactForm[<||>,
+        contactStatusBox[True, contactSuccessMessage[kind, name, date, time]]],
+      contactForm[state,
         contactStatusBox[False, Lookup[result, "error", "No se pudo enviar el mensaje."]]]
     ]
   ];
 
-contactValidate[name_String, email_String, message_String] :=
+(* Mensaje de exito segun el tipo de consulta. *)
+contactSuccessMessage["meeting", name_String, date_String, time_String] :=
+  StringJoin["Gracias ", name, ", tu solicitud de reunion para el ", date,
+    If[time === "", "", " a las " <> time],
+    " fue enviada. Te confirmare la disponibilidad a la brevedad."];
+
+contactSuccessMessage[_, name_String, _String, _String] :=
+  "Gracias " <> name <> ", tu mensaje fue enviado. Te respondere a la brevedad.";
+
+contactValidate[name_String, email_String, message_String, kind_String, date_String] :=
   Which[
     StringLength[name] < 2,
       "Por favor ingresa tu nombre.",
     !StringMatchQ[email, RegularExpression["[^@\\s]+@[^@\\s]+\\.[^@\\s]+"]],
       "Por favor ingresa un email valido.",
-    StringLength[message] < 10,
+    kind === "meeting" && !validMeetingDate[date],
+      "Por favor elegi una fecha valida para la reunion.",
+    kind === "meeting" && pastMeetingDate[date],
+      "La fecha de la reunion debe ser hoy o posterior.",
+    kind =!= "meeting" && StringLength[message] < 10,
       "El mensaje debe tener al menos 10 caracteres.",
     True, ""
   ];
+
+(* La fecha llega como "YYYY-MM-DD" desde <input type="date">. *)
+validMeetingDate[date_String] :=
+  StringMatchQ[date, RegularExpression["\\d{4}-\\d{2}-\\d{2}"]] &&
+    Quiet @ DateObjectQ @ DateObject[date];
+validMeetingDate[_] := False;
+
+pastMeetingDate[date_String] :=
+  Quiet @ TrueQ[AbsoluteTime @ DateObject[date] < AbsoluteTime @ Today];
+pastMeetingDate[_] := False;
 
 contactStatusBox[ok : True, msg_String] :=
   "<div class=\"ask-box ask-success\">" <>

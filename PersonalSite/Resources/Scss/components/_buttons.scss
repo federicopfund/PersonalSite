@@ -22,14 +22,14 @@
 }
 
 .btn-primary {
-  background: gray(900);
-  color: #fff;
-  box-shadow: shadow(md);
+  background: var(--accent);
+  color: var(--accent-contrast);
+  box-shadow: 0 4px 16px var(--shadow);
 
   &:hover {
-    background: gray(700);
+    background: var(--accent-strong);
     transform: translateY(-1px);
-    box-shadow: shadow(lg);
+    box-shadow: 0 8px 24px var(--shadow);
   }
 }
 

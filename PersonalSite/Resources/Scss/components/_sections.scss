@@ -8,7 +8,7 @@
 }
 
 .section-alt {
-  background: gray(50);
+  background: var(--bg-alt);
 }
 
 .section-inner {
@@ -23,10 +23,11 @@
     font-weight: 800;
     letter-spacing: -.04em;
     margin-bottom: .4rem;
+    color: var(--heading);
   }
 
   p {
-    color: gray(500);
+    color: var(--text-muted);
     font-size: 1rem;
   }
 }

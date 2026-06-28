@@ -6,7 +6,7 @@
 
 .article-head {
   @include dark-gradient;
-  color: #fff;
+  color: var(--header-text);
   padding: 5rem 1.5rem 4rem;
 
   time {
@@ -16,7 +16,7 @@
     font-weight: 700;
     letter-spacing: .1em;
     text-transform: uppercase;
-    color: gray(400);
+    color: var(--header-muted);
   }
 
   h1 {
@@ -38,7 +38,7 @@
   padding: 3.5rem 1.5rem 2rem;
   font-family: $font-serif;
   font-size: 1.05rem;
-  color: gray(800);
+  color: var(--text);
   line-height: 1.9;
 
   p { margin-bottom: 1.5rem; }
@@ -49,6 +49,7 @@
     font-weight: 700;
     margin: 2.5rem 0 1rem;
     letter-spacing: -.03em;
+    color: var(--heading);
   }
 
   h3 {
@@ -56,19 +57,21 @@
     font-size: 1.2rem;
     font-weight: 600;
     margin: 2rem 0 .75rem;
+    color: var(--heading);
   }
 
   code {
     font-family: $font-mono;
     font-size: .875em;
-    background: gray(100);
+    background: var(--bg-alt);
+    color: var(--accent-strong);
     padding: .2em .45em;
     border-radius: 4px;
   }
 
   pre {
-    background: gray(900);
-    color: gray(200);
+    background: var(--code-bg);
+    color: var(--code-text);
     padding: 1.5rem;
     border-radius: radius(sm);
     overflow-x: auto;
@@ -76,8 +79,77 @@
 
     code {
       background: none;
+      color: inherit;
       padding: 0;
       font-size: .9em;
+    }
+  }
+}
+
+// --- Wolfram Cloud Notebook embed --------------------------------
+// El embed sale del contenedor de 760 px del artículo para ganar
+// ancho, y usa aspect-ratio para ser responsivo en altura.
+.nb-embed {
+  // Rompe el max-width de .article-body (760 px + 3 rem de padding).
+  // En pantallas anchas el embed puede llegar hasta ~1000 px.
+  margin: 2.5rem calc(-1 * (50vw - 50%));
+  width: 100vw;
+  max-width: 1000px;
+  margin-inline: max(calc(50% - 500px), calc(-1 * (50vw - 50%)));
+
+  border-radius: radius(md);
+  overflow: hidden;
+  border: 1px solid gray(200);
+  background: gray(50);
+  box-shadow: shadow(md);
+
+  // Contenedor responsivo: aspect-ratio moderno, con fallback de
+  // min-height para que el notebook no quede enano en pantallas angostas.
+  &__frame {
+    width: 100%;
+    aspect-ratio: 4 / 3;   // ~750 px alto en desktop (1000 × 0.75)
+    min-height: 520px;
+    max-height: 80vh;       // nunca más alto que el 80 % de la ventana
+    overflow: hidden;
+
+    iframe {
+      width: 100%;
+      height: 100%;
+      border: none;
+      display: block;
+    }
+  }
+
+  &__caption {
+    display: flex;
+    align-items: center;
+    gap: .5rem;
+    padding: .65rem 1.25rem;
+    font-family: $font-sans;
+    font-size: .78rem;
+    font-weight: 600;
+    letter-spacing: .04em;
+    text-transform: uppercase;
+    color: gray(500);
+    background: gray(100);
+    border-top: 1px solid gray(200);
+
+    &::before {
+      content: '';
+      display: inline-block;
+      width: 8px;
+      height: 8px;
+      border-radius: 50%;
+      background: gray(400);
+      flex-shrink: 0;
+    }
+
+    a {
+      color: inherit;
+      text-decoration: underline;
+      text-underline-offset: 2px;
+
+      &:hover { color: gray(800); }
     }
   }
 }

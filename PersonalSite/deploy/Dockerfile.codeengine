@@ -1,0 +1,41 @@
+# Code Engine variant of the deploy image.
+# Diferencias con deploy/Dockerfile:
+#   - Code Engine es STATELESS/efimero: no hay volumen para la DB ni para la
+#     licencia. La DB sembrada se hornea en la imagen y se copia a un /data
+#     efimero al arrancar (las escrituras viven solo durante la instancia).
+#   - La licencia de Wolfram Engine NO viaja en la imagen: hay que proveerla
+#     en runtime (on-demand entitlement) o hornear un mathpass valido para el
+#     entorno de ejecucion. La activacion por volumen del setup local no aplica.
+FROM wolframresearch/wolframwebengineforpython:latest
+
+WORKDIR /app
+COPY PersonalSite /app/PersonalSite
+COPY PersonalSite/deploy/app.wl /app/deploy/app.wl
+
+# Semilla de la base horneada en la imagen (contenido de solo lectura del blog).
+COPY data/site.db /seed/site.db
+COPY PersonalSite/deploy/entrypoint.ce.sh /entrypoint.sh
+
+USER root
+RUN mkdir -p /data && chmod 777 /data && chmod +x /entrypoint.sh
+
+# Pre-bake the activated Wolfram mathpass (extracted from a working activation).
+# This avoids needing network access to Wolfram activation servers at runtime.
+COPY PersonalSite/deploy/mathpass /home/wolframengine/.WolframEngine/Licensing/mathpass
+RUN mkdir -p /home/wolframengine/.WolframEngine/Licensing && \
+    chown -R wolframengine:wolframengine /home/wolframengine/.WolframEngine
+
+USER wolframengine
+
+ENV PERSONALSITE_HOME=/app \
+    PERSONALSITE_ROOT=/app \
+    PERSONALSITE_DB=/data/site.db \
+    PERSONALSITE_ENV=production \
+    POOLSIZE=2 \
+    FLOW_MAX_KERNELS=1 \
+    PORT=18000
+
+# Code Engine enruta al puerto declarado con --port (aqui 18000).
+EXPOSE 18000
+
+ENTRYPOINT ["/entrypoint.sh"]

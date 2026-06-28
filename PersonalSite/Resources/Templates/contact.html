@@ -44,6 +44,29 @@
         </div>
 
         <div class="form-field">
+          <label for="c-kind">&iquest;Qu&eacute; necesit&aacute;s?</label>
+          <select id="c-kind" name="kind" class="form-select">
+            <option value="message" <* TemplateSlot["selMessage"] *>>Enviar un mensaje</option>
+            <option value="meeting" <* TemplateSlot["selMeeting"] *>>Planificar una reuni&oacute;n</option>
+          </select>
+        </div>
+
+        <div class="form-meeting<* TemplateSlot["meetingClass"] *>" id="c-meeting">
+          <div class="form-row">
+            <div class="form-field">
+              <label for="c-date">Fecha de la reuni&oacute;n</label>
+              <input type="date" id="c-date" name="date" class="form-input"
+                     value="<* TemplateSlot["date"] *>">
+            </div>
+            <div class="form-field">
+              <label for="c-time">Horario preferido</label>
+              <input type="time" id="c-time" name="time" class="form-input"
+                     value="<* TemplateSlot["time"] *>">
+            </div>
+          </div>
+        </div>
+
+        <div class="form-field">
           <label for="c-message">Mensaje</label>
           <textarea id="c-message" name="message" class="form-textarea"
                     placeholder="Contame en qu&eacute; puedo ayudarte&hellip;" required><* TemplateSlot["message"] *></textarea>
@@ -61,3 +84,30 @@
     </div>
   </div>
 </section>
+
+<script>
+  (function () {
+    var sel = document.getElementById('c-kind');
+    var block = document.getElementById('c-meeting');
+    var date = document.getElementById('c-date');
+    var msg = document.getElementById('c-message');
+    if (!sel || !block) return;
+
+    // La fecha minima seleccionable es hoy.
+    if (date) {
+      var now = new Date();
+      var pad = function (n) { return (n < 10 ? '0' : '') + n; };
+      date.min = now.getFullYear() + '-' + pad(now.getMonth() + 1) + '-' + pad(now.getDate());
+    }
+
+    function sync() {
+      var meeting = sel.value === 'meeting';
+      block.classList.toggle('is-hidden', !meeting);
+      if (date) date.required = meeting;
+      if (msg) msg.required = !meeting;
+    }
+
+    sel.addEventListener('change', sync);
+    sync();
+  })();
+</script>

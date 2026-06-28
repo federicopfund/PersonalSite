@@ -1,0 +1,242 @@
+name: CD — Deploy to IBM Code Engine
+
+on:
+  push:
+    branches: [main]
+
+# Solo se ejecuta despues de que CI pase en main.
+# El deploy NO se activa en PRs ni en feature branches.
+permissions:
+  contents: read
+
+concurrency:
+  group: cd-main
+  cancel-in-progress: false   # nunca cancela un deploy en curso
+
+env:
+  IBM_REGION:         us-south
+  IBM_RESOURCE_GROUP: Default
+  CR_REGISTRY:        us.icr.io
+  CR_NAMESPACE:       personalsitewolframresource
+  CE_PROJECT:         personalsite
+  APP_NAME:           personalsite
+  IMAGE:              us.icr.io/personalsitewolframresource/personalsite:latest
+
+jobs:
+  # ── 1. Esperar que CI pase (re-usa los checks del workflow ci.yml) ─────────
+  wait-ci:
+    name: Esperar CI verde
+    runs-on: ubuntu-latest
+    steps:
+      - name: Verificar que CI paso en este commit
+        uses: lewagon/wait-on-check-action@v1.3.4
+        with:
+          ref:              ${{ github.sha }}
+          check-name:       "Build imagen Code Engine"   # ultimo job de ci.yml
+          repo-token:       ${{ secrets.GITHUB_TOKEN }}
+          wait-interval:    20
+          allowed-conclusions: success
+
+  # ── 2. Build + Push imagen CE a IBM Container Registry ───────────────────
+  build-push:
+    name: Build y Push imagen CE
+    runs-on: ubuntu-latest
+    needs: wait-ci
+    outputs:
+      image-digest: ${{ steps.push.outputs.digest }}
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Inicializar base de datos seed
+        run: |
+          sudo apt-get install -y sqlite3 --quiet
+          mkdir -p data
+          sqlite3 data/site.db < PersonalSite/data/init.sql
+
+      - name: Restaurar mathpass (licencia Wolfram pre-activada)
+        env:
+          WOLFRAM_MATHPASS_B64: ${{ secrets.WOLFRAM_MATHPASS_B64 }}
+        run: |
+          if [ -z "$WOLFRAM_MATHPASS_B64" ]; then
+            echo "::error::El secret WOLFRAM_MATHPASS_B64 no esta configurado. Ver README."
+            exit 1
+          fi
+          mkdir -p PersonalSite/deploy
+          echo "$WOLFRAM_MATHPASS_B64" | base64 -d > PersonalSite/deploy/mathpass
+          echo "Mathpass restaurado ($(wc -l < PersonalSite/deploy/mathpass) linea/s)."
+
+      - name: Compilar SCSS → CSS
+        run: |
+          npm install -g sass@1.98.0 --silent
+          sass PersonalSite/Resources/Scss/styles.scss \
+               PersonalSite/Resources/Static/styles.css \
+               --style=compressed --no-source-map
+
+      - name: Build imagen Code Engine
+        run: |
+          docker build \
+            -f PersonalSite/deploy/Dockerfile.codeengine \
+            -t "$IMAGE" \
+            --label "git.sha=${{ github.sha }}" \
+            --label "git.ref=${{ github.ref_name }}" \
+            .
+
+      - name: Instalar IBM Cloud CLI + plugins
+        run: |
+          curl -fsSL https://clis.cloud.ibm.com/install/linux | sh
+          ibmcloud config --check-version=false
+          ibmcloud plugin install container-registry -f -q
+          ibmcloud plugin install code-engine -f -q
+
+      - name: Login a IBM Cloud
+        env:
+          IBMCLOUD_API_KEY: ${{ secrets.IBMCLOUD_API_KEY }}
+        run: |
+          ibmcloud login \
+            --apikey "$IBMCLOUD_API_KEY" \
+            -r "$IBM_REGION" \
+            -g "$IBM_RESOURCE_GROUP"
+
+      - name: Login a IBM Container Registry
+        run: |
+          ibmcloud cr region-set "$IBM_REGION"
+          ibmcloud cr namespace-add "$CR_NAMESPACE" 2>/dev/null || true
+          ibmcloud cr login
+
+      - name: Push imagen a ICR
+        id: push
+        run: |
+          docker push "$IMAGE"
+          DIGEST=$(docker inspect --format='{{index .RepoDigests 0}}' "$IMAGE" 2>/dev/null || echo "unknown")
+          echo "digest=$DIGEST" >> "$GITHUB_OUTPUT"
+          echo "Imagen pushed: $IMAGE"
+          echo "Digest: $DIGEST"
+
+  # ── 3. Deploy a Code Engine ───────────────────────────────────────────────
+  deploy:
+    name: Deploy a Code Engine
+    runs-on: ubuntu-latest
+    needs: build-push
+    environment:
+      name: production
+      url: https://personalsite.2bmiodwwso2z.us-south.codeengine.appdomain.cloud
+
+    steps:
+      - name: Instalar IBM Cloud CLI + plugins
+        run: |
+          curl -fsSL https://clis.cloud.ibm.com/install/linux | sh
+          ibmcloud config --check-version=false
+          ibmcloud plugin install code-engine -f -q
+          ibmcloud plugin install container-registry -f -q
+
+      - name: Login a IBM Cloud
+        env:
+          IBMCLOUD_API_KEY: ${{ secrets.IBMCLOUD_API_KEY }}
+        run: |
+          ibmcloud login \
+            --apikey "$IBMCLOUD_API_KEY" \
+            -r "$IBM_REGION" \
+            -g "$IBM_RESOURCE_GROUP"
+          ibmcloud ce project select --name "$CE_PROJECT"
+
+      - name: Actualizar o crear registro de imagen en CE
+        env:
+          IBMCLOUD_API_KEY: ${{ secrets.IBMCLOUD_API_KEY }}
+        run: |
+          ibmcloud ce registry create \
+            --name icr-secret \
+            --server "$CR_REGISTRY" \
+            --username iamapikey \
+            --password "$IBMCLOUD_API_KEY" 2>/dev/null || \
+          ibmcloud ce registry update \
+            --name icr-secret \
+            --server "$CR_REGISTRY" \
+            --username iamapikey \
+            --password "$IBMCLOUD_API_KEY"
+
+      - name: Deploy app (create or update)
+        env:
+          WOLFRAM_ALPHA_APPID: ${{ secrets.WOLFRAM_ALPHA_APPID }}
+        run: |
+          CE_ARGS="--image $IMAGE \
+            --registry-secret icr-secret \
+            --port 18000 \
+            --cpu 2 \
+            --memory 8G \
+            --min-scale 1 \
+            --max-scale 3 \
+            --env PERSONALSITE_DB_DRIVER=sqlite \
+            --env POOLSIZE=1 \
+            --env FLOW_MAX_KERNELS=1 \
+            --env WOLFRAM_ALPHA_APPID=${WOLFRAM_ALPHA_APPID:-}"
+
+          if ibmcloud ce app get --name "$APP_NAME" &>/dev/null; then
+            echo "Actualizando app existente..."
+            # shellcheck disable=SC2086
+            ibmcloud ce app update --name "$APP_NAME" $CE_ARGS --wait-timeout 300
+          else
+            echo "Creando app nueva..."
+            # shellcheck disable=SC2086
+            ibmcloud ce app create --name "$APP_NAME" $CE_ARGS --wait-timeout 300
+          fi
+
+      - name: Obtener URL publica
+        id: url
+        run: |
+          URL=$(ibmcloud ce app get --name "$APP_NAME" --output url 2>/dev/null)
+          echo "url=$URL" >> "$GITHUB_OUTPUT"
+          echo "### Deployed to: $URL" >> "$GITHUB_STEP_SUMMARY"
+
+  # ── 4. Smoke test ──────────────────────────────────────────────────────────
+  smoke-test:
+    name: Smoke test
+    runs-on: ubuntu-latest
+    needs: deploy
+
+    steps:
+      - name: Esperar que el servidor este listo
+        run: sleep 15
+
+      - name: GET / — HTML valido con tema slate
+        run: |
+          STATUS=$(curl -sf --max-time 30 -o /tmp/body.html -w "%{http_code}" \
+            "https://personalsite.2bmiodwwso2z.us-south.codeengine.appdomain.cloud/")
+          echo "HTTP $STATUS"
+          [ "$STATUS" = "200" ] || (echo "::error::/ devolvio HTTP $STATUS"; exit 1)
+          grep -q 'data-theme="slate"' /tmp/body.html || \
+            (echo "::error::/ no contiene data-theme slate"; cat /tmp/body.html | head -30; exit 1)
+          echo "OK — homepage responde con tema slate."
+
+      - name: GET /blog — listado de posts
+        run: |
+          STATUS=$(curl -sf --max-time 30 -o /tmp/blog.html -w "%{http_code}" \
+            "https://personalsite.2bmiodwwso2z.us-south.codeengine.appdomain.cloud/blog")
+          echo "HTTP $STATUS"
+          [ "$STATUS" = "200" ] || (echo "::error::/blog devolvio HTTP $STATUS"; exit 1)
+          echo "OK — /blog responde."
+
+      - name: GET /contact — formulario de contacto
+        run: |
+          STATUS=$(curl -sf --max-time 30 -w "%{http_code}" -o /dev/null \
+            "https://personalsite.2bmiodwwso2z.us-south.codeengine.appdomain.cloud/contact")
+          echo "HTTP $STATUS"
+          [ "$STATUS" = "200" ] || (echo "::error::/contact devolvio HTTP $STATUS"; exit 1)
+          echo "OK — /contact responde."
+
+      - name: GET /static/styles.css — assets estaticos
+        run: |
+          STATUS=$(curl -sf --max-time 15 -w "%{http_code}" -o /dev/null \
+            "https://personalsite.2bmiodwwso2z.us-south.codeengine.appdomain.cloud/static/styles.css")
+          echo "HTTP $STATUS"
+          [ "$STATUS" = "200" ] || (echo "::error::/static/styles.css devolvio HTTP $STATUS"; exit 1)
+          echo "OK — assets estaticos servidos."
+
+      - name: Resumen del deploy
+        if: always()
+        run: |
+          echo "## Deploy Summary" >> "$GITHUB_STEP_SUMMARY"
+          echo "- **Commit:** \`${{ github.sha }}\`" >> "$GITHUB_STEP_SUMMARY"
+          echo "- **Branch:** \`${{ github.ref_name }}\`" >> "$GITHUB_STEP_SUMMARY"
+          echo "- **URL:** https://personalsite.2bmiodwwso2z.us-south.codeengine.appdomain.cloud" >> "$GITHUB_STEP_SUMMARY"
+          echo "- **Imagen:** \`${{ env.IMAGE }}\`" >> "$GITHUB_STEP_SUMMARY"

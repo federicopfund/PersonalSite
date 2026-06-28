@@ -1,0 +1,132 @@
+<div class="page-head">
+  <div class="page-head-inner">
+    <h1>Apariencia</h1>
+    <p>Eleg&iacute; la regla del tema: fijalo a mano o dej&aacute; que rote solo en el tiempo.</p>
+  </div>
+</div>
+
+<section class="section">
+  <div class="section-inner appearance">
+
+<* TemplateSlot["status"] *>
+
+    <div class="theme-tokens-note">
+      Cada tema redefine <strong>20 variables CSS</strong> (fondo, superficie, texto, bordes,
+      acento, gradiente de cabecera, enlaces, c&oacute;digo&hellip;). En modo autom&aacute;tico la
+      <strong>ScheduledTask</strong> rota el tema y las 20 cambian en runtime.
+    </div>
+
+    <div class="theme-state">
+      <div class="theme-state__item">
+        <span class="theme-state__label">Tema activo</span>
+        <strong class="theme-chip theme-<* TemplateSlot["active"] *>">
+          <span class="theme-chip__dot"></span><* TemplateSlot["activeName"] *>
+        </strong>
+      </div>
+      <div class="theme-state__item">
+        <span class="theme-state__label">Modo</span>
+        <strong><* TemplateSlot["mode"] *></strong>
+      </div>
+      <div class="theme-state__item theme-state__auto<* TemplateSlot["autoClass"] *>">
+        <span class="theme-state__label">Por tiempo ahora</span>
+        <strong><* TemplateSlot["liveName"] *> &middot; pr&oacute;ximo en <span id="ap-secs"><* TemplateSlot["secs"] *></span>s</strong>
+      </div>
+    </div>
+
+    <form method="POST" action="/apariencia" class="appearance-form" id="ap-form">
+
+      <fieldset class="form-field">
+        <legend>Regla</legend>
+        <div class="theme-mode">
+          <label class="form-radio">
+            <input type="radio" name="mode" value="manual" <* TemplateSlot["selManual"] *>>
+            <span><strong>Manual</strong> &mdash; un tema fijo</span>
+          </label>
+          <label class="form-radio">
+            <input type="radio" name="mode" value="auto" <* TemplateSlot["selAuto"] *>>
+            <span><strong>Autom&aacute;tico</strong> &mdash; rota en el tiempo (ScheduledTask)</span>
+          </label>
+        </div>
+      </fieldset>
+
+      <div class="form-field theme-manual" id="ap-manual">
+        <label for="ap-theme">Tema</label>
+        <select id="ap-theme" name="theme" class="form-select">
+<* TemplateSlot["options"] *>
+        </select>
+        <div class="theme-swatches" id="ap-swatches">
+<* TemplateSlot["swatches"] *>
+        </div>
+      </div>
+
+      <div class="form-field theme-auto<* TemplateSlot["autoClass"] *>" id="ap-auto">
+        <label for="ap-interval">Segundos por tema</label>
+        <input type="number" id="ap-interval" name="interval" class="form-input"
+               min="3" max="3600" step="1" value="<* TemplateSlot["interval"] *>">
+        <p class="form-hint">La tarea programada recalcula el tema seg&uacute;n el reloj del servidor, igual en todos los kernels del pool.</p>
+      </div>
+
+      <button type="submit" class="btn btn-primary">Guardar apariencia</button>
+    </form>
+
+  </div>
+</section>
+
+<script>
+  (function () {
+    var form = document.getElementById('ap-form');
+    if (!form) return;
+    var manual = document.getElementById('ap-manual');
+    var auto = document.getElementById('ap-auto');
+    var sel = document.getElementById('ap-theme');
+    var swatches = document.getElementById('ap-swatches');
+    var root = document.documentElement;
+
+    function currentMode() {
+      var r = form.querySelector('input[name="mode"]:checked');
+      return r ? r.value : 'manual';
+    }
+
+    function syncMode() {
+      var auto_ = currentMode() === 'auto';
+      if (manual) manual.classList.toggle('is-hidden', auto_);
+      if (auto) auto.classList.toggle('is-hidden', !auto_);
+    }
+
+    function preview(theme) {
+      if (theme) root.setAttribute('data-theme', theme);
+      if (swatches) {
+        swatches.querySelectorAll('.theme-swatch').forEach(function (b) {
+          b.classList.toggle('is-active', b.getAttribute('data-pick') === theme);
+        });
+      }
+    }
+
+    form.querySelectorAll('input[name="mode"]').forEach(function (r) {
+      r.addEventListener('change', syncMode);
+    });
+
+    if (sel) sel.addEventListener('change', function () { preview(sel.value); });
+
+    if (swatches) {
+      swatches.addEventListener('click', function (e) {
+        var b = e.target.closest('.theme-swatch');
+        if (!b) return;
+        var theme = b.getAttribute('data-pick');
+        if (sel) sel.value = theme;
+        preview(theme);
+      });
+    }
+
+    // Cuenta regresiva visual hasta el proximo cambio (solo display).
+    var secsEl = document.getElementById('ap-secs');
+    if (secsEl) {
+      setInterval(function () {
+        var n = parseInt(secsEl.textContent, 10);
+        secsEl.textContent = (isNaN(n) || n <= 1) ? '—' : (n - 1);
+      }, 1000);
+    }
+
+    syncMode();
+  })();
+</script>

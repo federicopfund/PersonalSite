@@ -15,11 +15,7 @@ blogShow::usage =
 Begin["`Private`"];
 
 blogIndex[request_] :=
-  Module[{cards},
-    cards = StringRiffle[
-      PersonalSite`View`postItem /@ PersonalSite`Post`recent[10], "\n"];
-    PersonalSite`View`render["blog/index", <|"items" -> cards|>]
-  ];
+  PersonalSite`View`render["blog/index", <|"items" -> PersonalSite`Assets`blogCards[]|>];
 
 blogShow[slug_String, request_] :=
   Module[{post = PersonalSite`Post`bySlug[slug]},

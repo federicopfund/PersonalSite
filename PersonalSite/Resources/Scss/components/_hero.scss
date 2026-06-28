@@ -70,7 +70,7 @@
   font-weight: 700;
   letter-spacing: .1em;
   text-transform: uppercase;
-  color: gray(300);
+  color: var(--header-muted);
   padding: .3rem .85rem;
   border-radius: radius(pill);
   background: rgba(#fff, .06);
@@ -83,18 +83,18 @@
     font-weight: 800;
     line-height: 1.15;
     letter-spacing: -.05em;
-    color: #fff;
+    color: var(--header-text);
     margin-bottom: 1.25rem;
 
     em {
       font-style: normal;
-      color: gray(400);
+      color: var(--header-muted);
     }
   }
 
   p {
     font-size: 1.1rem;
-    color: gray(400);
+    color: var(--header-muted);
     max-width: 480px;
     line-height: 1.8;
     margin-bottom: 2.5rem;

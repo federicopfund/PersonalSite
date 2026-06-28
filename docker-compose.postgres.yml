@@ -1,0 +1,33 @@
+# Override para deploy STATEFUL con PostgreSQL (estado compartido y persistente).
+#   docker compose -f docker-compose.yml -f docker-compose.postgres.yml up -d
+#   python3 tools/sqlite_to_pg.py | \
+#     docker compose -f docker-compose.yml -f docker-compose.postgres.yml \
+#       exec -T db psql -U personalsite -d personalsite
+#
+# El web usa el MISMO image; solo cambia la config por entorno a postgresql.
+services:
+  db:
+    image: postgres:16-alpine
+    hostname: personalsite-db
+    environment:
+      POSTGRES_DB: personalsite
+      POSTGRES_USER: personalsite
+      POSTGRES_PASSWORD: ${PGPASSWORD:-personalsite}
+    volumes:
+      - personalsite-pg:/var/lib/postgresql/data
+    restart: unless-stopped
+
+  web:
+    environment:
+      PERSONALSITE_DB_DRIVER: postgresql
+      PGHOST: db
+      PGPORT: "5432"
+      PGDATABASE: personalsite
+      PGUSER: personalsite
+      PGPASSWORD: ${PGPASSWORD:-personalsite}
+      PGSSLMODE: disable        # local: sin TLS. En IBM PG usar require/verify-full.
+    depends_on:
+      - db
+
+volumes:
+  personalsite-pg:

@@ -20,7 +20,8 @@ $siteName::usage =
 
 $wolframAppID::usage =
   "$wolframAppID es el AppID de Wolfram|Alpha para la API HTTP (env WOLFRAM_ALPHA_APPID).";
-
+$wolframLLMAppID::usage =
+  "$wolframLLMAppID es el AppID para la Wolfram|Alpha LLM API (env WOLFRAM_LLM_APPID).";
 $contactTo::usage =
   "$contactTo es la direccion que recibe los mensajes del formulario de contacto (env CONTACT_TO).";
 
@@ -39,6 +40,15 @@ $smtpPassword::usage =
 $smtpFrom::usage =
   "$smtpFrom es la direccion remitente; por defecto $smtpUser (env SMTP_FROM).";
 
+$dbDriver::usage =
+  "$dbDriver es el motor de base de datos: \"sqlite\" (default) o \"postgresql\" (env PERSONALSITE_DB_DRIVER).";
+$pgHost::usage     = "$pgHost host PostgreSQL (env PGHOST).";
+$pgPort::usage     = "$pgPort puerto PostgreSQL (env PGPORT).";
+$pgDatabase::usage = "$pgDatabase nombre de la base PostgreSQL (env PGDATABASE).";
+$pgUser::usage     = "$pgUser usuario PostgreSQL (env PGUSER).";
+$pgPassword::usage = "$pgPassword contrasena PostgreSQL (env PGPASSWORD).";
+$pgSslMode::usage  = "$pgSslMode modo SSL JDBC: require|disable|verify-full (env PGSSLMODE).";
+
 Begin["`Private`"];
 
 value[key_String, default_] :=
@@ -47,14 +57,28 @@ value[key_String, default_] :=
   ];
 
 (* Base de datos: por defecto un archivo SQLite local (cero configuracion,
-   ideal para un sitio personal de un solo autor). Para apuntar a otro motor,
-   cambia el descriptor JDBC en Models/Database.wl y exporta PERSONALSITE_DB. *)
+   ideal para un sitio personal de un solo autor). En produccion stateless
+   (p.ej. Code Engine) conviene PostgreSQL: exporta PERSONALSITE_DB_DRIVER=postgresql
+   y los PG* (host/puerto/base/usuario/contrasena/ssl). *)
 $databasePath =
   value["PERSONALSITE_DB", FileNameJoin[{PersonalSite`$Root, "data", "site.db"}]];
 
+$dbDriver   = ToLowerCase @ value["PERSONALSITE_DB_DRIVER", "sqlite"];
+$pgHost     = value["PGHOST", ""];
+$pgPort     = value["PGPORT", "5432"];
+$pgDatabase = value["PGDATABASE", "personalsite"];
+$pgUser     = value["PGUSER", "postgres"];
+$pgPassword = value["PGPASSWORD", ""];
+$pgSslMode  = value["PGSSLMODE", "require"];
+
 $siteName = value["PERSONALSITE_NAME", "Federico"];
 
-$wolframAppID = value["WOLFRAM_ALPHA_APPID", ""];
+$wolframAppID    = value["WOLFRAM_ALPHA_APPID", ""];
+
+(* LLM API — https://products.wolframalpha.com/llm-api/documentation
+   Devuelve resultados Wolfram|Alpha como texto plano estructurado.
+   AppID independiente del de la Simple/Full API. *)
+$wolframLLMAppID = value["WOLFRAM_LLM_APPID", ""];
 
 (* --- Correo / formulario de contacto -----------------------------------
    El formulario envia un correo via SMTP (por defecto Gmail). El usuario y la

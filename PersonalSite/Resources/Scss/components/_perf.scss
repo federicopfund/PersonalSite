@@ -1,0 +1,123 @@
+// =============================================================
+//  components/_perf.scss
+//  Pagina /perf: cache en runtime + asset pesado servido desde memoria.
+// =============================================================
+@use '../abstracts' as *;
+
+.perf-hero {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 1rem;
+  margin-bottom: 2.5rem;
+
+  @include breakpoint(md) { grid-template-columns: 1fr; }
+}
+
+.perf-hero__big,
+.perf-hero__vs {
+  padding: 1.5rem 1.5rem;
+  border: 1px solid var(--border);
+  border-radius: radius(md);
+  background: var(--surface);
+  box-shadow: 0 1px 3px var(--shadow);
+}
+
+.perf-hero__big { border-left: 4px solid var(--accent); }
+
+.perf-hero__label {
+  display: block;
+  font-size: .74rem;
+  font-weight: 700;
+  letter-spacing: .05em;
+  text-transform: uppercase;
+  color: var(--text-muted);
+  margin-bottom: .4rem;
+}
+
+.perf-hero__num {
+  font-family: $font-mono;
+  font-size: 2.2rem;
+  font-weight: 800;
+  color: var(--accent);
+  line-height: 1;
+
+  &--alt { color: var(--heading); }
+}
+
+.perf-hero__note {
+  display: block;
+  margin-top: .5rem;
+  font-size: .8rem;
+  color: var(--text-muted);
+}
+
+.perf-h {
+  font-size: 1.3rem;
+  font-weight: 800;
+  letter-spacing: -.03em;
+  color: var(--heading);
+  margin: 2rem 0 1rem;
+}
+
+.perf-grid {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 1rem;
+
+  .perf-card {
+    flex: 1 1 120px;
+    padding: 1rem 1.1rem;
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: radius(md);
+
+    span {
+      display: block;
+      font-size: .72rem;
+      font-weight: 700;
+      letter-spacing: .06em;
+      text-transform: uppercase;
+      color: var(--text-muted);
+      margin-bottom: .3rem;
+    }
+
+    strong {
+      font-family: $font-mono;
+      font-size: 1.5rem;
+      color: var(--heading);
+    }
+  }
+}
+
+.perf-keys {
+  margin-top: .85rem;
+  font-size: .85rem;
+  color: var(--text-muted);
+
+  code { font-family: $font-mono; color: var(--accent); }
+}
+
+.perf-table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: .92rem;
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: radius(md);
+  overflow: hidden;
+
+  td {
+    padding: .65rem .9rem;
+    border-bottom: 1px solid var(--border);
+  }
+
+  td:first-child {
+    color: var(--text-muted);
+    width: 45%;
+  }
+
+  tr:last-child td { border-bottom: none; }
+
+  code { font-family: $font-mono; color: var(--accent); }
+  strong { color: var(--heading); }
+}

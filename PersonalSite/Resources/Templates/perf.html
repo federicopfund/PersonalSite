@@ -1,0 +1,50 @@
+<div class="page-head">
+  <div class="page-head-inner">
+    <h1>Performance &mdash; cache en runtime</h1>
+    <p>Una <strong>ScheduledTask</strong> mantiene el asset caliente en el kernel del pool; el request lo lee del cache.</p>
+  </div>
+</div>
+
+<section class="section">
+  <div class="section-inner">
+
+    <div class="perf-hero">
+      <div class="perf-hero__big">
+        <span class="perf-hero__label">Esta p&aacute;gina se sirvi&oacute; en</span>
+        <strong class="perf-hero__num"><* TemplateSlot["served"] *></strong>
+      </div>
+      <div class="perf-hero__vs">
+        <span class="perf-hero__label">Computar el asset cuesta</span>
+        <strong class="perf-hero__num perf-hero__num--alt"><* TemplateSlot["metricMs"] *></strong>
+        <span class="perf-hero__note">en <* TemplateSlot["metricKernel"] *> &middot; evitado por el cache</span>
+      </div>
+    </div>
+
+    <h2 class="perf-h">Cache</h2>
+    <div class="perf-grid">
+      <div class="perf-card"><span>Hits</span><strong><* TemplateSlot["hits"] *></strong></div>
+      <div class="perf-card"><span>Misses</span><strong><* TemplateSlot["misses"] *></strong></div>
+      <div class="perf-card"><span>Hit ratio</span><strong><* TemplateSlot["ratio"] *></strong></div>
+      <div class="perf-card"><span>Claves</span><strong><* TemplateSlot["count"] *></strong></div>
+    </div>
+    <p class="perf-keys">En cache: <code><* TemplateSlot["keys"] *></code></p>
+
+    <h2 class="perf-h">Asset pesado</h2>
+    <table class="perf-table">
+      <tbody>
+        <tr><td>Valor</td><td><code><* TemplateSlot["metricValue"] *></code></td></tr>
+        <tr><td>Costo de c&oacute;mputo</td><td><strong><* TemplateSlot["metricMs"] *></strong> (<* TemplateSlot["metricKernel"] *>)</td></tr>
+        <tr><td>Edad (&uacute;ltimo refresh)</td><td><* TemplateSlot["metricAge"] *></td></tr>
+      </tbody>
+    </table>
+
+    <h2 class="perf-h">Fragmentos cacheados</h2>
+    <table class="perf-table">
+      <tbody>
+        <tr><td>home.cards (edad)</td><td><* TemplateSlot["homeAge"] *></td></tr>
+        <tr><td>blog.cards (edad)</td><td><* TemplateSlot["blogAge"] *></td></tr>
+      </tbody>
+    </table>
+
+  </div>
+</section>

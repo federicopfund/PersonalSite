@@ -27,7 +27,7 @@
   font-size: 1.15rem;
   font-weight: 800;
   letter-spacing: -.04em;
-  color: #fff;
+  color: var(--header-text);
   text-decoration: none;
 }
 
@@ -43,11 +43,11 @@
     border-radius: radius(sm);
     font-size: .9rem;
     font-weight: 500;
-    color: gray(300);
+    color: var(--header-muted);
     transition: color $ease, background $ease;
 
     &:hover {
-      color: #fff;
+      color: var(--header-text);
       background: rgba(#fff, .1);
       text-decoration: none;
     }
@@ -81,12 +81,12 @@
 }
 
 .nav-cta {
-  background: #fff !important;
-  color: gray(950) !important;
+  background: var(--accent) !important;
+  color: var(--accent-contrast) !important;
   padding: .5rem 1.1rem !important;
 
   &:hover {
-    background: gray(200) !important;
+    background: var(--accent-strong) !important;
   }
 
   @include breakpoint(md) {

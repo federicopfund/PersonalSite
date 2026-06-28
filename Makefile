@@ -6,7 +6,7 @@ COMPOSE := docker compose
 SCSS_IN  := PersonalSite/Resources/Scss/styles.scss
 CSS_OUT  := PersonalSite/Resources/Static/styles.css
 
-.PHONY: build activate seed up down logs shell clean lint css css-watch
+.PHONY: build activate seed up down logs shell clean lint css css-watch ce-build ce-deploy
 
 ## 0. Validar estructura del paclet (lo mismo que corre CI)
 lint:
@@ -42,12 +42,15 @@ seed:
 	@echo "Base de datos inicializada en data/site.db"
 
 ## 4. Copiar la DB al volumen Docker (después de seed)
+##    El volumen tapa el `chmod` del Dockerfile, así que /data debe hacerse
+##    escribible AQUÍ: el kernel corre como wolframengine (uid 999) y necesita
+##    permiso de escritura para persistir settings (tema, rotación, etc.).
 load-db:
 	docker run --rm \
-	  -v personalsite-data:/data \
+	  -v profile_personalsite-data:/data \
 	  -v $(PWD)/data:/src \
-	  alpine cp /src/site.db /data/site.db
-	@echo "site.db copiada al volumen personalsite-data"
+	  alpine sh -c 'cp /src/site.db /data/site.db && chown -R 999:999 /data && chmod 775 /data && chmod 664 /data/site.db'
+	@echo "site.db copiada al volumen profile_personalsite-data (escribible por uid 999)"
 
 ## 5. Levantar el servidor
 up:
@@ -73,3 +76,18 @@ clean:
 
 ## Flujo completo primera vez
 first-run: build seed load-db activate up
+
+## --- IBM Cloud Code Engine -------------------------------------------------
+## Construir la imagen lista para Code Engine (DB horneada + entrypoint efimero)
+ce-build: seed
+	docker build -f PersonalSite/deploy/Dockerfile.codeengine -t personalsite:ce .
+
+## Deploy end-to-end a Code Engine (requiere IBM_REGION, IBM_RESOURCE_GROUP,
+## CR_NAMESPACE y, recomendado, IBMCLOUD_API_KEY exportados; ver el script).
+ce-deploy:
+	bash PersonalSite/deploy/codeengine.sh
+
+## Codificar el mathpass para subirlo como GitHub Secret WOLFRAM_MATHPASS_B64.
+## Uso: make encode-mathpass  (copia la salida y pega en Settings > Secrets)
+encode-mathpass:
+	@cat PersonalSite/deploy/mathpass | base64 -w0 && echo

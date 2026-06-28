@@ -2,7 +2,7 @@ name: CI
 
 on:
   push:
-    branches: [main]
+    branches: [main, feature]
   pull_request:
     branches: [main]
 
@@ -15,6 +15,7 @@ concurrency:
   cancel-in-progress: true
 
 jobs:
+  # ── 1. Validacion estructural del paclet ──────────────────────────────────
   structure:
     name: Validacion estructural del paclet
     runs-on: ubuntu-latest
@@ -29,6 +30,7 @@ jobs:
       - name: Validar estructura del paclet
         run: python3 tools/check_structure.py
 
+  # ── 2. SCSS → CSS coherencia ──────────────────────────────────────────────
   styles:
     name: SCSS compila al CSS commiteado
     runs-on: ubuntu-latest
@@ -55,8 +57,9 @@ jobs:
           fi
           echo "styles.css coincide con la fuente SCSS."
 
+  # ── 3. Build imagen Docker (local/dev) ────────────────────────────────────
   docker:
-    name: Build de imagen Docker
+    name: Build imagen Docker (dev)
     runs-on: ubuntu-latest
     needs: [structure, styles]
     steps:
@@ -65,5 +68,35 @@ jobs:
       - name: Validar docker-compose
         run: docker compose config -q
 
-      - name: Construir imagen
+      - name: Construir imagen dev
         run: docker build -f PersonalSite/deploy/Dockerfile -t personalsite:ci .
+
+  # ── 4. Build imagen Code Engine (valida Dockerfile.codeengine) ───────────
+  docker-ce:
+    name: Build imagen Code Engine
+    runs-on: ubuntu-latest
+    needs: [structure, styles]
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Inicializar base de datos seed
+        run: |
+          sudo apt-get install -y sqlite3 --quiet
+          mkdir -p data
+          sqlite3 data/site.db < PersonalSite/data/init.sql
+
+      - name: Restaurar mathpass desde secret
+        env:
+          WOLFRAM_MATHPASS_B64: ${{ secrets.WOLFRAM_MATHPASS_B64 }}
+        run: |
+          if [ -n "$WOLFRAM_MATHPASS_B64" ]; then
+            mkdir -p PersonalSite/deploy
+            echo "$WOLFRAM_MATHPASS_B64" | base64 -d > PersonalSite/deploy/mathpass
+            echo "Mathpass restaurado."
+          else
+            echo "::warning::WOLFRAM_MATHPASS_B64 no configurado — build CE sin licencia (solo validacion de estructura)."
+            echo "# placeholder — sin licencia" > PersonalSite/deploy/mathpass
+          fi
+
+      - name: Construir imagen Code Engine
+        run: docker build -f PersonalSite/deploy/Dockerfile.codeengine -t personalsite:ce .

@@ -1,0 +1,58 @@
+<div class="page-head">
+  <div class="page-head-inner">
+    <h1>Flow &mdash; tareas como DAG</h1>
+    <p>Cada tarea es un <strong>TaskObject</strong>; el motor ordena el grafo y reparte los hilos por capas.</p>
+  </div>
+</div>
+
+<section class="section">
+  <div class="section-inner">
+
+    <div class="flow-backend">
+      <span class="flow-backend__state">
+        Backend: <strong><* TemplateSlot["backend"] *></strong>
+        &middot; <* TemplateSlot["kernels"] *>/<* TemplateSlot["maxKernels"] *> subkernel(s)<* TemplateSlot["degraded"] *>
+      </span>
+      <span class="flow-backend__toggle">
+        <a class="flow-pill<* TemplateSlot["sessionSel"] *>" href="/flow?backend=session">session</a>
+        <a class="flow-pill<* TemplateSlot["parallelSel"] *>" href="/flow?backend=parallel">parallel</a>
+        <a class="flow-pill<* TemplateSlot["syncSel"] *>" href="/flow?backend=sync">sync</a>
+      </span>
+    </div>
+
+    <div class="flow-dist">
+      <code>DistributeDefinitions</code> &rarr; <code>ParallelEvaluate[Lib`boost[2]]</code>
+      = <strong><* TemplateSlot["distcheck"] *></strong>
+    </div>
+
+    <div class="flow-stats">
+      <div><span>Tareas</span><strong><* TemplateSlot["tasks"] *></strong></div>
+      <div><span>Capas</span><strong><* TemplateSlot["layersN"] *></strong></div>
+      <div><span>Paralelismo m&aacute;x</span><strong><* TemplateSlot["maxPar"] *></strong></div>
+      <div><span>Tiempo</span><strong><* TemplateSlot["elapsed"] *></strong></div>
+      <div><span>Resultado final</span><strong><* TemplateSlot["final"] *></strong></div>
+    </div>
+
+    <h2 class="flow-h">Pipeline &mdash; capas topol&oacute;gicas</h2>
+    <p class="flow-sub">Las tareas de una misma capa no dependen entre s&iacute;: se reparten y corren a la vez.</p>
+    <div class="flow-diagram">
+<* TemplateSlot["diagram"] *>
+    </div>
+
+    <h2 class="flow-h">Dependencias del DAG</h2>
+    <ul class="flow-edges">
+<* TemplateSlot["edges"] *>
+    </ul>
+
+    <h2 class="flow-h">Ejecuci&oacute;n</h2>
+    <table class="flow-table">
+      <thead>
+        <tr><th>Capa</th><th>Tarea</th><th>Acci&oacute;n</th><th>Dependencias</th><th>Resultado</th></tr>
+      </thead>
+      <tbody>
+<* TemplateSlot["rows"] *>
+      </tbody>
+    </table>
+
+  </div>
+</section>

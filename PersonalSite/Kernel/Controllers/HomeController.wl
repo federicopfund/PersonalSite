@@ -14,11 +14,7 @@ home::usage =
 Begin["`Private`"];
 
 home[request_] :=
-  Module[{cards},
-    cards = StringRiffle[
-      PersonalSite`View`postItem /@ PersonalSite`Post`recent[3], "\n"];
-    PersonalSite`View`render["home", <|"latest" -> cards|>]
-  ];
+  PersonalSite`View`render["home", <|"latest" -> PersonalSite`Assets`homeCards[]|>];
 
 End[];
 EndPackage[];

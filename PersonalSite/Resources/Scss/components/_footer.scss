@@ -5,7 +5,7 @@
 
 .footer {
   @include dark-gradient;
-  color: gray(400);
+  color: var(--header-muted);
   padding: 3rem 1.5rem;
   border-top: 1px solid rgba(#fff, .06);
 }
@@ -23,7 +23,7 @@
   font-size: 1.05rem;
   font-weight: 800;
   letter-spacing: -.03em;
-  color: #fff;
+  color: var(--header-text);
 }
 
 .footer-links {
@@ -32,12 +32,12 @@
   list-style: none;
 
   a {
-    color: gray(400);
+    color: var(--header-muted);
     font-size: .9rem;
     transition: color $ease;
 
     &:hover {
-      color: #fff;
+      color: var(--header-text);
       text-decoration: none;
     }
   }
@@ -47,7 +47,7 @@
   width: 100%;
   text-align: center;
   font-size: .8rem;
-  color: gray(600);
+  color: var(--header-muted);
   margin-top: 1.5rem;
   padding-top: 1.5rem;
   border-top: 1px solid rgba(#fff, .06);

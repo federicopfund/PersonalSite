@@ -23,6 +23,14 @@ If[! TrueQ[$PersonalSiteReady],
     ]
   ];
   Needs["PersonalSite`"];
+  (* Arranca las tareas de runtime (heartbeat + cache warm-up). Es idempotente
+     por kernel y se protege con Check para que un fallo al programar nunca
+     interrumpa el servido de requests. *)
+  Quiet @ Check[PersonalSite`Scheduler`start[], $Failed];
+  (* Precalienta SOLO el cache barato (tarjetas) para no penalizar el arranque.
+     El asset pesado se computa perezosamente (en subkernel) al primer /perf y
+     lo mantiene la ScheduledTask metric-refresh. *)
+  Quiet @ Check[PersonalSite`Assets`refreshCards[], Null];
   $PersonalSiteReady = True;
 ];
 

@@ -1,5 +1,9 @@
 <!DOCTYPE html>
-<html lang="es">
+<html lang="es" data-theme="<* TemplateSlot["theme"] *>"
+      data-theme-mode="<* TemplateSlot["themeMode"] *>"
+      data-theme-order="<* TemplateSlot["themeOrder"] *>"
+      data-theme-interval="<* TemplateSlot["themeInterval"] *>"
+      data-theme-epoch="<* TemplateSlot["themeEpoch"] *>">
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
@@ -7,6 +11,7 @@
   <link rel="stylesheet" href="/static/styles.css">
 </head>
 <body>
+  <div class="theme-bar" aria-hidden="true"></div>
   <nav class="navbar">
     <div class="nav-container">
       <a class="nav-brand" href="/"><* TemplateSlot["siteName"] *></a>
@@ -17,6 +22,9 @@
         <li><a href="/">Inicio</a></li>
         <li><a href="/blog">Blog</a></li>
         <li><a href="/ask">Wolfram &alpha;</a></li>
+        <li><a href="/apariencia">Apariencia</a></li>
+        <li><a href="/flow">Flow</a></li>
+        <li><a href="/perf">Perf</a></li>
         <li><a href="/contacto" class="nav-cta">Contacto</a></li>
       </ul>
     </div>
@@ -100,6 +108,29 @@
         document.body.appendChild(ov);
       }
     });
+  </script>
+  <script>
+    // Modo AUTOMATICO: rota el tema EN VIVO en el navegador, sincronizado al
+    // reloj del servidor (misma formula que la ScheduledTask del backend).
+    (function () {
+      var root = document.documentElement;
+      if (root.getAttribute('data-theme-mode') !== 'auto') return;
+      var order = (root.getAttribute('data-theme-order') || '').split(',').filter(Boolean);
+      var iv = parseInt(root.getAttribute('data-theme-interval'), 10) || 20;
+      var serverEpoch = parseInt(root.getAttribute('data-theme-epoch'), 10) || Math.floor(Date.now() / 1000);
+      if (order.length < 2 || iv < 1) return;
+      // Alinea el reloj del cliente con el del servidor.
+      var offset = serverEpoch - Math.floor(Date.now() / 1000);
+      function pick() {
+        var now = Math.floor(Date.now() / 1000) + offset;
+        var idx = Math.floor(now / iv) % order.length;
+        if (idx < 0) idx += order.length;
+        var theme = order[idx];
+        if (root.getAttribute('data-theme') !== theme) root.setAttribute('data-theme', theme);
+      }
+      pick();
+      setInterval(pick, 1000);
+    })();
   </script>
 </body>
 </html>

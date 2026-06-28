@@ -1,0 +1,234 @@
+// =============================================================
+//  components/_scheduler.scss
+//  Simulacion de runtime embebida en el articulo del blog:
+//  un panel que "corre" ScheduledTask en el navegador en tiempo real.
+//  Paleta monocroma: el estado vivo se comunica con animacion, no color.
+// =============================================================
+@use '../abstracts' as *;
+
+.sched-sim {
+  @include surface;
+  margin: 2.5rem 0;
+  overflow: hidden;
+  font-family: $font-sans;
+  box-shadow: shadow(md);
+}
+
+// --- Barra superior: estado + metricas + controles -----------
+.sched-sim__bar {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 1rem 1.5rem;
+  padding: 1rem 1.25rem;
+  @include dark-gradient;
+  color: #fff;
+}
+
+.sched-sim__status {
+  display: inline-flex;
+  align-items: center;
+  gap: .55rem;
+  font-size: .8rem;
+  font-weight: 700;
+  letter-spacing: .04em;
+  text-transform: uppercase;
+
+  .sched-dot {
+    width: 10px;
+    height: 10px;
+    border-radius: 50%;
+    background: gray(0);
+    box-shadow: 0 0 0 0 rgba(255, 255, 255, .55);
+    animation: sched-pulse 1.6s infinite;
+  }
+
+  .sched-status-text::after { content: 'Runtime activo'; }
+
+  &.is-paused {
+    .sched-dot { animation: none; background: gray(500); box-shadow: none; }
+    .sched-status-text::after { content: 'En pausa'; }
+  }
+}
+
+@keyframes sched-pulse {
+  0%   { box-shadow: 0 0 0 0 rgba(255, 255, 255, .5); }
+  70%  { box-shadow: 0 0 0 8px rgba(255, 255, 255, 0); }
+  100% { box-shadow: 0 0 0 0 rgba(255, 255, 255, 0); }
+}
+
+.sched-metric {
+  font-size: .78rem;
+  letter-spacing: .03em;
+  text-transform: uppercase;
+  color: gray(400);
+
+  strong {
+    display: inline-block;
+    margin-left: .35rem;
+    font-family: $font-mono;
+    font-size: .95rem;
+    color: #fff;
+    font-variant-numeric: tabular-nums;
+  }
+}
+
+.sched-sim__controls {
+  display: inline-flex;
+  gap: .5rem;
+  margin-left: auto;
+}
+
+.sched-btn {
+  font: inherit;
+  font-size: .8rem;
+  font-weight: 600;
+  cursor: pointer;
+  padding: .4rem .9rem;
+  border-radius: radius(pill);
+  border: 1px solid gray(0);
+  background: gray(0);
+  color: gray(950);
+  transition: background $ease, color $ease, border-color $ease;
+
+  &:hover { background: gray(200); }
+
+  &--ghost {
+    background: transparent;
+    color: gray(0);
+    border-color: rgba(255, 255, 255, .35);
+
+    &:hover { background: rgba(255, 255, 255, .12); }
+  }
+}
+
+// --- Grid: lista de tareas + consola -------------------------
+.sched-sim__grid {
+  display: grid;
+  grid-template-columns: 1.1fr .9fr;
+
+  @include breakpoint(lg) { grid-template-columns: 1fr; }
+}
+
+.sched-tasks {
+  padding: 1rem 1.25rem;
+  display: grid;
+  gap: .85rem;
+  border-right: 1px solid gray(200);
+
+  @include breakpoint(lg) { border-right: none; border-bottom: 1px solid gray(200); }
+}
+
+.sched-task {
+  --fill: 0%;
+  padding: .25rem 0;
+  transition: transform $ease;
+
+  &.is-firing { transform: translateX(2px); }
+}
+
+.sched-task__head {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: .75rem;
+  margin-bottom: .4rem;
+}
+
+.sched-task__name {
+  font-size: .9rem;
+  font-weight: 600;
+  color: gray(900);
+}
+
+.sched-task__interval {
+  font-family: $font-mono;
+  font-size: .72rem;
+  color: gray(500);
+  white-space: nowrap;
+}
+
+.sched-task__bar {
+  height: 6px;
+  border-radius: radius(pill);
+  background: gray(150);
+  overflow: hidden;
+}
+
+.sched-task__fill {
+  display: block;
+  height: 100%;
+  width: 0;
+  border-radius: inherit;
+  background: gray(800);
+  transition: width .9s linear;
+
+  .sched-task.is-firing & {
+    background: gray(950);
+    transition: none;
+  }
+}
+
+.sched-task__count {
+  margin-top: .35rem;
+  font-family: $font-mono;
+  font-size: .72rem;
+  color: gray(500);
+  font-variant-numeric: tabular-nums;
+}
+
+// --- Consola de ejecucion ------------------------------------
+.sched-console {
+  display: flex;
+  flex-direction: column;
+  background: gray(950);
+  min-height: 220px;
+}
+
+.sched-console__head {
+  padding: .65rem 1.1rem;
+  font-size: .72rem;
+  font-weight: 700;
+  letter-spacing: .08em;
+  text-transform: uppercase;
+  color: gray(400);
+  border-bottom: 1px solid gray(800);
+}
+
+.sched-log {
+  list-style: none;
+  margin: 0;
+  padding: .6rem 1.1rem 1rem;
+  font-family: $font-mono;
+  font-size: .78rem;
+  line-height: 1.65;
+  color: gray(200);
+  overflow-y: auto;
+  max-height: 280px;
+
+  li {
+    padding: .12rem 0;
+    border-bottom: 1px solid rgba(255, 255, 255, .04);
+    animation: sched-log-in .35s ease both;
+  }
+
+  strong { color: #fff; font-weight: 600; }
+
+  &__t {
+    display: inline-block;
+    min-width: 3.4em;
+    margin-right: .5rem;
+    color: gray(500);
+  }
+}
+
+@keyframes sched-log-in {
+  from { opacity: 0; transform: translateY(-4px); }
+  to   { opacity: 1; transform: translateY(0); }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .sched-dot,
+  .sched-log li { animation: none; }
+  .sched-task__fill { transition: none; }
+}

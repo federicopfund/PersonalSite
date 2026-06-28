@@ -17,8 +17,15 @@ services:
       PERSONALSITE_DB: /data/site.db
       PERSONALSITE_ROOT: /app
       POOLSIZE: "2"
+      # Wolfram|Alpha Simple API (graficas /wa-img)
       # Obtene tu AppID gratis en: https://developer.wolframalpha.com/
       WOLFRAM_ALPHA_APPID: "Q2X7HGK6X9"
+      # Wolfram|Alpha LLM API (pagina /ask) — texto estructurado
+      # Docs: https://products.wolframalpha.com/llm-api/documentation
+      WOLFRAM_LLM_APPID: "UGJTU6QW9G"
+      # Licencia on-demand de Wolfram Engine (opcional). Si se define, el kernel
+      # la usa en runtime en vez del mathpass del volumen (util para CE/cloud).
+      WOLFRAMSCRIPT_ENTITLEMENTID: "${WOLFRAMSCRIPT_ENTITLEMENTID:-}"
       # --- Formulario de contacto / correo (Gmail por defecto) ---------
       # Los mensajes llegan a CONTACT_TO. SMTP_USER/SMTP_PASSWORD son secretos:
       # se toman del entorno del host (NO se commitean). Con Gmail, usa una

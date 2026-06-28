@@ -14,3 +14,6 @@ PersonalSite/Resources/Scss
 **/*.db
 **/__pycache__
 **/.DS_Store
+
+# Excepcion: la DB sembrada se hornea en la imagen de Code Engine (stateless).
+!data/site.db
