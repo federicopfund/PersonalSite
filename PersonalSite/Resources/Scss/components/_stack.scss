@@ -1,0 +1,127 @@
+// =============================================================
+//  components/_stack.scss
+//  Sección de stack tecnológico (home page)
+// =============================================================
+@use '../abstracts' as *;
+
+.stack {
+  // usa .section y .section-alt como base
+}
+
+.stack-header {
+  text-align: center;
+  margin-bottom: 3rem;
+
+  h2 {
+    font-size: clamp(1.5rem, 2.5vw, 2rem);
+    font-weight: 800;
+    letter-spacing: -.04em;
+    color: var(--heading);
+    margin-bottom: .4rem;
+  }
+
+  p {
+    font-size: .9rem;
+    color: var(--text-muted);
+  }
+}
+
+.stack-groups {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 2.5rem 4rem;
+  justify-content: center;
+  margin-bottom: 2.5rem;
+}
+
+.stack-group {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 1.25rem;
+}
+
+.stack-group-label {
+  font-size: .7rem;
+  font-weight: 700;
+  letter-spacing: .12em;
+  text-transform: uppercase;
+  color: var(--text-muted);
+}
+
+.stack-icons {
+  display: flex;
+  gap: 1.75rem;
+  align-items: flex-end;
+  flex-wrap: wrap;
+  justify-content: center;
+}
+
+.stack-icon {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: .5rem;
+  text-decoration: none;
+  color: var(--text-muted);
+
+  img {
+    display: block;
+    transition: transform $ease, filter $ease, opacity $ease;
+    filter: drop-shadow(0 2px 4px rgba(0, 0, 0, .12));
+    opacity: .85;
+  }
+
+  span {
+    font-size: .68rem;
+    font-weight: 600;
+    color: var(--text-muted);
+    letter-spacing: .04em;
+  }
+
+  &:hover img {
+    transform: translateY(-5px) scale(1.08);
+    filter: drop-shadow(0 8px 16px rgba(0, 0, 0, .2));
+    opacity: 1;
+  }
+
+  &:hover span {
+    color: var(--heading);
+  }
+}
+
+.stack-footer {
+  text-align: center;
+  border-top: 1px solid var(--border);
+  padding-top: 2rem;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: .75rem;
+
+  p {
+    font-size: .78rem;
+    color: var(--text-muted);
+    letter-spacing: .04em;
+  }
+}
+
+.stack-linkedin {
+  display: inline-flex;
+  align-items: center;
+  gap: .5rem;
+  text-decoration: none;
+  font-size: .85rem;
+  font-weight: 600;
+  color: #0a66c2;
+  transition: opacity $ease;
+
+  img {
+    display: block;
+  }
+
+  &:hover {
+    opacity: .75;
+    text-decoration: underline;
+  }
+}
