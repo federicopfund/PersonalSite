@@ -321,3 +321,130 @@
     });
 })();
 </script>
+
+<!-- ── KaTeX ───────────────────────────────────────────────────── -->
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/katex@0.16.11/dist/katex.min.css">
+<script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.11/dist/katex.min.js"></script>
+<script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.11/dist/contrib/auto-render.min.js"
+  onload="renderMathInElement(document.getElementById('arch-math-section'),{delimiters:[{left:'\\[',right:'\\]',display:true},{left:'\\(',right:'\\)',display:false}]});"></script>
+
+<!-- ── force-graph 2D ─────────────────────────────────────────── -->
+<script src="https://unpkg.com/force-graph@1/dist/force-graph.min.js"></script>
+
+<section id="arch-math-section" class="arch-math-section">
+  <div class="section-header">
+    <h2>Fundamento Matem&aacute;tico &mdash; NestGraph</h2>
+    <p class="arch-math-subtitle">
+      &Aacute;rbol de iteraci&oacute;n funcional del NestScheduler &bull;
+      <code>NestGraph[\{2x+1, x+14, x-18\}, \{1\}, 3]</code>
+    </p>
+  </div>
+
+  <div class="arch-math-inner">
+
+    <!-- ── Ecuaciones KaTeX ───────────────────────── -->
+    <div class="arch-math-eqs">
+      <div class="arch-eq-block">
+        <h4>Iteraci&oacute;n funcional compuesta</h4>
+        \[ f^{(n)}(x_0) = \underbrace{f \circ f \circ \cdots \circ f}_{n \text{ veces}}(x_0) \]
+      </div>
+      <div class="arch-eq-block">
+        <h4>Expansi&oacute;n BFS por capas</h4>
+        \[ L_0 = \{x_0\}, \quad L_{k+1} = \bigcup_{i=1}^{m} \bigl\{\,f_i(v) : v \in L_k\bigr\} \]
+      </div>
+      <div class="arch-eq-block">
+        <h4>Tama&ntilde;o del &aacute;rbol en profundidad \(d\)</h4>
+        \[ |T_d| = \sum_{k=0}^{d} m^k = \frac{m^{d+1}-1}{m-1}, \quad \mathcal{O}(m^d) \]
+      </div>
+      <div class="arch-eq-block">
+        <h4>Estado confluente (Sentinel)</h4>
+        \[ \mathrm{SysState}(t) = \bigwedge_{s \in \mathcal{S}}\, H_s(t), \quad H_s(t) \in \{0,1\} \]
+      </div>
+      <div class="arch-eq-block">
+        <h4>Pulso de heartbeat</h4>
+        \[ \varphi(t) = \tfrac{1}{2}\!\left(1 + \sin\!\left(\tfrac{2\pi\,t}{T}\right)\right), \quad T = 2400\,\mathrm{ms} \]
+      </div>
+    </div>
+
+    <!-- ── NestGraph 2D live ──────────────────────── -->
+    <div class="arch-math-graph-wrap">
+      <div class="arch-math-graph-header">
+        <span id="arch-math-stats" class="arch-math-stats"></span>
+        <span class="arch-math-legend">
+          <span class="arch-mleg arch-mleg--0">L&#8320; seed</span>
+          <span class="arch-mleg arch-mleg--1">L&#8321;</span>
+          <span class="arch-mleg arch-mleg--2">L&#8322;</span>
+          <span class="arch-mleg arch-mleg--3">L&#8323;</span>
+        </span>
+      </div>
+      <div id="arch-math-graph"></div>
+    </div>
+
+  </div>
+
+  <!-- ── Propiedades del &aacute;rbol ────────────────────── -->
+  <div class="arch-math-props">
+    <div class="arch-math-prop">
+      <span class="prop-label">Reglas \(m\)</span>
+      <span class="prop-val">3</span>
+    </div>
+    <div class="arch-math-prop">
+      <span class="prop-label">Profundidad \(d\)</span>
+      <span class="prop-val">3</span>
+    </div>
+    <div class="arch-math-prop">
+      <span class="prop-label">Nodos totales</span>
+      <span class="prop-val">\(\frac{3^4-1}{2} = 40\)</span>
+    </div>
+    <div class="arch-math-prop">
+      <span class="prop-label">Complejidad</span>
+      <span class="prop-val">\(\mathcal{O}(m^d) = \mathcal{O}(27)\)</span>
+    </div>
+    <div class="arch-math-prop">
+      <span class="prop-label">Capas paralelas</span>
+      <span class="prop-val">\(d+1 = 4\)</span>
+    </div>
+    <div class="arch-math-prop">
+      <span class="prop-label">Hojas</span>
+      <span class="prop-val">\(m^d = 27\)</span>
+    </div>
+  </div>
+</section>
+
+<script>
+(function() {
+  var DEPTH_COLOR = ['#ffd700','#eb7a1a','#2db85e','#3389ff'];
+  var el = document.getElementById('arch-math-graph');
+  el.style.width  = '100%';
+  el.style.height = '420px';
+
+  fetch('/arch/math')
+    .then(function(r){ return r.json(); })
+    .then(function(data) {
+      document.getElementById('arch-math-stats').textContent =
+        data.total + ' nodos \u00b7 ' + data.links.length +
+        ' aristas \u00b7 profundidad ' + data.depth +
+        ' \u00b7 reglas: ' + data.rules.join(', ');
+
+      ForceGraph()(el)
+        .width(el.offsetWidth || 520)
+        .height(420)
+        .backgroundColor('#08080a')
+        .nodeLabel(function(n){ return n.label + ' (d=' + n.depth + ')'; })
+        .nodeColor(function(n){ return DEPTH_COLOR[n.depth] || '#aaa'; })
+        .nodeVal(function(n){ return n.depth === 0 ? 10 : Math.max(1, 5 - n.depth); })
+        .linkColor(function(){ return 'rgba(180,190,220,0.35)'; })
+        .linkDirectionalArrowLength(4)
+        .linkDirectionalArrowRelPos(1)
+        .linkLabel(function(l){ return l.op || ''; })
+        .graphData(data);
+
+      window.addEventListener('resize', function(){
+        /* re-read width on resize */
+      });
+    })
+    .catch(function(){
+      el.innerHTML = '<p style="color:#555;padding:2rem;text-align:center">NestGraph data no disponible (start /arch/math backend)</p>';
+    });
+})();
+</script>

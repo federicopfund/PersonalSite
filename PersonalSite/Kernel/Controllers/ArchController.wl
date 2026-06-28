@@ -11,6 +11,7 @@ BeginPackage["PersonalSite`Controller`"];
 arch::usage     = "arch[req] renderiza /arch: arquitectura del sistema.";
 archData::usage = "archData[req] sirve los datos JSON del grafo.";
 archHealth::usage = "archHealth[req] sirve el estado de salud en tiempo real.";
+archMath::usage   = "archMath[req] sirve el arbol NestGraph como JSON para visualizacion matematica.";
 
 Begin["`Private`"];
 
@@ -262,6 +263,46 @@ cacheNodeHealth[stats_] :=
 (* GET /arch  →  pagina HTML con el grafo 3D interactivo *)
 arch[req_] :=
   PersonalSite`View`render["arch", <||>];
+
+(* GET /arch/math  →  arbol NestGraph como JSON para visualizacion matematica *)
+archMath[req_] :=
+  Module[
+    {rules, rLabels, seed, maxDepth, allNodes, allLinks, makeTree},
+    rules     = {2 #1 + 1 &, #1 + 14 &, #1 - 18 &};
+    rLabels   = {"2x+1", "x+14", "x-18"};
+    seed      = 1;
+    maxDepth  = 3;
+    allNodes  = {};
+    allLinks  = {};
+
+    makeTree[v_, d_, pid_] := (
+      AppendTo[allNodes, <|"id" -> pid, "label" -> ToString[v], "depth" -> d, "val" -> v|>];
+      If[d < maxDepth,
+        Do[
+          With[{cv = rules[[ri]][v], cid = pid <> "_" <> ToString[ri]},
+            AppendTo[allLinks, <|"source" -> pid, "target" -> cid,
+                                  "rule" -> ri, "op" -> rLabels[[ri]]|>];
+            makeTree[cv, d + 1, cid]
+          ],
+          {ri, Length[rules]}
+        ]
+      ]
+    );
+
+    makeTree[seed, 0, "r"];
+
+    HTTPResponse[
+      Developer`WriteRawJSONString[<|
+        "nodes" -> allNodes,
+        "links" -> allLinks,
+        "rules" -> rLabels,
+        "seed"  -> seed,
+        "depth" -> maxDepth,
+        "total" -> Length[allNodes]
+      |>],
+      <|"Content-Type" -> "application/json"|>
+    ]
+  ];
 
 End[];
 EndPackage[];
