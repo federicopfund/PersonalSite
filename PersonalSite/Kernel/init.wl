@@ -48,6 +48,7 @@ With[{load = Function[parts,
   load[{"Controllers", "NestController.wl"}];
   load[{"Controllers", "TaskController.wl"}];
   load[{"Controllers", "ArchController.wl"}];
+  load[{"Controllers", "KernelController.wl"}];
   load[{"Router.wl"}];
 ];
 

@@ -1,0 +1,318 @@
+<section class="kernel-hero">
+  <div class="kernel-hero-inner">
+    <span class="kernel-badge">Wolfram Language &bull; Runtime REPL &bull; ScheduledTask</span>
+    <h1>Kernel Evaluation</h1>
+    <p>Evaluaci&oacute;n nativa en el kernel WL &bull; TeXForm &bull; OutputForm &bull;
+       Re-evaluaci&oacute;n autom&aacute;tica con ScheduledTask</p>
+    <div class="kernel-meta">
+      Kernel&nbsp;ID:&nbsp;<code id="kernel-id">&#8230;</code> &bull;
+      Celdas:&nbsp;<code id="kernel-cells-count">0</code> &bull;
+      <span id="kernel-status" class="kernel-status">listo</span>
+    </div>
+  </div>
+</section>
+
+<section class="kernel-section">
+  <div class="kernel-notebook">
+
+    <!-- ── Input area ───────────────────────────────────── -->
+    <div class="kernel-input-area">
+      <div class="kernel-in-header">
+        <span class="kernel-label kernel-label--in">In[<span id="in-n">1</span>]:=</span>
+        <span class="kernel-input-hint">Shift+Enter para evaluar</span>
+      </div>
+      <textarea id="kernel-input" class="kernel-input" rows="4" spellcheck="false"
+        placeholder="NestList[2#+1&amp;, 1, 5]&#10;Integrate[x^2, x]&#10;Table[Prime[n], {n, 10}]&#10;Association[&quot;kernel&quot; -&gt; $KernelID, &quot;ts&quot; -&gt; Now]"></textarea>
+      <div class="kernel-actions">
+        <button id="kernel-eval-btn" class="kernel-btn kernel-btn--eval">
+          &#9654; Evaluar
+        </button>
+        <div class="kernel-sched-wrap">
+          <button id="kernel-sched-btn" class="kernel-btn kernel-btn--sched">
+            &#8635; Programar cada
+          </button>
+          <input type="number" id="sched-interval" class="kernel-sched-iv"
+                 value="30" min="5" max="3600" title="Intervalo en segundos">
+          <span class="kernel-sched-s">s</span>
+        </div>
+        <button id="kernel-clear-btn" class="kernel-btn kernel-btn--clear">
+          &#10005; Limpiar historia
+        </button>
+      </div>
+    </div>
+
+    <!-- ── Scheduled tasks panel ─────────────────────── -->
+    <div id="kernel-sched-panel" class="kernel-sched-panel"></div>
+
+    <!-- ── Cell history ──────────────────────────────── -->
+    <div id="kernel-cells" class="kernel-cells"></div>
+
+  </div>
+</section>
+
+<!-- KaTeX for TeXForm output -->
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/katex@0.16.11/dist/katex.min.css">
+<script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.11/dist/katex.min.js"></script>
+<script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.11/dist/contrib/auto-render.min.js"
+  onload="window._katexReady=true;"></script>
+
+<script>
+(function() {
+  var cellsEl   = document.getElementById('kernel-cells');
+  var inputEl   = document.getElementById('kernel-input');
+  var evalBtn   = document.getElementById('kernel-eval-btn');
+  var schedBtn  = document.getElementById('kernel-sched-btn');
+  var clearBtn  = document.getElementById('kernel-clear-btn');
+  var schedPanel= document.getElementById('kernel-sched-panel');
+  var inNEl     = document.getElementById('in-n');
+  var statusEl  = document.getElementById('kernel-status');
+  var kernelIdEl= document.getElementById('kernel-id');
+  var cellCountEl=document.getElementById('kernel-cells-count');
+
+  /* Scheduled task polls: taskId -> intervalId */
+  var schedPolls = {};
+
+  function escHtml(s) {
+    return String(s)
+      .replace(/&/g,'&amp;').replace(/</g,'&lt;')
+      .replace(/>/g,'&gt;').replace(/"/g,'&quot;');
+  }
+
+  function setStatus(msg, cls) {
+    statusEl.textContent = msg;
+    statusEl.className = 'kernel-status' + (cls ? ' kernel-status--'+cls : '');
+  }
+
+  /* ── Render a KaTeX math expression safely ────────── */
+  function renderTex(el) {
+    if (!window._katexReady) {
+      setTimeout(function(){ renderTex(el); }, 200);
+      return;
+    }
+    try {
+      renderMathInElement(el, {
+        delimiters: [
+          {left:'\\[', right:'\\]', display:true},
+          {left:'\\(', right:'\\)', display:false}
+        ],
+        throwOnError: false
+      });
+    } catch(e) {}
+  }
+
+  /* ── Build output HTML from cell.out ─────────────── */
+  function buildOutHtml(out) {
+    if (!out) return '<span class="kernel-out-empty">(void)</span>';
+    if (out.type === 'error') {
+      return '<span class="kernel-out-err">$Failed</span>';
+    }
+    var html = '';
+    /* TeXForm if non-trivial */
+    if (out.tex && out.tex.length > 3 && out.type !== 'string') {
+      html += '<div class="kernel-out-tex">\\[' + escHtml(out.tex) + '\\]</div>';
+    }
+    /* OutputForm always */
+    html += '<pre class="kernel-out-text">' + escHtml(out.out || '') + '</pre>';
+    return html;
+  }
+
+  /* ── Render one cell into the history ─────────────── */
+  function renderCell(cell) {
+    var div = document.createElement('div');
+    div.className = 'kernel-cell';
+    div.id = 'cell-' + cell.id;
+
+    div.innerHTML =
+      '<div class="kernel-cell-in">' +
+        '<span class="kernel-label kernel-label--in">In[' + cell.id + ']:=</span>' +
+        '<pre class="kernel-cell-src">' + escHtml(cell.input) + '</pre>' +
+        '<div class="kernel-cell-meta">' +
+          '<span class="kernel-ms">' + cell.ms + 'ms</span>' +
+          '<span class="kernel-ts">' + (cell.tsStr||'') + '</span>' +
+        '</div>' +
+      '</div>' +
+      '<div class="kernel-cell-out">' +
+        '<span class="kernel-label kernel-label--out">Out[' + cell.id + ']=</span>' +
+        '<div class="kernel-out-body">' + buildOutHtml(cell.out) + '</div>' +
+      '</div>';
+
+    cellsEl.insertBefore(div, cellsEl.firstChild);
+    renderTex(div);
+  }
+
+  /* ── Evaluate input ───────────────────────────────── */
+  function doEval() {
+    var input = inputEl.value.trim();
+    if (!input) return;
+    evalBtn.disabled = true;
+    setStatus('evaluando\u2026', 'busy');
+
+    fetch('/kernel/eval', {
+      method: 'POST',
+      headers: {'Content-Type': 'application/x-www-form-urlencoded'},
+      body: 'input=' + encodeURIComponent(input)
+    })
+    .then(function(r){ return r.json(); })
+    .then(function(cell) {
+      renderCell(cell);
+      inNEl.textContent   = cell.id + 1;
+      cellCountEl.textContent = cell.id;
+      kernelIdEl.textContent  = cell.id; /* updated from server */
+      setStatus('ok \u2014 ' + cell.ms + 'ms', 'ok');
+      evalBtn.disabled = false;
+    })
+    .catch(function(e) {
+      setStatus('error: ' + e, 'err');
+      evalBtn.disabled = false;
+    });
+  }
+
+  /* ── Schedule re-evaluation ───────────────────────── */
+  function doSchedule() {
+    var input = inputEl.value.trim();
+    var iv    = parseInt(document.getElementById('sched-interval').value) || 30;
+    if (!input) return;
+    schedBtn.disabled = true;
+    setStatus('programando\u2026', 'busy');
+
+    fetch('/kernel/schedule', {
+      method: 'POST',
+      headers: {'Content-Type': 'application/x-www-form-urlencoded'},
+      body: 'input=' + encodeURIComponent(input) + '&interval=' + iv
+    })
+    .then(function(r){ return r.json(); })
+    .then(function(task) {
+      if (task.error) { setStatus('error: '+task.error,'err'); schedBtn.disabled=false; return; }
+      addSchedCard(task);
+      setStatus('programado \u25b6 ' + task.taskId + ' cada ' + iv + 's', 'ok');
+      schedBtn.disabled = false;
+      /* Start polling history */
+      startSchedPoll(task.taskId, iv);
+    })
+    .catch(function(e) {
+      setStatus('error: '+e,'err'); schedBtn.disabled=false;
+    });
+  }
+
+  /* ── Add scheduled task card to panel ─────────────── */
+  function addSchedCard(task) {
+    var card = document.createElement('div');
+    card.className = 'kernel-sched-card';
+    card.id = 'sched-' + task.taskId;
+    card.innerHTML =
+      '<div class="kernel-sched-card-header">' +
+        '<span class="kernel-sched-pulse" id="pulse-' + escHtml(task.taskId) + '">&#9679;</span>' +
+        '<code class="kernel-sched-id">' + escHtml(task.taskId) + '</code>' +
+        '<span class="kernel-sched-iv">\u0394 ' + task.interval + 's</span>' +
+        '<pre class="kernel-sched-src">' + escHtml(task.input) + '</pre>' +
+        '<button class="kernel-sched-stop" data-id="' + escHtml(task.taskId) + '">' +
+          '&#9632; Detener</button>' +
+      '</div>' +
+      '<div class="kernel-sched-history" id="hist-' + escHtml(task.taskId) + '"></div>';
+    schedPanel.insertBefore(card, schedPanel.firstChild);
+    card.querySelector('.kernel-sched-stop').addEventListener('click', function() {
+      stopSchedPoll(this.dataset.id);
+    });
+  }
+
+  /* ── Poll scheduled task history ─────────────────── */
+  function startSchedPoll(taskId, iv) {
+    if (schedPolls[taskId]) return;
+    schedPolls[taskId] = setInterval(function(){
+      fetchHistory(taskId);
+    }, Math.max(iv * 1000, 5000));
+    /* Immediate first poll */
+    setTimeout(function(){ fetchHistory(taskId); }, iv * 1000 + 500);
+  }
+
+  function stopSchedPoll(taskId) {
+    if (schedPolls[taskId]) {
+      clearInterval(schedPolls[taskId]);
+      delete schedPolls[taskId];
+    }
+    var pulse = document.getElementById('pulse-' + taskId);
+    if (pulse) { pulse.style.color='#555'; pulse.textContent='\u25cb'; }
+    var stop = document.querySelector('[data-id="'+taskId+'"]');
+    if (stop) { stop.textContent = '\u2713 Detenido'; stop.disabled = true; }
+  }
+
+  function fetchHistory(taskId) {
+    fetch('/kernel/history', {
+      method: 'POST',
+      headers: {'Content-Type': 'application/x-www-form-urlencoded'},
+      body: 'id=' + encodeURIComponent(taskId)
+    })
+    .then(function(r){ return r.json(); })
+    .then(function(data) {
+      updateHistoryPanel(taskId, data.history || []);
+    }).catch(function(){});
+  }
+
+  function updateHistoryPanel(taskId, entries) {
+    var histEl = document.getElementById('hist-' + taskId);
+    if (!histEl) return;
+    var pulse  = document.getElementById('pulse-' + taskId);
+    if (pulse && entries.length > 0) {
+      pulse.style.color = '#00ff88';
+      pulse.style.animation = 'kernel-pulse 1s';
+      setTimeout(function(){ pulse.style.animation=''; }, 1100);
+    }
+    /* Show last 6 entries as a timeline */
+    var last6 = entries.slice(-6);
+    histEl.innerHTML = last6.map(function(e, i) {
+      var out = e.out || {};
+      var val = out.type === 'error' ? '<span class="k-err">$Failed</span>'
+              : '<code>' + escHtml((out.out||'').slice(0,120)) + '</code>';
+      var ts  = new Date((e.ts||0)*1000).toLocaleTimeString();
+      return '<div class="kernel-hist-entry">' +
+        '<span class="kernel-hist-ts">' + ts + '</span>' +
+        '<span class="kernel-hist-ms">' + (e.ms||0) + 'ms</span>' +
+        val + '</div>';
+    }).join('');
+  }
+
+  /* ── Fetch kernel info on load ────────────────────── */
+  fetch('/kernel/cells')
+    .then(function(r){ return r.json(); })
+    .then(function(d) {
+      kernelIdEl.textContent  = d.kernel || '?';
+      cellCountEl.textContent = d.cellN  || 0;
+      inNEl.textContent       = (d.cellN || 0) + 1;
+    }).catch(function(){});
+
+  /* ── Event bindings ───────────────────────────────── */
+  evalBtn.addEventListener('click', doEval);
+  schedBtn.addEventListener('click', doSchedule);
+  clearBtn.addEventListener('click', function() {
+    cellsEl.innerHTML = '';
+    setStatus('historia limpiada', 'ok');
+  });
+
+  inputEl.addEventListener('keydown', function(e) {
+    if (e.shiftKey && e.key === 'Enter') {
+      e.preventDefault();
+      doEval();
+    }
+  });
+
+  /* Sample expressions for quick testing */
+  var SAMPLES = [
+    'NestList[2#+1&, 1, 6]',
+    'Integrate[x^2 Sin[x], x]',
+    'Table[Prime[n], {n, 10}]',
+    'Association["kernel" -> $KernelID, "ts" -> TimeObject[Now]]',
+    'CharacteristicPolynomial[{{1,2},{3,4}}, x]',
+    'Fibonacci[20]'
+  ];
+  var sIdx = 0;
+  var sampleBtn = document.createElement('button');
+  sampleBtn.className = 'kernel-btn kernel-btn--sample';
+  sampleBtn.textContent = '\u00bb Ejemplo';
+  sampleBtn.addEventListener('click', function() {
+    inputEl.value = SAMPLES[sIdx % SAMPLES.length];
+    sIdx++;
+  });
+  document.querySelector('.kernel-actions').appendChild(sampleBtn);
+
+})();
+</script>

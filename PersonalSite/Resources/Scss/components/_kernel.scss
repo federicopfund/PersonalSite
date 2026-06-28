@@ -1,0 +1,407 @@
+// =============================================================
+//  components/_kernel.scss
+//  Página /kernel: REPL nativo Wolfram Language
+// =============================================================
+@use '../abstracts' as *;
+
+// ── Wolfram Kernel REPL ───────────────────────────────────────────
+
+@keyframes kernel-pulse {
+  0%   { opacity: 1; transform: scale(1.4); }
+  100% { opacity: .7; transform: scale(1); }
+}
+
+// ── Hero ─────────────────────────────────────────────────────────
+.kernel-hero {
+  background: linear-gradient(135deg, #0a0a0d 0%, #0f0a14 100%);
+  padding: 4rem 1.5rem 3rem;
+  border-bottom: 1px solid rgba(#eb7a1a, .2);
+  text-align: center;
+}
+
+.kernel-hero-inner {
+  max-width: 780px;
+  margin: 0 auto;
+
+  h1 {
+    font-size: clamp(2rem, 5vw, 3rem);
+    font-weight: 800;
+    color: #eb7a1a;
+    letter-spacing: -.02em;
+    margin: .5rem 0 1rem;
+  }
+
+  p {
+    font-size: .95rem;
+    color: rgba(#fff, .55);
+    line-height: 1.7;
+    margin-bottom: 1.25rem;
+  }
+}
+
+.kernel-badge {
+  font-size: .7rem;
+  font-weight: 700;
+  letter-spacing: .1em;
+  text-transform: uppercase;
+  color: rgba(#eb7a1a, .75);
+  background: rgba(#eb7a1a, .1);
+  border: 1px solid rgba(#eb7a1a, .25);
+  padding: .3rem .9rem;
+  border-radius: radius(pill);
+}
+
+.kernel-meta {
+  font-size: .78rem;
+  color: rgba(#fff, .4);
+  font-family: $font-mono;
+
+  code { color: rgba(#eb7a1a, .8); }
+}
+
+.kernel-status {
+  color: rgba(#fff, .4);
+  &--busy { color: #ffcc00; }
+  &--ok   { color: #00ff88; }
+  &--err  { color: #ff3333; }
+}
+
+// ── Notebook section ─────────────────────────────────────────────
+.kernel-section {
+  background: #09090c;
+  min-height: 60vh;
+  padding: 2rem 0 4rem;
+}
+
+.kernel-notebook {
+  max-width: 1000px;
+  margin: 0 auto;
+  padding: 0 1.25rem;
+  display: flex;
+  flex-direction: column;
+  gap: 1.25rem;
+}
+
+// ── Input area ───────────────────────────────────────────────────
+.kernel-input-area {
+  background: rgba(#fff, .03);
+  border: 1px solid rgba(#eb7a1a, .25);
+  border-radius: radius(md);
+  overflow: hidden;
+}
+
+.kernel-in-header {
+  display: flex;
+  align-items: center;
+  gap: .75rem;
+  padding: .5rem 1rem;
+  background: rgba(#eb7a1a, .06);
+  border-bottom: 1px solid rgba(#eb7a1a, .15);
+}
+
+.kernel-input-hint {
+  font-size: .68rem;
+  color: rgba(#fff, .3);
+  margin-left: auto;
+  font-family: $font-mono;
+}
+
+.kernel-input {
+  display: block;
+  width: 100%;
+  background: transparent;
+  border: none;
+  resize: vertical;
+  padding: 1rem;
+  font-family: $font-mono;
+  font-size: .9rem;
+  color: #e8d5b0;
+  outline: none;
+  line-height: 1.6;
+  box-sizing: border-box;
+
+  &::placeholder { color: rgba(#fff, .2); }
+}
+
+.kernel-actions {
+  display: flex;
+  align-items: center;
+  gap: .6rem;
+  padding: .6rem 1rem;
+  flex-wrap: wrap;
+  border-top: 1px solid rgba(#fff, .06);
+  background: rgba(#fff, .02);
+}
+
+// ── Buttons ──────────────────────────────────────────────────────
+.kernel-btn {
+  font-size: .78rem;
+  font-weight: 700;
+  letter-spacing: .05em;
+  padding: .4rem 1rem;
+  border-radius: radius(pill);
+  border: 1px solid;
+  cursor: pointer;
+  transition: background $ease, color $ease;
+  background: transparent;
+
+  &--eval {
+    border-color: #eb7a1a;
+    color: #eb7a1a;
+    &:hover   { background: rgba(#eb7a1a, .15); }
+    &:disabled{ opacity: .45; cursor: not-allowed; }
+  }
+  &--sched {
+    border-color: #00e5ff;
+    color: #00e5ff;
+    &:hover { background: rgba(#00e5ff, .12); }
+    &:disabled { opacity: .45; cursor: not-allowed; }
+  }
+  &--clear {
+    border-color: rgba(#fff, .2);
+    color: rgba(#fff, .4);
+    &:hover { background: rgba(#fff, .06); color: rgba(#fff, .7); }
+  }
+  &--sample {
+    border-color: rgba(#ffd700, .3);
+    color: rgba(#ffd700, .65);
+    &:hover { background: rgba(#ffd700, .08); }
+  }
+}
+
+.kernel-sched-wrap {
+  display: flex;
+  align-items: center;
+  gap: .35rem;
+}
+
+.kernel-sched-iv {
+  width: 60px;
+  background: rgba(#fff, .06);
+  border: 1px solid rgba(#00e5ff, .3);
+  border-radius: radius(sm);
+  color: #00e5ff;
+  text-align: center;
+  font-family: $font-mono;
+  font-size: .8rem;
+  padding: .25rem .4rem;
+  outline: none;
+}
+
+.kernel-sched-s {
+  font-size: .75rem;
+  color: rgba(#00e5ff, .55);
+  font-family: $font-mono;
+}
+
+// ── Scheduled tasks panel ─────────────────────────────────────────
+.kernel-sched-panel {
+  display: flex;
+  flex-direction: column;
+  gap: .75rem;
+}
+
+.kernel-sched-card {
+  background: rgba(#00e5ff, .03);
+  border: 1px solid rgba(#00e5ff, .18);
+  border-radius: radius(md);
+  overflow: hidden;
+}
+
+.kernel-sched-card-header {
+  display: flex;
+  align-items: center;
+  gap: .6rem;
+  padding: .55rem 1rem;
+  background: rgba(#00e5ff, .05);
+  border-bottom: 1px solid rgba(#00e5ff, .1);
+  flex-wrap: wrap;
+}
+
+.kernel-sched-pulse {
+  color: #00e5ff;
+  font-size: .9rem;
+  animation: none;
+}
+
+.kernel-sched-id {
+  font-family: $font-mono;
+  font-size: .72rem;
+  color: rgba(#00e5ff, .7);
+}
+
+.kernel-sched-iv {
+  font-size: .68rem;
+  color: rgba(#fff, .35);
+  font-family: $font-mono;
+}
+
+.kernel-sched-src {
+  font-size: .78rem;
+  color: #e8d5b0;
+  font-family: $font-mono;
+  margin: 0;
+  flex: 1;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  max-width: 400px;
+}
+
+.kernel-sched-stop {
+  margin-left: auto;
+  font-size: .65rem;
+  font-weight: 700;
+  padding: .2rem .55rem;
+  border-radius: radius(pill);
+  border: 1px solid rgba(#ff4444, .4);
+  color: rgba(#ff4444, .7);
+  background: transparent;
+  cursor: pointer;
+  &:hover { background: rgba(#ff4444, .1); }
+  &:disabled { opacity: .4; cursor: not-allowed; }
+}
+
+.kernel-sched-history {
+  display: flex;
+  flex-direction: column;
+  gap: 0;
+  max-height: 200px;
+  overflow-y: auto;
+}
+
+.kernel-hist-entry {
+  display: flex;
+  align-items: baseline;
+  gap: .75rem;
+  padding: .35rem 1rem;
+  border-bottom: 1px solid rgba(#fff, .04);
+  font-size: .75rem;
+
+  &:last-child { border-bottom: none; }
+
+  code {
+    font-family: $font-mono;
+    color: rgba(#e8d5b0, .8);
+    flex: 1;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+}
+
+.kernel-hist-ts {
+  font-family: $font-mono;
+  color: rgba(#00e5ff, .5);
+  min-width: 60px;
+}
+
+.kernel-hist-ms {
+  font-family: $font-mono;
+  color: rgba(#fff, .3);
+  min-width: 50px;
+  text-align: right;
+}
+
+.k-err { color: #ff5555; font-family: $font-mono; }
+
+// ── Cell history ─────────────────────────────────────────────────
+.kernel-cells {
+  display: flex;
+  flex-direction: column;
+  gap: .9rem;
+}
+
+.kernel-cell {
+  border: 1px solid rgba(#fff, .07);
+  border-radius: radius(md);
+  overflow: hidden;
+}
+
+.kernel-cell-in {
+  display: grid;
+  grid-template-columns: auto 1fr auto;
+  grid-template-rows: auto auto;
+  align-items: start;
+  gap: .4rem .75rem;
+  padding: .6rem 1rem;
+  background: rgba(#eb7a1a, .04);
+  border-bottom: 1px solid rgba(#fff, .06);
+}
+
+.kernel-cell-src {
+  grid-column: 2;
+  font-family: $font-mono;
+  font-size: .88rem;
+  color: #e8d5b0;
+  margin: 0;
+  white-space: pre-wrap;
+  word-break: break-all;
+}
+
+.kernel-cell-meta {
+  grid-column: 3;
+  display: flex;
+  flex-direction: column;
+  align-items: flex-end;
+  gap: .1rem;
+}
+
+.kernel-ms {
+  font-size: .65rem;
+  color: rgba(#eb7a1a, .6);
+  font-family: $font-mono;
+}
+
+.kernel-ts {
+  font-size: .62rem;
+  color: rgba(#fff, .3);
+  font-family: $font-mono;
+}
+
+.kernel-cell-out {
+  display: grid;
+  grid-template-columns: auto 1fr;
+  gap: .4rem .75rem;
+  align-items: start;
+  padding: .6rem 1rem;
+  background: rgba(#fff, .015);
+}
+
+.kernel-out-body {
+  overflow-x: auto;
+}
+
+.kernel-out-tex {
+  color: rgba(#fff, .85);
+  font-size: 1rem;
+  .katex-display { margin: .3rem 0; }
+}
+
+.kernel-out-text {
+  font-family: $font-mono;
+  font-size: .85rem;
+  color: rgba(#fff, .75);
+  margin: 0;
+  white-space: pre-wrap;
+  word-break: break-all;
+}
+
+.kernel-out-err {
+  font-family: $font-mono;
+  font-size: .85rem;
+  color: #ff4444;
+}
+
+.kernel-out-empty { color: rgba(#fff, .25); font-family: $font-mono; }
+
+// ── Labels ───────────────────────────────────────────────────────
+.kernel-label {
+  font-family: $font-mono;
+  font-size: .78rem;
+  font-weight: 700;
+  white-space: nowrap;
+
+  &--in  { color: #eb7a1a; }
+  &--out { color: #2db85e; }
+}

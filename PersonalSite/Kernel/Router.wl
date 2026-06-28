@@ -102,6 +102,11 @@ dispatcher[] := Delayed @ URLDispatcher[{
   "/arch/math"       ~~ EndOfString :> PersonalSite`Controller`archMath[HTTPRequestData[]],
   "/arch/dag"        ~~ EndOfString :> PersonalSite`Controller`archDag[HTTPRequestData[]],
   "/arch"            ~~ EndOfString :> PersonalSite`Controller`arch[HTTPRequestData[]],
+  "/kernel/eval"     ~~ EndOfString :> PersonalSite`Controller`kernelEval[HTTPRequestData[]],
+  "/kernel/cells"    ~~ EndOfString :> PersonalSite`Controller`kernelCells[HTTPRequestData[]],
+  "/kernel/schedule" ~~ EndOfString :> PersonalSite`Controller`kernelSchedule[HTTPRequestData[]],
+  "/kernel/history"  ~~ EndOfString :> PersonalSite`Controller`kernelHistory[HTTPRequestData[]],
+  "/kernel"          ~~ EndOfString :> PersonalSite`Controller`kernelPage[HTTPRequestData[]],
   "/"        ~~ EndOfString           :> PersonalSite`Controller`home[HTTPRequestData[]],
   ___ :> HTTPResponse["No encontrado", <|"StatusCode" -> 404|>]
 }];
