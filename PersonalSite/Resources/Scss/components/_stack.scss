@@ -119,6 +119,17 @@
     hue-rotate(205deg) brightness(90%);
 }
 
+// simple-icons npm SVGs son negros — filtros CSS para brand color
+.si-databricks {
+  // black → #FF3621 (Databricks red)
+  filter: invert(28%) sepia(90%) saturate(3000%) hue-rotate(4deg) brightness(100%) contrast(105%);
+}
+
+.si-linkedin {
+  // black → #0A66C2 (LinkedIn blue)
+  filter: invert(26%) sepia(80%) saturate(1200%) hue-rotate(196deg) brightness(90%) contrast(95%);
+}
+
 .stack-linkedin {
   display: inline-flex;
   align-items: center;

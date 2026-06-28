@@ -1,0 +1,180 @@
+// =============================================================
+//  components/_arch.scss
+//  Página /arch: Graph3D del flujo de estados
+// =============================================================
+@use '../abstracts' as *;
+
+// ── Hero ──────────────────────────────────────────────────────
+.arch-hero {
+  @include dark-gradient;
+  padding: calc(#{$nav-height} + 3rem) 1.5rem 3rem;
+}
+
+.arch-hero-inner {
+  @include container;
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 2rem;
+  flex-wrap: wrap;
+}
+
+.arch-hero-text {
+  h1 {
+    font-size: clamp(1.8rem, 3.5vw, 2.8rem);
+    font-weight: 800;
+    letter-spacing: -.04em;
+    color: var(--header-text);
+    margin: .75rem 0 .75rem;
+  }
+
+  p {
+    color: var(--header-muted);
+    font-size: 1rem;
+    max-width: 520px;
+    line-height: 1.7;
+
+    code {
+      font-family: $font-mono;
+      font-size: .85em;
+      background: rgba(#fff, .1);
+      padding: .1em .4em;
+      border-radius: radius(sm);
+    }
+  }
+}
+
+.arch-badge {
+  display: inline-block;
+  font-size: .7rem;
+  font-weight: 700;
+  letter-spacing: .12em;
+  text-transform: uppercase;
+  color: var(--header-muted);
+  padding: .3rem .85rem;
+  border-radius: radius(pill);
+  background: rgba(#fff, .06);
+  border: 1px solid rgba(#fff, .14);
+}
+
+// ── Leyenda de colores ──────────────────────────────────────────
+.arch-legend {
+  display: flex;
+  flex-direction: column;
+  gap: .5rem;
+  padding-top: 3.5rem;
+
+  @include breakpoint(md) {
+    flex-direction: row;
+    flex-wrap: wrap;
+    padding-top: 0;
+  }
+}
+
+.arch-leg {
+  font-size: .72rem;
+  font-weight: 600;
+  padding: .3rem .7rem;
+  border-radius: radius(pill);
+  color: #fff;
+
+  &--entry  { background: #3389ff; }
+  &--router { background: #7a7a85; }
+  &--ctrl   { background: #eb7a1a; }
+  &--model  { background: #2db85e; }
+  &--view   { background: #aa44e0; }
+  &--ext    { background: #d93535; }
+}
+
+// ── Graph image ────────────────────────────────────────────────
+.arch-section {
+  background: #{gray(950)};
+  padding: 2rem 0;
+}
+
+.arch-graph-wrap {
+  position: relative;
+  text-align: center;
+
+  &.arch-err {
+    .arch-graph-img      { display: none; }
+    .arch-graph-loading  { display: none; }
+    .arch-graph-err-msg  { display: block; }
+  }
+}
+
+.arch-graph-img {
+  max-width: 100%;
+  width: 1000px;
+  height: auto;
+  display: block;
+  margin: 0 auto;
+
+  & + .arch-graph-loading { display: none; }
+}
+
+.arch-graph-loading {
+  color: gray(400);
+  font-size: .9rem;
+  padding: 4rem 0;
+}
+
+.arch-graph-err-msg {
+  display: none;
+  color: #d93535;
+  font-size: .9rem;
+  padding: 3rem 0;
+}
+
+// ── Flujo de estados ────────────────────────────────────────────
+.arch-flow {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 0;
+  max-width: 680px;
+  margin: 0 auto;
+}
+
+.arch-flow-step {
+  width: 100%;
+  padding: 1.25rem 1.5rem;
+  border-radius: radius(md);
+  border: 1px solid var(--border);
+  background: var(--bg);
+
+  strong {
+    display: block;
+    font-size: 1rem;
+    font-weight: 700;
+    margin-bottom: .25rem;
+  }
+
+  p {
+    font-size: .85rem;
+    color: var(--text-muted);
+    margin: 0;
+    line-height: 1.5;
+  }
+
+  .arch-flow-icon {
+    float: right;
+    font-size: 1.25rem;
+    opacity: .4;
+    margin-left: .5rem;
+  }
+
+  &--entry  { border-left: 4px solid #3389ff; }
+  &--router { border-left: 4px solid #7a7a85; }
+  &--ctrl   { border-left: 4px solid #eb7a1a; }
+  &--model  { border-left: 4px solid #2db85e; }
+  &--view   { border-left: 4px solid #aa44e0; }
+}
+
+.arch-flow-arrow {
+  font-size: 1.5rem;
+  color: var(--text-muted);
+  opacity: .5;
+  padding: .2rem 0;
+  line-height: 1;
+}

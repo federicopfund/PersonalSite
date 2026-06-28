@@ -1,0 +1,75 @@
+<section class="arch-hero">
+  <div class="arch-hero-inner">
+    <div class="arch-hero-text">
+      <span class="arch-badge">Graph 3D</span>
+      <h1>Arquitectura del Sistema</h1>
+      <p>Flujo de estados y dependencias del sitio &mdash; generado con Wolfram Language <code>Graph3D</code></p>
+    </div>
+    <div class="arch-legend">
+      <span class="arch-leg arch-leg--entry">HTTP Entry / Response</span>
+      <span class="arch-leg arch-leg--router">Router</span>
+      <span class="arch-leg arch-leg--ctrl">Controllers</span>
+      <span class="arch-leg arch-leg--model">Models</span>
+      <span class="arch-leg arch-leg--view">Renderer</span>
+      <span class="arch-leg arch-leg--ext">External / Data</span>
+    </div>
+  </div>
+</section>
+
+<section class="section arch-section">
+  <div class="arch-graph-wrap">
+    <img src="/arch/graph"
+         alt="Graph3D arquitectura del sistema"
+         class="arch-graph-img"
+         loading="lazy"
+         onerror="this.closest('.arch-graph-wrap').classList.add('arch-err')">
+    <p class="arch-graph-loading">Generando grafo&hellip; (primera carga ~5 s)</p>
+    <p class="arch-graph-err-msg">Error al generar el grafo.</p>
+  </div>
+</section>
+
+<section class="section section-alt">
+  <div class="section-inner">
+    <div class="section-header">
+      <h2>Flujo de Estado</h2>
+      <p>Recorrido de una petici&oacute;n HTTP a trav&eacute;s del sistema</p>
+    </div>
+    <div class="arch-flow">
+      <div class="arch-flow-step arch-flow-step--entry">
+        <div class="arch-flow-icon">&#8594;</div>
+        <strong>HTTP Request</strong>
+        <p>Petici&oacute;n entrante al servidor WolframWebEngine</p>
+      </div>
+      <div class="arch-flow-arrow">&#8595;</div>
+      <div class="arch-flow-step arch-flow-step--router">
+        <div class="arch-flow-icon">&#9654;</div>
+        <strong>Router</strong>
+        <p>URLDispatcher: match de path a controller</p>
+      </div>
+      <div class="arch-flow-arrow">&#8595;</div>
+      <div class="arch-flow-step arch-flow-step--ctrl">
+        <div class="arch-flow-icon">&#9632;</div>
+        <strong>Controller</strong>
+        <p>Home &bull; Blog &bull; Contacto &bull; Wolfram&alpha; &bull; Nest &bull; Tasks &bull; Perf &bull; Theme</p>
+      </div>
+      <div class="arch-flow-arrow">&#8595;</div>
+      <div class="arch-flow-step arch-flow-step--model">
+        <div class="arch-flow-icon">&#9670;</div>
+        <strong>Models</strong>
+        <p>Database &bull; Post &bull; Mailer &bull; WolframAlpha &bull; TaskManager &bull; NestScheduler &bull; Cache</p>
+      </div>
+      <div class="arch-flow-arrow">&#8595;</div>
+      <div class="arch-flow-step arch-flow-step--view">
+        <div class="arch-flow-icon">&#9711;</div>
+        <strong>Renderer</strong>
+        <p>StringTemplate: layout.html + vista + datos compartidos</p>
+      </div>
+      <div class="arch-flow-arrow">&#8595;</div>
+      <div class="arch-flow-step arch-flow-step--entry">
+        <div class="arch-flow-icon">&#8592;</div>
+        <strong>HTTP Response</strong>
+        <p>Content-Type: text/html &mdash; 200 OK</p>
+      </div>
+    </div>
+  </div>
+</section>

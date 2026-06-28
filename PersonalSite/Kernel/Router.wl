@@ -97,6 +97,8 @@ dispatcher[] := Delayed @ URLDispatcher[{
   "/nest/schedule"  ~~ EndOfString :> PersonalSite`Controller`nestSchedule[HTTPRequestData[]],
   "/nest/cancel"    ~~ EndOfString :> PersonalSite`Controller`nestCancel[HTTPRequestData[]],
   "/nest"           ~~ EndOfString :> PersonalSite`Controller`nest[HTTPRequestData[]],
+  "/arch/graph"      ~~ EndOfString :> PersonalSite`Controller`archGraph[HTTPRequestData[]],
+  "/arch"            ~~ EndOfString :> PersonalSite`Controller`arch[HTTPRequestData[]],
   "/"        ~~ EndOfString           :> PersonalSite`Controller`home[HTTPRequestData[]],
   ___ :> HTTPResponse["No encontrado", <|"StatusCode" -> 404|>]
 }];

@@ -117,48 +117,28 @@
 
 .hero-wl {
   margin-top: 1.75rem;
-}
-
-.hero-wl-badge {
-  display: inline-flex;
+  display: flex;
+  flex-wrap: wrap;
+  gap: .5rem;
   align-items: center;
-  gap: 0;
-  text-decoration: none;
-  border-radius: radius(sm);
-  overflow: hidden;
-  font-size: .8rem;
-  font-weight: 700;
-  letter-spacing: .04em;
-  box-shadow: 0 4px 14px rgba(0, 0, 0, .35);
-  transition: transform $ease, box-shadow $ease;
 
-  &:hover {
+  @include breakpoint(md) {
+    justify-content: center;
+  }
+
+  img {
+    display: block;
+    transition: transform $ease, opacity $ease;
+    opacity: .92;
+  }
+
+  a:hover img {
     transform: translateY(-2px);
-    box-shadow: 0 8px 24px rgba(0, 0, 0, .45);
+    opacity: 1;
   }
 }
 
-.hero-wl-logo {
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  padding: .55rem .75rem;
-  background: #dd1100;
-
-  svg { display: block; }
-}
-
-.hero-wl-name {
-  padding: .55rem .85rem .55rem .7rem;
-  background: #dd1100;
-  color: #fff;
-  border-right: 1px solid rgba(255,255,255,.25);
-}
-
-.hero-wl-ver {
-  padding: .55rem .85rem;
-  background: #a50d00;
-  color: #fff;
-  font-weight: 600;
-  letter-spacing: .06em;
-}
+.hero-wl-badge,
+.hero-wl-logo,
+.hero-wl-name,
+.hero-wl-ver { display: none; } // eliminados — sustituidos por shields.io
