@@ -4,6 +4,7 @@
 [![Version](https://img.shields.io/badge/Version-1.0.1--alpha-orange)]()
 [![Estado](https://img.shields.io/badge/Estado-Alpha%20estable-blue)]()
 [![Licencia: MIT](https://img.shields.io/badge/Licencia-MIT-green)](LICENSE)
+[![CD — Deploy to IBM Code Engine](https://github.com/federicopfund/PersonalSite/actions/workflows/cd.yml/badge.svg?branch=main&event=deployment)](https://github.com/federicopfund/PersonalSite/actions/workflows/cd.yml)
 
 Sitio personal servido con **Wolfram Language** vía Wolfram Web Engine.  
 Incluye blog, integración con Wolfram|Alpha, runtime scheduler con TaskObjects, NestGraph paralelo y dashboard de tareas.
