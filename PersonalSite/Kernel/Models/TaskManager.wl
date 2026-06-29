@@ -335,56 +335,121 @@ $groupPalette = <|
 |>;
 
 PersonalSite`TaskManager`depGraph[] :=
-  Module[{ids, edges, roots, vLabels, vStyles, vSizes, vShapes, running},
+  Module[{ids, edges, roots, vLabels, vStyles, vSizes, running,
+          hbRuns, hbRunning, hbDeps, entangled, hbEdges, edgeStyles},
     ids = Keys[$specs];
     If[Length[ids] == 0,
       Return[Graph[{}, {}, ImageSize -> 500, Background -> RGBColor[0.05, 0.05, 0.07]]]];
 
-    (* dep → task: la dependencia apunta a quien la necesita *)
+    (* dep → task *)
     edges = Flatten @ KeyValueMap[
       Function[{name, spec},
         Map[Function[dep, DirectedEdge[dep, name]],
             Lookup[spec, "deps", {}]]],
       $specs];
 
-    (* Raíces = tareas sin dependencias *)
-    roots = Select[ids, Lookup[$specs[#], "deps", {}] === {} &];
-
-    (* Estado running para cada tarea *)
+    roots   = Select[ids, Lookup[$specs[#], "deps", {}] === {} &];
     running = Select[ids, TrueQ[$states[#]["running"]] &];
 
-    (* Labels: task_id + ∆interval encima del vértice *)
+    (* ── Heartbeat entanglement ──────────────────────────────────── *)
+    hbRuns    = Quiet @ Check[$states["heartbeat"]["runs"], 0];
+    hbRunning = TrueQ[$states["heartbeat"]["running"]];
+    hbDeps    = Select[ids,
+                  MemberQ[Lookup[$specs[#], "deps", {}], "heartbeat"] &];
+    entangled = Join[{"heartbeat"}, hbDeps];
+
+    (* Aristas desde heartbeat → doradas punteadas (entanglement bond) *)
+    hbEdges = Select[edges, Function[e, First[e] === "heartbeat"]];
+    edgeStyles = Join[
+      (* entanglement bonds: dorado, grueso, punteado *)
+      Map[Function[e,
+        e -> Directive[
+          RGBColor[1.00, 0.82, 0.12],
+          Arrowheads[{{0.028, 1}}],
+          AbsoluteThickness[2.0],
+          Dashing[{0.025, 0.012}]]],
+        hbEdges],
+      (* aristas normales *)
+      {_ -> Directive[
+        GrayLevel[0.40], Arrowheads[{{0.018, 1}}], AbsoluteThickness[0.9]]}
+    ];
+
+    (* ── Vertex labels ───────────────────────────────────────────── *)
     vLabels = Map[
       Function[name,
-        With[{lbl = Lookup[$specs[name], "label", name],
-              iv  = ToString[Lookup[$specs[name], "interval", 0]] <> "s"},
-          name -> Placed[
-            Column[{
-              Style[name, FontSize -> 7, FontFamily -> "Courier New",
-                    FontColor -> GrayLevel[0.85], FontWeight -> Bold],
-              Style[iv,   FontSize -> 6, FontFamily -> "Courier New",
-                    FontColor -> GrayLevel[0.5]]
-            }, Alignment -> Center],
-            Below]]],
+        With[{iv = ToString[Lookup[$specs[name], "interval", 0]] <> "s"},
+          If[name === "heartbeat",
+            (* ♩ latiendo: nota musical + beat count + intervalo *)
+            name -> Placed[
+              Column[{
+                Style["\[MusicNote] \[MusicNote]",
+                      FontSize -> 12,
+                      FontColor -> RGBColor[1.00, 0.85, 0.15],
+                      FontWeight -> Bold],
+                Style["heartbeat",
+                      FontSize -> 7, FontFamily -> "Courier New",
+                      FontColor -> GrayLevel[0.95], FontWeight -> Bold],
+                Style[ToString[hbRuns] <> "\[CenterDot]" <> iv,
+                      FontSize -> 6, FontFamily -> "Courier New",
+                      FontColor -> RGBColor[1.00, 0.82, 0.12]]
+              }, Alignment -> Center],
+              Below],
+            (* label normal: id + interval *)
+            name -> Placed[
+              Column[{
+                Style[name, FontSize -> 7, FontFamily -> "Courier New",
+                      FontColor -> GrayLevel[0.85], FontWeight -> Bold],
+                Style[iv, FontSize -> 6, FontFamily -> "Courier New",
+                      FontColor -> GrayLevel[0.50]]
+              }, Alignment -> Center],
+              Below]
+          ]]],
       ids];
 
-    (* Colores: por grupo, opacidad por enabled *)
+    (* ── Vertex styles ───────────────────────────────────────────── *)
     vStyles = Map[
       Function[name,
         With[{grp  = Lookup[$specs[name], "group", "system"],
               enab = TrueQ[Lookup[$specs[name], "enabled", True]],
               run  = MemberQ[running, name]},
-          name -> Directive[
-            Lookup[$groupPalette, grp, GrayLevel[0.45]],
-            Opacity[If[enab, 1.0, 0.45]],
-            If[run,
-              EdgeForm[Directive[White, AbsoluteThickness[1.5]]],
-              EdgeForm[Directive[GrayLevel[0.35], AbsoluteThickness[0.8]]]]]]],
+          name -> Which[
+            (* heartbeat: dorado brillante con borde blanco grueso *)
+            name === "heartbeat",
+              Directive[
+                RGBColor[1.00, 0.80, 0.10],
+                Opacity[1.0],
+                EdgeForm[Directive[White, AbsoluteThickness[2.5]]]],
+            (* nodos entangled (deps directas de heartbeat): borde dorado *)
+            MemberQ[hbDeps, name],
+              Directive[
+                Lookup[$groupPalette, grp, GrayLevel[0.45]],
+                Opacity[If[enab, 1.0, 0.45]],
+                EdgeForm[Directive[
+                  RGBColor[1.00, 0.82, 0.12],
+                  AbsoluteThickness[If[run, 1.8, 1.2]]]]],
+            (* running: borde blanco *)
+            run,
+              Directive[
+                Lookup[$groupPalette, grp, GrayLevel[0.45]],
+                Opacity[1.0],
+                EdgeForm[Directive[White, AbsoluteThickness[1.5]]]],
+            (* default *)
+            True,
+              Directive[
+                Lookup[$groupPalette, grp, GrayLevel[0.45]],
+                Opacity[If[enab, 1.0, 0.45]],
+                EdgeForm[Directive[GrayLevel[0.35], AbsoluteThickness[0.8]]]]
+          ]]],
       ids];
 
-    (* Tamaño: running=grande, stopped=mediano *)
+    (* ── Vertex sizes ────────────────────────────────────────────── *)
     vSizes = Map[
-      Function[name, name -> If[MemberQ[running, name], 0.55, 0.38]],
+      Function[name,
+        name -> Which[
+          name === "heartbeat",           If[hbRunning, 0.80, 0.65],
+          MemberQ[running, name],         0.55,
+          MemberQ[entangled, name],       0.42,
+          True,                           0.38]],
       ids];
 
     Graph[
@@ -392,8 +457,7 @@ PersonalSite`TaskManager`depGraph[] :=
       VertexLabels -> vLabels,
       VertexStyle  -> vStyles,
       VertexSize   -> vSizes,
-      EdgeStyle    -> Directive[
-        GrayLevel[0.45], Arrowheads[{{0.018, 1}}], AbsoluteThickness[1.0]],
+      EdgeStyle    -> edgeStyles,
       GraphLayout  -> {
         "LayeredDigraphEmbedding",
         "Orientation" -> Left,
@@ -402,9 +466,9 @@ PersonalSite`TaskManager`depGraph[] :=
       ImageSize    -> {1100, 520},
       ImagePadding -> {{45, 45}, {70, 20}},
       PlotTheme    -> "Monochrome",
-      (* Resaltar las running con halo amarillo *)
-      GraphHighlight      -> running,
-      GraphHighlightStyle -> Directive[Yellow, Opacity[0.25], AbsoluteThickness[3]]
+      GraphHighlight      -> Join[running, entangled],
+      GraphHighlightStyle -> Directive[
+        RGBColor[1.00, 0.82, 0.12], Opacity[0.20], AbsoluteThickness[3]]
     ]
   ];
 
