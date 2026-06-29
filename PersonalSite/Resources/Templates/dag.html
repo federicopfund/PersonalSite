@@ -135,9 +135,10 @@
       <div id="dv-health" class="de-bridge-badge">⏳ Verificando bridge…</div>
       <div id="dv-progress" class="de-devops-stats">0 / 18 stages ejecutadas</div>
       <div class="de-devops-controls">
-        <button id="dv-run-all" class="btn btn--primary btn--sm">▶ Run Full Pipeline</button>
-        <button id="dv-reset"   class="btn btn--ghost btn--sm">↺ Reset</button>
-        <button id="dv-refresh" class="btn btn--ghost btn--sm">⟳</button>
+        <button id="dv-run-all"      class="btn btn--primary btn--sm">▶ Run Full Pipeline</button>
+        <button id="dv-run-history"  class="btn btn--ghost btn--sm">📋 History</button>
+        <button id="dv-reset"        class="btn btn--ghost btn--sm">↺ Reset</button>
+        <button id="dv-refresh"      class="btn btn--ghost btn--sm">⟳</button>
       </div>
     </div>
 
@@ -162,6 +163,16 @@
           <p class="de-sim-hint">Haz clic en un nodo del DAG para ejecutar esa etapa,<br>
             o presiona <strong>▶ Run Full Pipeline</strong> para correr todas en orden.</p>
         </div>
+
+        <!-- Pipeline History (Warehouse) -->
+        <div class="de-sim-header" style="margin-top:12px">
+          <span>Pipeline History — Warehouse</span>
+          <button id="dv-history-refresh" class="btn btn--ghost btn--xs">⟳</button>
+        </div>
+        <div id="dv-history" class="de-sim-log" style="max-height:220px">
+          <p class="de-sim-hint">Sin runs aún. Ejecuta ▶ Run Full Pipeline.</p>
+        </div>
+
       </aside>
 
     </div>
@@ -369,7 +380,7 @@ function switchTab(tab) {
   });
   if (tab === 'metrics') renderMetrics();
   if (tab === 'create')  renderDepList('');
-  if (tab === 'devops')  { fetchDevopsDag(); fetchDevopsStatus(); }
+  if (tab === 'devops')  { fetchDevopsDag(); fetchDevopsStatus(); fetchPipelineHistory(); }
 }
 
 // ── Data fetching ──────────────────────────────────────────────────────────
@@ -1203,6 +1214,7 @@ async function runDevopsPipeline() {
   DV.running = false;
   dvLog('✓ Pipeline completado', 'ok', null, null);
   renderDevopsDAG();
+  fetchPipelineHistory();
 }
 
 // ── Helpers ───────────────────────────────────────────────────────────────
@@ -1256,6 +1268,7 @@ function updateDevopsStats() {
 // ── Bootstrap DevOps bindings ─────────────────────────────────────────────
 document.addEventListener('DOMContentLoaded', () => {
   document.getElementById('dv-run-all')?.addEventListener('click', runDevopsPipeline);
+  document.getElementById('dv-run-history')?.addEventListener('click', fetchPipelineHistory);
   document.getElementById('dv-reset')?.addEventListener('click', () => {
     DV.results = {};
     document.getElementById('dv-log').innerHTML =
@@ -1270,7 +1283,40 @@ document.addEventListener('DOMContentLoaded', () => {
     document.getElementById('dv-log').innerHTML =
       '<p class="de-sim-hint">Log limpiado.</p>';
   });
+  document.getElementById('dv-history-refresh')?.addEventListener('click', fetchPipelineHistory);
 });
+
+// ── Pipeline History — Warehouse ──────────────────────────────────────────
+async function fetchPipelineHistory() {
+  const el = document.getElementById('dv-history');
+  el.innerHTML = '<p class="de-sim-hint">Cargando…</p>';
+  try {
+    const res  = await fetch('/devops/pipeline/history');
+    const data = await res.json();
+    const runs = data.runs || [];
+    if (!runs.length) {
+      el.innerHTML = '<p class="de-sim-hint">Sin runs en el Warehouse aún. Ejecutá ▶ Run Full Pipeline.</p>';
+      return;
+    }
+    el.innerHTML = runs.map(r => {
+      const ok   = r.status === 'ok';
+      const col  = ok ? '#22c55e' : '#ef4444';
+      const icon = ok ? '✓' : '✗';
+      const ms   = r.elapsed_ms != null ? Number(r.elapsed_ms).toFixed(0)+'ms' : '—';
+      const sha  = r.sha ? String(r.sha).slice(0,7) : '—';
+      const ts   = String(r.started_at||'').slice(0,19).replace('T',' ');
+      return `<div class="de-sim-entry de-sim-entry--${r.status||'idle'}">
+        <span class="de-sim-icon" style="color:${col}">${icon}</span>
+        <div class="de-sim-body">
+          <span class="de-sim-stage" style="color:${col}">#${r.id} sha:${sha} · step ${r.step_num||1}</span>
+          <span class="de-sim-meta">${ts} · ${ms}</span>
+        </div></div>`;
+    }).join('');
+  } catch(e) {
+    el.innerHTML = `<p class="de-sim-hint">Error: ${dvEsc(e.message)}</p>`;
+  }
+}
+
 </script>
 
 <script>

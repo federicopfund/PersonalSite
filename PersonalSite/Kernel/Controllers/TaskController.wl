@@ -15,7 +15,8 @@
    -------------------------------------------------------------------------- *)
 
 BeginPackage["PersonalSite`Controller`",
-  {"PersonalSite`TaskManager`", "PersonalSite`TaskConfig`", "PersonalSite`DevOps`"}];
+  {"PersonalSite`TaskManager`", "PersonalSite`TaskConfig`", "PersonalSite`DevOps`",
+   "PersonalSite`Database`"}];
 
 tasks::usage         = "tasks[req] sirve el dashboard de TaskObjects.";
 dagDashboard::usage  = "dagDashboard[req] sirve el DAG Engineer Dashboard.";
@@ -291,6 +292,54 @@ devopsRunStage[stage_String, req_] :=
     <|"ok"->False, "stage"->stage, "err"->"exception",
       "ms"->0, "ts"->DateString["ISODateTime"]|>]},
     jsonResp[result]];
+
+(* ── POST /devops/pipeline/run ────────────────────────────────── *)
+(*  Ejecuta runPipeline() via Flow.run (paralelo topologico),        *)
+(*  persiste en Warehouse y retorna el estado final.                 *)
+devopsPipelineRun[req_] :=
+  Module[{res, saved},
+    res   = Quiet @ Check[
+      PersonalSite`DevOps`runPipeline[],
+      <|"ok"->False, "err"->"runPipeline exception",
+        "ts"->DateString["ISODateTime"]|>];
+    saved = Quiet @ Check[
+      PersonalSite`DevOps`saveRun[1,
+        <|"ok"  -> TrueQ[res["ok"]],
+          "sha" -> Lookup[res, "sha", ""],
+          "ts"  -> Lookup[res, "ts", DateString["ISODateTime"]],
+          "runLog" -> {<|"step"->1, "ok"->TrueQ[res["ok"]],
+                         "ms"->Lookup[res,"elapsedMs",0],
+                         "ts"->Lookup[res,"ts",""]|>}|>],
+      $Failed];
+    jsonResp[<|res, "warehouse" -> (saved =!= $Failed)|>]];
+
+(* ── GET /devops/pipeline/history ───────────────────────────── *)
+(*  Retorna los ultimos 50 runs del Warehouse (SQLite pipeline_runs) *)
+devopsPipelineHistory[req_] :=
+  Module[{rows = Quiet @ Check[
+    PersonalSite`DevOps`pipelineHistory[50], {}]},
+    jsonResp[<|"runs" -> rows, "count" -> Length[rows],
+               "ts"  -> DateString["ISODateTime"]|>]];
+
+(* ── POST /devops/trajectory/:n ─────────────────────────────── *)
+(*  Ejecuta NestList[runPipeline, state0, n] y guarda cada step.     *)
+devopsTrajectory[nStr_String, req_] :=
+  Module[{n, traj},
+    n = Quiet @ ToExpression[nStr];
+    If[!IntegerQ[n] || n < 1 || n > 5,
+      Return[jsonResp[<|"ok"->False,
+        "err"->"n must be integer 1-5"|>]]];
+    traj = Quiet @ Check[
+      PersonalSite`DevOps`trajectory[n],
+      {}];
+    (* Persiste cada step (excepto el seed state0) *)
+    Scan[Function[state,
+      PersonalSite`DevOps`saveRun[state["step"], state]],
+      Rest[traj]];
+    jsonResp[<|"ok"    -> True,
+              "steps" -> Length[traj],
+              "trajectory" -> Map[KeyDrop[#, {"stageResults"}]&, traj],
+              "ts"   -> DateString["ISODateTime"]|>]];
 
 End[];
 EndPackage[];

@@ -185,7 +185,32 @@ $taskSpecs = {
     "interval" -> 30,
     "enabled"  -> False,
     "deps"     -> {"css-version"},
-    "action"   -> Function[PersonalSite`DevStyle`report[]]  |>}
+    "action"   -> Function[PersonalSite`DevStyle`report[]]  |>},
+
+  (* ── DevOps Pipeline — NestList × Flow (Warehouse) ───────────────── *)
+  (*  Corre el pipeline DevOps completo via Flow.run (paralelo L0-L7),  *)
+  (*  guarda el resultado en pipeline_runs (Warehouse SQLite).           *)
+  (*  enabled=False: activar desde POST /tasks/start o desde /dag UI.   *)
+  {"pipeline-run", <|
+    "label"    -> "DevOps Pipeline (NestList × Flow → Warehouse)",
+    "group"    -> "ops",
+    "interval" -> 3600,
+    "enabled"  -> False,
+    "deps"     -> {"heartbeat"},
+    "action"   -> Function[
+      Module[{res, saved},
+        res   = Quiet @ Check[PersonalSite`DevOps`runPipeline[], <|"ok"->False|>];
+        saved = Quiet @ Check[
+          PersonalSite`DevOps`saveRun[1,
+            <|"ok"  -> TrueQ[res["ok"]],
+              "sha" -> Lookup[res, "sha", ""],
+              "ts"  -> Lookup[res, "ts", DateString["ISODateTime"]],
+              "runLog" -> {<|"step"->1, "ok"->TrueQ[res["ok"]],
+                             "ms"->Lookup[res,"elapsedMs",0],
+                             "ts"->Lookup[res,"ts",""]|>}|>],
+          $Failed];
+        TrueQ[res["ok"]]]]
+  |>}
 
 };
 

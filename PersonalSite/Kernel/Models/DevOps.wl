@@ -215,26 +215,31 @@ EndPackage[];
      (campos adicionales segun la etapa)
    -------------------------------------------------------------------------- *)
 
-BeginPackage["PersonalSite`DevOps`"];
+BeginPackage["PersonalSite`DevOps`", {"PersonalSite`Flow`"}];
 
 (* ── API publica ─────────────────────────────────────────────────────── *)
-codeLint::usage    = "codeLint[] SyntaxQ-check de todos los .wl en Kernel/.";
-runTests::usage    = "runTests[] ejecuta la suite de tests via python tools/test_tasks.py.";
-testReport::usage  = "testReport[] snapshot del ultimo commit + timestamp.";
-gitStatus::usage   = "gitStatus[] RunProcess git status --porcelain.";
-gitDiff::usage     = "gitDiff[] RunProcess git diff --stat HEAD.";
-pacletClean::usage = "pacletClean[] elimina build/*.paclet antes de rebuild.";
-pacletBuild::usage = "pacletBuild[] llama tools/build_paclet.py.";
-pacletVerify::usage= "pacletVerify[] verifica que exista un .paclet en build/.";
-dockerBuild::usage = "dockerBuild[] docker build -t personalsite:latest.";
-dockerVerify::usage= "dockerVerify[] docker ps --filter name=profile-web-1.";
-gitStage::usage    = "gitStage[] git add -A.";
-gitCommit::usage   = "gitCommit[] git commit -m auto:<iso>.";
-gitPush::usage     = "gitPush[] git push origin main.";
-smokeTest::usage   = "smokeTest[] HTTP GET localhost:18000 health check.";
-deployNotify::usage= "deployNotify[] registra evento de deploy con timestamp.";
-perfCheck::usage   = "perfCheck[] mide latencia de GET / en ms.";
-changelogGen::usage= "changelogGen[] git log --oneline -10 como changelog.";
+codeLint::usage      = "codeLint[] SyntaxQ-check de todos los .wl en Kernel/.";
+runTests::usage      = "runTests[] ejecuta la suite de tests via python tools/test_tasks.py.";
+testReport::usage    = "testReport[] snapshot del ultimo commit + timestamp.";
+gitStatus::usage     = "gitStatus[] RunProcess git status --porcelain.";
+gitDiff::usage       = "gitDiff[] RunProcess git diff --stat HEAD.";
+pacletClean::usage   = "pacletClean[] elimina build/*.paclet antes de rebuild.";
+pacletBuild::usage   = "pacletBuild[] llama tools/build_paclet.py.";
+pacletVerify::usage  = "pacletVerify[] verifica que exista un .paclet en build/.";
+dockerBuild::usage   = "dockerBuild[] docker build -t personalsite:latest.";
+dockerVerify::usage  = "dockerVerify[] docker ps --filter name=profile-web-1.";
+gitStage::usage      = "gitStage[] git add -A.";
+gitCommit::usage     = "gitCommit[] git commit -m auto:<iso>.";
+gitPush::usage       = "gitPush[] git push origin main.";
+smokeTest::usage     = "smokeTest[] HTTP GET localhost:18000 health check.";
+deployNotify::usage  = "deployNotify[] registra evento de deploy con timestamp.";
+perfCheck::usage     = "perfCheck[] mide latencia de GET / en ms.";
+changelogGen::usage  = "changelogGen[] git log --oneline -10 como changelog.";
+toFlowSpec::usage    = "toFlowSpec[] convierte $devopsStages en un Flow spec (deps+action).";
+runPipeline::usage   = "runPipeline[] ejecuta el pipeline completo via Flow.run con paralelismo topologico.";
+trajectory::usage    = "trajectory[n] aplica NestList[runPipeline, state0, n] — trayectoria Ruliad.";
+saveRun::usage       = "saveRun[stepNum, state] persiste un paso del pipeline en pipeline_runs (Warehouse).";
+pipelineHistory::usage = "pipelineHistory[n] retorna los ultimos n runs desde el Warehouse (SQLite).";
 
 Begin["`Private`"];
 
@@ -430,6 +435,117 @@ PersonalSite`DevOps`changelogGen[] :=
       "log"    -> StringTrim[r["out"]],
       "msgs"   -> StringSplit[logR["out"], "\n"],
       "ts"     -> DateString["ISODateTime"]|>];
+
+(* ══════════════════════════════════════════════════════════════════════
+   FASE 1 — Flow integration + Ruliad NestList Warehouse
+   ══════════════════════════════════════════════════════════════════════
+
+   toFlowSpec[]      → spec para PersonalSite`Flow`run (deps + action)
+   runPipeline[]     → ejecuta con paralelismo topologico via Flow.run
+   trajectory[n]     → NestList sobre runPipeline → trayectoria Ruliad
+   saveRun[n,state]  → persiste step en pipeline_runs (SQLite Warehouse)
+   pipelineHistory[] → query los ultimos N runs
+   ────────────────────────────────────────────────────────────────────── *)
+
+(* ── toFlowSpec[] ─────────────────────────────────────────────────── *)
+(*  Convierte $devopsStages en Association{id -> <|deps, action|>}    *)
+(*  compatible con PersonalSite`Flow`run.                             *)
+PersonalSite`DevOps`toFlowSpec[] :=
+  Association @ Map[
+    Function[s,
+      With[{id = s[[1]], deps = s[[5]]},
+        id -> <|
+          "deps"   -> deps,
+          "action" -> With[{stageId = id},
+            Function[prev, PersonalSite`DevOps`runStage[stageId]]]
+        |>]],
+    $devopsStages];
+
+(* ── runPipeline[] ────────────────────────────────────────────────── *)
+(*  Ejecuta el pipeline completo via Flow.run ("session" backend).    *)
+(*  Las etapas independientes de cada nivel topologico corren en      *)
+(*  paralelo como TaskObjects (SessionSubmit, timeout 60s por capa).  *)
+PersonalSite`DevOps`runPipeline[] :=
+  Module[{spec, t0, flowResult, allOk, ms, sha},
+    spec       = PersonalSite`DevOps`toFlowSpec[];
+    t0         = AbsoluteTime[];
+    flowResult = Quiet @ Check[
+      PersonalSite`Flow`run[spec, "session"],
+      <||>];
+    ms     = Round[(AbsoluteTime[] - t0) * 1000, 1];
+    allOk  = AllTrue[
+      Values[flowResult],
+      Function[r, AssociationQ[r] && TrueQ[r["ok"]]]];
+    sha    = Quiet @ Check[
+      StringTrim[run[{"git", "-C", $root, "log", "--format=%h", "-1"}]["out"]],
+      "unknown"];
+    $devopsResults = Association @ KeyValueMap[
+      Function[{k, v}, k -> If[AssociationQ[v], v, <|"ok"->False|>]],
+      flowResult];
+    <|"ok"          -> allOk,
+      "sha"         -> sha,
+      "stageResults"-> flowResult,
+      "elapsedMs"   -> ms,
+      "ts"          -> DateString["ISODateTime"],
+      "layerCount"  -> (Max[#[[4]] & /@ $devopsStages] + 1)|>];
+
+(* ── trajectory[n] ────────────────────────────────────────────────── *)
+(*  NestList[step, state0, n]: genera lista de n+1 estados del        *)
+(*  pipeline — trayectoria en el Ruliad de Wolfram.                   *)
+$pipelineState0 = <|
+  "ok"     -> True,
+  "sha"    -> None,
+  "runLog" -> {},
+  "step"   -> 0,
+  "ts"     -> None|>;
+
+PersonalSite`DevOps`trajectory[n_Integer : 1] :=
+  NestList[
+    Function[state,
+      Module[{res = PersonalSite`DevOps`runPipeline[]},
+        <|state,
+          "ok"     -> TrueQ[res["ok"]],
+          "sha"    -> res["sha"],
+          "runLog" -> Append[state["runLog"],
+                       <|"step"  -> state["step"] + 1,
+                         "ok"    -> TrueQ[res["ok"]],
+                         "ms"    -> res["elapsedMs"],
+                         "ts"    -> res["ts"]|>],
+          "step"   -> state["step"] + 1,
+          "ts"     -> res["ts"]|>]],
+    $pipelineState0,
+    n];
+
+(* ── saveRun[stepNum, state] ──────────────────────────────────────── *)
+(*  Persiste un paso del pipeline en pipeline_runs (Warehouse SQLite).*)
+PersonalSite`DevOps`saveRun[stepNum_Integer, state_Association] :=
+  Quiet @ Check[
+    PersonalSite`Database`execute[
+      "INSERT INTO pipeline_runs
+         (sha, started_at, elapsed_ms, status, state_json, step_num)
+       VALUES (?, ?, ?, ?, ?, ?)",
+      {ToString[Lookup[state, "sha", ""]],
+       ToString[Lookup[state, "ts", DateString["ISODateTime"]]],
+       N @ With[{log = Lookup[state, "runLog", {}]},
+             If[log =!= {}, Lookup[Last[log], "ms", 0], 0]],
+       If[TrueQ[state["ok"]], "ok", "fail"],
+       ExportString[KeyDrop[state, {"stageResults"}], "JSON"],
+       stepNum}],
+    $Failed];
+
+(* ── pipelineHistory[n] ───────────────────────────────────────────── *)
+(*  Retorna los ultimos n runs del Warehouse como lista de            *)
+(*  Associations {id, sha, started_at, elapsed_ms, status, step_num} *)
+PersonalSite`DevOps`pipelineHistory[n_Integer : 20] :=
+  Quiet @ Check[
+    PersonalSite`Database`execute[
+      "SELECT id, sha, started_at, elapsed_ms, status, step_num
+         FROM pipeline_runs
+        ORDER BY id DESC
+        LIMIT ?",
+      {n}],
+    {}];
+
 (* ── bridge-health (nativo — ping al DevOps Bridge HTTP) ─────────── *)
 PersonalSite`DevOps`bridgeHealth[] :=
   Module[{body, t0, ms},

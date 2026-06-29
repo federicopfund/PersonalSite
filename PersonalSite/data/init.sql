@@ -100,6 +100,26 @@ VALUES
 
 
 
+-- ── DevOps Pipeline Warehouse ─────────────────────────────────────────
+-- Cada fila = un paso de NestList[runPipeline, state0, n].
+-- status     : running | ok | fail
+-- state_json : snapshot del estado Ruliad (runLog, sha, ok…)
+-- step_num   : posicion en la trayectoria NestList (0=seed, 1=primer run…)
+CREATE TABLE IF NOT EXISTS pipeline_runs (
+    id           INTEGER PRIMARY KEY AUTOINCREMENT,
+    sha          TEXT    NOT NULL DEFAULT '',
+    started_at   TEXT    NOT NULL DEFAULT (strftime('%Y-%m-%dT%H:%M:%SZ','now')),
+    finished_at  TEXT,
+    elapsed_ms   REAL    NOT NULL DEFAULT 0,
+    status       TEXT    NOT NULL DEFAULT 'running'
+                   CHECK(status IN ('running','ok','fail')),
+    state_json   TEXT    NOT NULL DEFAULT '{}',
+    step_num     INTEGER NOT NULL DEFAULT 0
+);
+
+CREATE INDEX IF NOT EXISTS idx_pipeline_runs_status ON pipeline_runs(status);
+CREATE INDEX IF NOT EXISTS idx_pipeline_runs_sha    ON pipeline_runs(sha);
+
 -- ── Session store (NestGraph permission FSM) ───────────────────────────
 -- state     : unauthenticated | active | elevated | suspended | expired | revoked
 -- role      : 1=reader  2=writer  3=admin  (maps to NestGraph depth)
