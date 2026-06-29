@@ -61,9 +61,11 @@ kernelEval[req_] :=
         <|"StatusCode" -> 400, "Content-Type" -> "application/json"|>]];
 
     t0     = AbsoluteTime[];
-    result = Quiet @ Check[
-      ToExpression[input, InputForm],
-      $Failed];
+    (* Quiet suprime mensajes sin convertirlos en $Failed.
+       ToExpression devuelve $Failed solo si el input no puede parsearse.
+       Esto evita que mensajes legítimos de WL (ej: TaskStatus, Check internos)
+       sean capturados como errores de evaluación.                            *)
+    result = Quiet[ToExpression[input, InputForm]];
     ms     = Round[1000. * (AbsoluteTime[] - t0), 0.01];
 
     $cellN++;

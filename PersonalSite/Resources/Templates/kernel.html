@@ -264,12 +264,12 @@
   /* ── Build output HTML ────────────────────────────── */
   function outHtml(out) {
     if (!out) return '<span class="kernel-out-empty">(void)</span>';
-    if (out.type === 'error') return '<span class="kernel-out-err">$Failed &mdash; expression returned Null or threw</span>';
-    /* Prefer server-rendered WL native HTML (MathML / SVG / pre) */
+    /* StyleEngine HTML tiene prioridad absoluta (incluye $Failed, Null, etc.) */
     if (out.html && out.html.length > 10) {
       return '<div class="wl-nb-output">' + out.html + '</div>';
     }
-    /* Fallback: KaTeX + OutputForm text */
+    /* Fallback cuando StyleEngine no produce HTML */
+    if (out.type === 'error') return '<span class="kernel-out-err">$Failed &mdash; expression returned Null or threw</span>';
     var h = '';
     if (out.tex && out.tex.length > 2 && out.type !== 'string')
       h += '<div class="kernel-out-tex">\\[' + esc(out.tex) + '\\]</div>';
