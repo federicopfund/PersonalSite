@@ -178,15 +178,19 @@ configure[name_String, key_String, value_] :=
   ];
 
 (* ── Consultas ────────────────────────────────────────────────────────── *)
+(* Estado se fusiona al primer nivel: s["running"], s["runs"], s["avgMs"]   *)
+(* La clave "state" se mantiene como alias para compatibilidad.             *)
 allTasks[] :=
   Association @ KeyValueMap[
     Function[{name, spec},
-      name -> <|spec, "state" -> $states[name]|>],
+      With[{st = If[KeyExistsQ[$states, name], $states[name], initState[]]},
+        name -> <|spec, st, "state" -> st|>]],
     $specs];
 
 info[name_String] :=
   If[KeyExistsQ[$specs, name],
-    <|$specs[name], "state" -> $states[name]|>,
+    With[{st = If[KeyExistsQ[$states, name], $states[name], initState[]]},
+      <|$specs[name], st, "state" -> st|>],
     $Failed];
 
 history[name_String] :=
