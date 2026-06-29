@@ -40,6 +40,9 @@ uxContactState::usage    = "uxContactState[req] devuelve el estado UX del boton 
 devopsDag::usage         = "devopsDag[req] devuelve el DAG del pipeline DevOps (18 stages).";
 devopsStatus::usage      = "devopsStatus[req] devuelve el estado del bridge y resultados recientes.";
 devopsRunStage::usage    = "devopsRunStage[stage, req] ejecuta una etapa del pipeline DevOps.";
+devopsPipelineRun::usage     = "devopsPipelineRun[req] ejecuta runPipeline() via Flow.run y persiste en Warehouse.";
+devopsPipelineHistory::usage = "devopsPipelineHistory[req] retorna los ultimos 50 runs del Warehouse.";
+devopsTrajectory::usage      = "devopsTrajectory[n, req] ejecuta NestList[runPipeline, state0, n] y guarda cada step.";
 
 Begin["`Private`"];
 
