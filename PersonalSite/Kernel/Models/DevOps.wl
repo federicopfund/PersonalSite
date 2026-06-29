@@ -59,15 +59,18 @@ parseJSON[body_String] :=
       ListQ[parsed],         Association[parsed],
       True,                  $Failed]];
 
-(* POST al bridge — devuelve Association *)
+(* POST al bridge — falla en 5s si no responde, nunca bloquea el kernel *)
 bridge[path_String] :=
   Module[{url, body},
     url  = $bridgeBase <> path;
     body = Quiet @ Check[
-      URLRead[HTTPRequest[url, <|"Method" -> "POST", "Body" -> ""|>], "Body"],
+      TimeConstrained[
+        URLRead[HTTPRequest[url, <|"Method" -> "POST", "Body" -> ""|>], "Body"],
+        5,       (* max 5 segundos — no bloquear el kernel pool *)
+        $Failed],
       $Failed];
     If[!StringQ[body],
-      Return[<|"ok" -> False, "err" -> "bridge unavailable"|>]];
+      Return[<|"ok" -> False, "err" -> "bridge unavailable (timeout/down)"|>]];
     With[{p = parseJSON[body]},
       If[AssociationQ[p], p,
         <|"ok" -> False, "err" -> "parse error", "raw" -> StringTake[body, UpTo[200]]|>]]];
@@ -76,13 +79,16 @@ bridge[path_String] :=
 PersonalSite`DevOps`bridgeHealth[] :=
   Module[{body},
     body = Quiet @ Check[
-      URLRead[HTTPRequest[$bridgeBase <> "/health"], "Body"], $Failed];
+      TimeConstrained[
+        URLRead[HTTPRequest[$bridgeBase <> "/health"], "Body"],
+        5, $Failed],
+      $Failed];
     If[!StringQ[body],
-      Return[<|"ok" -> False, "status" -> "bridge not running — start: python3 tools/devops_bridge.py &"|>]];
+      Return[<|"ok" -> False, "status" -> "bridge down — run: make bridge"|>]];
     With[{p = parseJSON[body]},
       If[AssociationQ[p],
         <|p, "status" -> "bridge ok"|>,
-        <|"ok" -> False, "status" -> "parse error", "raw" -> StringTake[body, UpTo[100]]|>]]];
+        <|"ok" -> False, "status" -> "parse error"|>]]];
 
 (* ── L0 · code-lint (nativo — SyntaxQ en /app/PersonalSite/Kernel) ── *)
 PersonalSite`DevOps`codeLint[] :=
