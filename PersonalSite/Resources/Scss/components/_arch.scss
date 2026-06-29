@@ -191,12 +191,15 @@
 // ── Graph container (3d-force-graph / WebGL) ───────────────────
 .arch-section {
   background: #0f0f10;
-  padding: 0;
+  padding: 2rem 1.5rem;
 }
 
 #arch-graph-container {
-  width: 100%;
+  max-width: 1200px;
+  margin-inline: auto;
   overflow: hidden;
+  border-radius: radius(lg);
+  border: 1px solid rgba(#fff, .08);
 }
 
 #arch-graph {

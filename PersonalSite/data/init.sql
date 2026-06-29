@@ -48,6 +48,17 @@ VALUES
   ('nest-refresh',  'NestGraph {2x+1,x+14,x-18}', 'flow',   300, 1, '["cache-warm"]',    '2', 'Function[PersonalSite`NestScheduler`run[{2#+1&,#+14&,#-18&},{1},3,"session"]]'),
   ('metric-refresh','Metric refresh (heavy)',      'cache',  300, 1, '["cards-refresh"]', '3', 'Function[PersonalSite`Assets`refreshMetric[]]');
 
+-- Seed: 5 tareas dev SCSS (disabled=0 — no impactan produccion)
+-- DAG: scss-watch -> scss-compile -> {css-version, css-cache-bust} -> scss-report
+INSERT OR IGNORE INTO scheduler_tasks
+  (task_id, label, group_name, interval_s, enabled, deps, dag_order, action_code)
+VALUES
+  ('scss-watch',    'SCSS watch (detect CSS changes)',            'dev', 3,  0, '[]',               '0', 'Function[PersonalSite`DevStyle`detect[]]'),
+  ('scss-compile',  'SCSS compile (sass / npx sass)',             'dev', 3,  0, '["scss-watch"]',   '1', 'Function[PersonalSite`DevStyle`compile[]]'),
+  ('css-version',   'CSS version hash (CRC32 -> css-version.json)','dev',3, 0, '["scss-compile"]', '2', 'Function[PersonalSite`DevStyle`hashCss[]]'),
+  ('css-cache-bust','CSS cache bust (clear WL fragment cache)',   'dev', 3,  0, '["scss-compile"]', '2', 'Function[PersonalSite`DevStyle`cacheBust[]]'),
+  ('scss-report',   'SCSS pipeline report',                       'dev', 30, 0, '["css-version"]',  '3', 'Function[PersonalSite`DevStyle`report[]]');
+
 
 
 -- ── Session store (NestGraph permission FSM) ───────────────────────────

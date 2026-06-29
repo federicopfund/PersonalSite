@@ -99,8 +99,54 @@ $taskSpecs = {
     "action"   -> Function[
       Module[{active = If[Mod[Floor[UnixTime[] / 20], 2] === 1, "1", "0"]},
         PersonalSite`Settings`set["ux.contact.active", active];
-        active === "1"]]
-  |>}
+        active === "1"]]  |>},
+
+  (* ── Dev — SCSS hot-reload pipeline (disabled en production) ──────── *)
+  (*  Las 5 tareas forman un DAG: detect → compile → {hash, bust} → report
+      Todas arrancan con enabled=False; activar manualmente en dev:          *)
+  {"scss-watch", <|
+    "label"    -> "SCSS watch (detect CSS changes)",
+    "group"    -> "dev",
+    "interval" -> 3,
+    "enabled"  -> False,
+    "deps"     -> {},
+    "action"   -> Function[PersonalSite`DevStyle`detect[]]
+  |>},
+
+  {"scss-compile", <|
+    "label"    -> "SCSS compile (sass / npx sass)",
+    "group"    -> "dev",
+    "interval" -> 3,
+    "enabled"  -> False,
+    "deps"     -> {"scss-watch"},
+    "action"   -> Function[PersonalSite`DevStyle`compile[]]
+  |>},
+
+  {"css-version", <|
+    "label"    -> "CSS version hash (CRC32 → css-version.json)",
+    "group"    -> "dev",
+    "interval" -> 3,
+    "enabled"  -> False,
+    "deps"     -> {"scss-compile"},
+    "action"   -> Function[PersonalSite`DevStyle`hashCss[]]
+  |>},
+
+  {"css-cache-bust", <|
+    "label"    -> "CSS cache bust (clear WL fragment cache)",
+    "group"    -> "dev",
+    "interval" -> 3,
+    "enabled"  -> False,
+    "deps"     -> {"scss-compile"},
+    "action"   -> Function[PersonalSite`DevStyle`cacheBust[]]
+  |>},
+
+  {"scss-report", <|
+    "label"    -> "SCSS pipeline report",
+    "group"    -> "dev",
+    "interval" -> 30,
+    "enabled"  -> False,
+    "deps"     -> {"css-version"},
+    "action"   -> Function[PersonalSite`DevStyle`report[]]  |>}
 
 };
 

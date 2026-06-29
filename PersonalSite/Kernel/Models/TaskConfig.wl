@@ -175,7 +175,35 @@ $defaults = {
   <|"task_id"->"metric-refresh","label"->"Metric refresh (heavy)",
     "group_name"->"cache", "interval_s"->300, "enabled"->True,
     "deps"->{"cards-refresh"},        "dag_order"->3,
-    "action_code"->"Function[PersonalSite`Assets`refreshMetric[]]"|>
+    "action_code"->"Function[PersonalSite`Assets`refreshMetric[]]"|>,
+
+  (* ── Dev — SCSS hot-reload pipeline ───────────────────────────────── *)
+  (*  DAG: scss-watch → scss-compile → {css-version, css-cache-bust} → scss-report
+      enabled=False: no impacta produccion; activar manualmente en dev.    *)
+  <|"task_id"->"scss-watch",    "label"->"SCSS watch (detect CSS changes)",
+    "group_name"->"dev",  "interval_s"->3,   "enabled"->False,
+    "deps"->{},                        "dag_order"->0,
+    "action_code"->"Function[PersonalSite`DevStyle`detect[]]"|>,
+
+  <|"task_id"->"scss-compile",  "label"->"SCSS compile (sass / npx sass)",
+    "group_name"->"dev",  "interval_s"->3,   "enabled"->False,
+    "deps"->{"scss-watch"},            "dag_order"->1,
+    "action_code"->"Function[PersonalSite`DevStyle`compile[]]"|>,
+
+  <|"task_id"->"css-version",   "label"->"CSS version hash (CRC32 -> css-version.json)",
+    "group_name"->"dev",  "interval_s"->3,   "enabled"->False,
+    "deps"->{"scss-compile"},          "dag_order"->2,
+    "action_code"->"Function[PersonalSite`DevStyle`hashCss[]]"|>,
+
+  <|"task_id"->"css-cache-bust","label"->"CSS cache bust (clear WL fragment cache)",
+    "group_name"->"dev",  "interval_s"->3,   "enabled"->False,
+    "deps"->{"scss-compile"},          "dag_order"->2,
+    "action_code"->"Function[PersonalSite`DevStyle`cacheBust[]]"|>,
+
+  <|"task_id"->"scss-report",   "label"->"SCSS pipeline report",
+    "group_name"->"dev",  "interval_s"->30,  "enabled"->False,
+    "deps"->{"css-version"},           "dag_order"->3,
+    "action_code"->"Function[PersonalSite`DevStyle`report[]]"|>
 };
 
 seedDefaults[] :=
