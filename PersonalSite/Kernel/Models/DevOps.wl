@@ -198,6 +198,7 @@ PersonalSite`DevOps`changelogGen[] :=
 End[];
 EndPackage[];
 
+(* ── Bloque 2: implementacion RunProcess (produccion) ──────────────────
    17 etapas distribuidas en 8 niveles del DAG:
 
    L0 (roots) : code-lint          git-status
