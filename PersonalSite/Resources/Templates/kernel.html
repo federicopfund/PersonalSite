@@ -150,6 +150,24 @@
         <input type="checkbox" id="kta-autoeval">
         <span>Auto-eval al cargar</span>
       </label>
+
+      <!-- ── Style Rules Panel ─────────────────────────── -->
+      <div class="kernel-style-panel">
+        <div class="kta-group-label kta-group-label--style">Style &middot; Rules</div>
+        <div id="style-rules-list" class="style-rules-list">
+          <div class="sr-row" style="opacity:.4"><span class="sr-id">cargando&hellip;</span></div>
+        </div>
+        <div class="style-rule-form">
+          <input id="sr-id"      type="text" class="kernel-trigger-custom" placeholder="rule-id">
+          <input id="sr-pattern" type="text" class="kernel-trigger-custom" placeholder="pattern WL: _List">
+          <input id="sr-order"   type="number" class="kernel-trigger-custom" placeholder="order (50)" style="width:60%">
+        </div>
+        <div class="style-rule-actions">
+          <button class="kernel-btn kernel-btn--eval"  id="sr-add-btn">&#43; Regla</button>
+          <button class="kernel-btn kernel-btn--clear" id="sr-reset-btn">&#8635; Reset</button>
+        </div>
+      </div>
+
     </aside>
 
     <!-- ── Main notebook area ─────────────────────────── -->
@@ -437,6 +455,72 @@
     autoCb.checked = true;
     setTimeout(function(){ doEval(AUTO_EXPR); }, 800);
   }
+
+  /* ══════════════════════════════════════════════════════
+     Style Rules Panel  — runtime pattern-match editor
+     ══════════════════════════════════════════════════════*/
+  var srList    = document.getElementById('style-rules-list');
+  var srIdEl    = document.getElementById('sr-id');
+  var srPatEl   = document.getElementById('sr-pattern');
+  var srOrdEl   = document.getElementById('sr-order');
+  var srAddBtn  = document.getElementById('sr-add-btn');
+  var srResetBtn= document.getElementById('sr-reset-btn');
+
+  function loadStyleRules() {
+    fetch('/kernel/style/rules')
+      .then(function(r){ return r.json(); })
+      .then(function(d) {
+        if (!srList) return;
+        var rules = d.rules || [];
+        rules = rules.slice().sort(function(a,b){ return (a.order||99)-(b.order||99); });
+        srList.innerHTML = rules.length === 0
+          ? '<div class="sr-row" style="opacity:.35"><span class="sr-id">sin reglas</span></div>'
+          : rules.map(function(r) {
+              return '<div class="sr-row">' +
+                '<span class="sr-id" title="order: '+(r.order||99)+'">' + esc(r.id) + '</span>' +
+                '<span class="sr-sep">\u25b9</span>' +
+                '<span class="sr-pattern" title="' + esc(r.pattern) + '">' + esc(r.pattern) + '</span>' +
+                '<button class="sr-del" data-id="' + esc(r.id) + '">\u00d7</button>' +
+              '</div>';
+            }).join('');
+        srList.querySelectorAll('.sr-del').forEach(function(btn) {
+          btn.addEventListener('click', function() {
+            var id = this.getAttribute('data-id');
+            fetch('/kernel/style/remove', {
+              method: 'POST',
+              headers: {'Content-Type': 'application/x-www-form-urlencoded'},
+              body: 'id=' + encodeURIComponent(id)
+            }).then(loadStyleRules);
+          });
+        });
+      })
+      .catch(function(){ /* StyleEngine not yet loaded — ignore */ });
+  }
+
+  if (srAddBtn) srAddBtn.addEventListener('click', function() {
+    var id  = (srIdEl && srIdEl.value.trim())  || '';
+    var pat = (srPatEl && srPatEl.value.trim()) || '_';
+    var ord = (srOrdEl && srOrdEl.value.trim()) || '50';
+    if (!id) { srIdEl && srIdEl.focus(); return; }
+    fetch('/kernel/style/rule', {
+      method: 'POST',
+      headers: {'Content-Type': 'application/x-www-form-urlencoded'},
+      body: 'id=' + encodeURIComponent(id) +
+            '&pattern=' + encodeURIComponent(pat) +
+            '&order=' + encodeURIComponent(ord)
+    }).then(function(r){ return r.json(); })
+      .then(function(d) {
+        if (d.ok) { if(srIdEl) srIdEl.value=''; if(srPatEl) srPatEl.value=''; loadStyleRules(); }
+      });
+  });
+
+  if (srResetBtn) srResetBtn.addEventListener('click', function() {
+    fetch('/kernel/style/reset', { method: 'POST' })
+      .then(loadStyleRules);
+  });
+
+  /* Load rules once the page is ready */
+  setTimeout(loadStyleRules, 600);
 
   /* ── Core event bindings ──────────────────────────── */
   evalBtn.addEventListener('click', function(){ doEval(); });

@@ -719,3 +719,229 @@ pre.wl-nb-text {
 // ── Special states ────────────────────────────────────────────────
 .wl-nb-void  { color: rgba(#fff, .2); font-size: .9rem; font-family: $font-mono; }
 .wl-nb-error { color: #ff4c4c; font-family: $font-mono; font-size: .85rem; font-weight: 700; }
+
+// ══════════════════════════════════════════════════════════════════
+//  StyleEngine — WL-native structured output  (.wl-ds-*)
+//  Replica el aspecto de Dataset/Association/List del FrontEnd WL.
+//  Generado por Kernel/FrontEnd/StyleEngine.wl en runtime.
+// ══════════════════════════════════════════════════════════════════
+
+// ── Wrapper base de todos los tipos ──────────────────────────────
+.wl-ds {
+  background: #0c0c12;
+  border: 1px solid rgba(#fff, .07);
+  border-radius: radius(sm);
+  overflow: hidden;
+  font-family: $font-mono;
+  font-size: .8rem;
+
+  // Variantes por tipo
+  &--dataset  { border-color: rgba(#5aafff, .25); }
+  &--assoc    { border-color: rgba(#5aafff, .15); }
+  &--list     { border-color: rgba(#a8d8a8, .15); }
+  &--rule     { border-color: rgba(#eb7a1a, .2); }
+  &--graphics { border-color: rgba(#ff9acd, .2); }
+  &--math     { border-color: rgba(#fff, .1); }
+  &--custom   { border-color: rgba(#a855f7, .3); border-style: dashed; }
+
+  // Anidamiento visual
+  .wl-ds {
+    border-radius: radius(sm);
+    margin: .15rem 0;
+    font-size: .75rem;
+  }
+}
+
+// ── Header badge (type + rule name) ──────────────────────────────
+.wl-ds-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: .25rem .65rem;
+  background: rgba(#fff, .035);
+  border-bottom: 1px solid rgba(#fff, .05);
+  gap: .5rem;
+}
+
+.wl-ds-type {
+  font-size: .68rem;
+  font-weight: 700;
+  letter-spacing: .04em;
+  color: rgba(#5aafff, .85);
+  white-space: nowrap;
+}
+
+.wl-ds-rule {
+  font-size: .6rem;
+  color: rgba(#eb7a1a, .55);
+  white-space: nowrap;
+  font-weight: 600;
+}
+
+.wl-ds-inner { padding: .2rem 0; }
+
+// ── Table layout (Association) ────────────────────────────────────
+.wl-ds-table {
+  width: 100%;
+  border-collapse: collapse;
+}
+
+.wl-ds-row {
+  border-bottom: 1px solid rgba(#fff, .035);
+  &:last-child  { border-bottom: none; }
+  &:nth-child(even) { background: rgba(#fff, .015); }
+  &:hover { background: rgba(#5aafff, .05); }
+}
+
+.wl-ds-key {
+  padding: .28rem .5rem .28rem .65rem;
+  color: rgba(#5aafff, .82);
+  vertical-align: top;
+  white-space: nowrap;
+  border-right: 1px solid rgba(#fff, .05);
+  min-width: 90px;
+  max-width: 180px;
+  font-size: .77rem;
+}
+
+.wl-ds-val {
+  padding: .28rem .65rem;
+  vertical-align: top;
+  word-break: break-word;
+  font-size: .77rem;
+}
+
+// ── "More" truncation indicator ───────────────────────────────────
+.wl-ds-more {
+  padding: .25rem .65rem;
+  font-size: .65rem;
+  color: rgba(#fff, .28);
+  font-style: italic;
+  border-top: 1px solid rgba(#fff, .04);
+}
+
+// ── List items ────────────────────────────────────────────────────
+.wl-list-items {
+  display: flex;
+  flex-direction: column;
+}
+
+.wl-list-row {
+  display: grid;
+  grid-template-columns: 32px 1fr;
+  align-items: start;
+  border-bottom: 1px solid rgba(#fff, .03);
+  &:last-child { border-bottom: none; }
+  &:hover { background: rgba(#a8d8a8, .03); }
+}
+
+.wl-list-idx {
+  font-size: .65rem;
+  color: rgba(#5aafff, .45);
+  text-align: right;
+  padding: .28rem .4rem;
+  border-right: 1px solid rgba(#fff, .04);
+  user-select: none;
+}
+
+.wl-list-val { padding: .28rem .6rem; }
+
+// ── Rule k→v single row ───────────────────────────────────────────
+.wl-ds-kv {
+  display: flex;
+  align-items: center;
+  gap: .45rem;
+  padding: .4rem .65rem;
+  flex-wrap: wrap;
+}
+
+.wl-ds-arrow { color: rgba(#eb7a1a, .65); }
+
+// ── Value type tokens ─────────────────────────────────────────────
+.wl-val--int    { color: #c8e8ff; }
+.wl-val--num    { color: #aaddff; }
+.wl-val--str    { color: #a8d8a8; }
+.wl-val--bool   { color: #ffb866; }
+.wl-val--null   { color: rgba(#fff, .25); font-style: italic; }
+.wl-val--err    { color: #ff4c4c; font-weight: 700; }
+.wl-val--other  { color: rgba(#fff, .75); }
+.wl-val--ellipsis { color: rgba(#fff, .25); font-style: italic; }
+
+// ══════════════════════════════════════════════════════════════════
+//  Style Rules sidebar panel  (.sr-*)
+//  Panel en el sidebar de /kernel para ver/agregar/eliminar reglas
+//  del StyleEngine en runtime.
+// ══════════════════════════════════════════════════════════════════
+
+.kernel-style-panel {
+  margin-top: .65rem;
+  padding-top: .5rem;
+  border-top: 1px solid rgba(#a855f7, .15);
+}
+
+.kta-group-label--style {
+  color: rgba(#a855f7, .7);
+  border-bottom-color: rgba(#a855f7, .15);
+}
+
+.style-rules-list {
+  display: flex;
+  flex-direction: column;
+  gap: .2rem;
+  margin: .35rem 0 .4rem;
+  max-height: 200px;
+  overflow-y: auto;
+  scrollbar-width: thin;
+  scrollbar-color: rgba(#a855f7, .2) transparent;
+}
+
+.sr-row {
+  display: grid;
+  grid-template-columns: 1fr auto auto auto;
+  align-items: center;
+  gap: .3rem;
+  padding: .22rem .4rem;
+  background: rgba(#a855f7, .04);
+  border: 1px solid rgba(#a855f7, .1);
+  border-radius: radius(sm);
+
+  &:hover { background: rgba(#a855f7, .09); }
+}
+
+.sr-id      { font-size: .62rem; color: rgba(#a855f7, .9); font-weight: 700; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.sr-sep     { font-size: .6rem;  color: rgba(#fff, .2); }
+.sr-pattern { font-size: .6rem;  color: rgba(#e8d5b0, .55); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+
+.sr-del {
+  background: none;
+  border: none;
+  color: rgba(#ff4444, .4);
+  cursor: pointer;
+  font-size: .75rem;
+  padding: 0 .15rem;
+  line-height: 1;
+  &:hover { color: #ff4444; }
+}
+
+.style-rule-form {
+  display: flex;
+  flex-direction: column;
+  gap: .25rem;
+  margin-top: .25rem;
+
+  .kernel-trigger-custom { font-size: .7rem; padding: .22rem .4rem; }
+}
+
+.style-rule-actions {
+  display: flex;
+  gap: .3rem;
+  margin-top: .1rem;
+
+  .kernel-btn {
+    flex: 1;
+    font-size: .65rem;
+    padding: .28rem .4rem;
+    justify-content: center;
+    text-align: center;
+  }
+}

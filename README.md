@@ -473,4 +473,36 @@ Variables disponibles (ver `docker-compose.yml`):
 
 Si `SMTP_USER`/`SMTP_PASSWORD` no están definidos, el formulario sigue
 visible pero informa que el envío no está configurado (sin romper el sitio).
+#Resultado — WolframScript 14.2.1 — todos los casos ✓
+CREATE     sessionId: 530b16b4...  expiresAt: 2026-06-29 01:29:55
 
+VALIDATE   userId: federico  state: active  role: 3
+           permissions (16 total): {admin.*, arch.data, arch.view, blog.read,
+           blog.write, contact.send, content.write, flow.run, kernel.eval,
+           kernel.schedule, nest.run, perf.view, public.read, ruliology.eval,
+           tasks.manage, tasks.view}
+
+NESTGRAPH  nodeCount: 40
+TREE       L0 id=1  parent=Null  perms={}
+           L1 id=2  parent=1     perms={arch.view, blog.read, public.read}
+           L1 id=3  parent=1     perms={blog.write, content.write, ...}
+           L1 id=4  parent=1     perms={admin.*, kernel.eval, ...}
+           ... (27 nodos L3)
+
+CAPABILITIES
+  can kernel.eval : True
+  can admin.*     : True
+  can public.read : True
+
+FSM elevate    active → elevated  (lastTransition registrado)  ok
+FSM downgrade  elevated → active                               ok
+FSM inválida   active → resume    → $Failed  "invalid_transition:active->resume"
+
+FSM GRAPH      6 estados, 8 eventos, 13 aristas — tabla completa impresa
+
+STATS          byState: active→5  |  cache hits: 5  keys: 1
+
+GC             True
+DESTROY        True
+INVALIDATE     validateToken = $Failed
+               ✓ PASS — token correctamente invalidado

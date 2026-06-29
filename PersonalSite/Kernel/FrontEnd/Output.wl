@@ -57,37 +57,17 @@ textHtml[expr_] :=
     "</pre>"];
 
 (* ════════════════════════════════════════════════════════════
-   toHtml  —  conversor principal expr → HTML fragment
+   toHtml  —  delega al StyleEngine (pattern-match dispatch)
    ════════════════════════════════════════════════════════════*)
 
-PersonalSite`FrontEnd`Output`toHtml[Null] :=
-  "<span class=\"wl-nb-void\">\[EmptySet]</span>";
-
-PersonalSite`FrontEnd`Output`toHtml[$Failed] :=
-  "<span class=\"wl-nb-error\">$Failed</span>";
-
-PersonalSite`FrontEnd`Output`toHtml[s_String] :=
-  "<pre class=\"wl-nb-text wl-nb-string\">" <> esc[s] <> "</pre>";
-
+(* StyleEngine.render[] usa pattern matching para despachar al renderer
+   correcto (Dataset, Association, List, Graphics, Math…) y acepta
+   reglas nuevas en runtime via POST /kernel/style/rule.           *)
 PersonalSite`FrontEnd`Output`toHtml[expr_] :=
-  Which[
-    (* ── Graficos → SVG embebido ────────────────────── *)
-    graphQ[expr],
-      With[{svg = trySVG[expr]},
-        If[StringLength[svg] > 50,
-          "<div class=\"wl-nb-svg\">" <> svg <> "</div>",
-          textHtml[expr]]],
-
-    (* ── Numericos simples → texto limpio ───────────── *)
-    MatchQ[expr, _Integer | _Real | _Rational | _Complex],
-      "<span class=\"wl-nb-number\">" <> esc[ToString[expr]] <> "</span>",
-
-    (* ── Resto → MathML con fallback OutputForm ──────── *)
-    True,
-      With[{mml = tryMathML[expr]},
-        If[StringLength[mml] > 30,
-          "<div class=\"wl-nb-mathml\">" <> mml <> "</div>",
-          textHtml[expr]]]
+  Quiet @ Check[
+    PersonalSite`FrontEnd`StyleEngine`render[expr],
+    (* Fallback si StyleEngine no está cargado *)
+    textHtml[expr]
   ];
 
 (* ════════════════════════════════════════════════════════════
