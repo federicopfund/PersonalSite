@@ -18,6 +18,7 @@ BeginPackage["PersonalSite`Controller`",
   {"PersonalSite`TaskManager`", "PersonalSite`TaskConfig`"}];
 
 tasks::usage         = "tasks[req] sirve el dashboard de TaskObjects.";
+dagDashboard::usage  = "dagDashboard[req] sirve el DAG Engineer Dashboard.";
 tasksSummary::usage  = "tasksSummary[req] devuelve JSON snapshot.";
 tasksHistory::usage  = "tasksHistory[id, req] devuelve historial JSON.";
 tasksStart::usage    = "tasksStart[id, req] inicia la tarea.";
@@ -54,7 +55,15 @@ jsonResp[data_, code_: 200] :=
       Quiet @ Check[ExportString[data, "JSON"], "{\"ok\":false}"]],
     <|"StatusCode" -> code,
       "Headers" -> <|"Content-Type" -> "application/json"|>|>];
-
+(* ── GET /dag ─────────────────────────────────────────────────── *)
+dagDashboard[req_] :=
+  Module[{snap = PersonalSite`TaskManager`summary[]},
+    PersonalSite`View`render["dag",
+      <|"kernelID"   -> ToString[snap["kernel"]],
+        "taskCount"  -> ToString[snap["taskCount"]],
+        "running"    -> ToString[snap["running"]]
+      |>]
+  ];
 (* ── GET /tasks ────────────────────────────────────────────────────── *)
 tasks[req_] :=
   Module[{snap = PersonalSite`TaskManager`summary[]},

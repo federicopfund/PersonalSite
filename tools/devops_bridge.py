@@ -65,9 +65,13 @@ def run(args, cwd=None, timeout=60):
 # ── Route table ──────────────────────────────────────────────────────
 def handle_health(_body):
     return {
-        "ok":   True,
-        "host": str(ROOT),
-        "ts":   datetime.now().isoformat(timespec="seconds"),
+        "ok":    True,
+        "service": "PersonalSite DevOps Bridge",
+        "note":  "Este es el bridge interno (API). El sitio esta en el puerto 8080.",
+        "site":  "http://localhost:8080",
+        "kernel":"http://localhost:8080/kernel",
+        "host":  str(ROOT),
+        "ts":    datetime.now().isoformat(timespec="seconds"),
     }
 
 
@@ -140,8 +144,9 @@ def handle_docker_verify(_body):
 
 
 ROUTES = {
-    ("GET",  "/health"):         handle_health,
-    ("POST", "/health"):         handle_health,
+    ("GET",  "/"):             handle_health,   # browser friendly fallback
+    ("GET",  "/health"):       handle_health,
+    ("POST", "/health"):       handle_health,
     ("POST", "/git/status"):     handle_git_status,
     ("POST", "/git/diff"):       handle_git_diff,
     ("POST", "/git/stage"):      handle_git_stage,

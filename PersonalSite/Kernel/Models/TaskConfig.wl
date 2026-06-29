@@ -177,6 +177,31 @@ $defaults = {
     "deps"->{"cards-refresh"},        "dag_order"->3,
     "action_code"->"Function[PersonalSite`Assets`refreshMetric[]]"|>,
 
+  (* ── UX ──────────────────────────────────────────────────────────────── *)
+  (*  contact-ux: pulso del boton CTA (activo/inactivo cada 20 s).
+      ux-color-{eval,apply,report}: motor de reglas de color por dominio.
+      DAG: heartbeat → {theme-rotate, contact-ux} → ux-color-eval
+                       → ux-color-apply → ux-color-report              *)
+  <|"task_id"->"contact-ux",     "label"->"Contact UX ring pulse",
+    "group_name"->"ux",   "interval_s"->5,   "enabled"->True,
+    "deps"->{"heartbeat"},            "dag_order"->1,
+    "action_code"->"Function[Module[{active=If[Mod[Floor[UnixTime[]/20],2]===1,\"1\",\"0\"]},PersonalSite`Settings`set[\"ux.contact.active\",active];active===\"1\"]]"|>,
+
+  <|"task_id"->"ux-color-eval",  "label"->"UX color rule evaluation",
+    "group_name"->"ux",   "interval_s"->15,  "enabled"->True,
+    "deps"->{"heartbeat","theme-rotate"},     "dag_order"->2,
+    "action_code"->"Function[PersonalSite`UXColorRules`eval[]]"|>,
+
+  <|"task_id"->"ux-color-apply", "label"->"UX color apply tokens to Settings",
+    "group_name"->"ux",   "interval_s"->15,  "enabled"->True,
+    "deps"->{"ux-color-eval"},               "dag_order"->3,
+    "action_code"->"Function[PersonalSite`UXColorRules`apply[]]"|>,
+
+  <|"task_id"->"ux-color-report","label"->"UX color rules audit report",
+    "group_name"->"ux",   "interval_s"->60,  "enabled"->True,
+    "deps"->{"ux-color-apply"},              "dag_order"->4,
+    "action_code"->"Function[PersonalSite`UXColorRules`report[]]"|>,
+
   (* ── Dev — SCSS hot-reload pipeline ───────────────────────────────── *)
   (*  DAG: scss-watch → scss-compile → {css-version, css-cache-bust} → scss-report
       enabled=False: no impacta produccion; activar manualmente en dev.    *)

@@ -152,11 +152,15 @@ connection[] :=
 closeConnection[] := (Quiet @ CloseSQLConnection[$conn]; $conn = Null);
 
 execute[sql_String, params_List : {}] :=
-  Module[{r},
+  Module[{r, conn},
     (* Ruta rapida: Python fallback ya activo (Cloud sin JDBC nativo) *)
     If[TrueQ[$usePythonFallback],
       Return[executePython[sql, params]]];
-    r = Quiet @ Check[SQLExecute[connection[], sql, params], $Failed];
+    conn = connection[];
+    (* connection[] puede haber activado el fallback si JDBC fallo en Cloud *)
+    If[TrueQ[$usePythonFallback],
+      Return[executePython[sql, params]]];
+    r = Quiet @ Check[SQLExecute[conn, sql, params], $Failed];
     If[r === $Failed,
       (* Conexion posiblemente stale: reabrir y reintentar una vez *)
       closeConnection[];

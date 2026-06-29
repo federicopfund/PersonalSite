@@ -30,11 +30,12 @@ $testDir = DirectoryName[$InputFileName];
 
 (* ── Layers disponibles ──────────────────────────────────────────────── *)
 $layers = <|
-  "all"     -> {"SessionFSM", "SessionStore", "Flow", "NestScheduler", "Database"},
+  "all"     -> {"SessionFSM", "SessionStore", "Flow", "NestScheduler", "Database", "UXColorRules"},
   "session" -> {"SessionFSM", "SessionStore"},
   "flow"    -> {"Flow", "NestScheduler"},
   "db"      -> {"Database"},
-  "models"  -> {"Flow", "NestScheduler", "Database"}
+  "models"  -> {"Flow", "NestScheduler", "Database"},
+  "ux"      -> {"UXColorRules"}
 |>;
 
 (* ── Parsear --layer desde la linea de comandos ─────────────────────── *)

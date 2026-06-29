@@ -26,6 +26,7 @@ With[{load = Function[parts,
        Get[FileNameJoin[Join[{PersonalSite`$Root, "Kernel"}, parts]]]]},
   load[{"Config.wl"}];
   load[{"Models", "Database.wl"}];
+  PersonalSite`Database`setup[];
   load[{"Models", "Post.wl"}];
   load[{"Models", "WolframAlpha.wl"}];
   load[{"Models", "Mailer.wl"}];
@@ -39,6 +40,7 @@ With[{load = Function[parts,
   load[{"Models", "SessionStore.wl"}];
   load[{"Models", "DevStyle.wl"}];
   load[{"Models", "DevOps.wl"}];
+  load[{"Models", "UXColorRules.wl"}];
   load[{"Models", "TaskConfig.wl"}];
   load[{"Models", "TaskManager.wl"}];
   load[{"Models", "Scheduler.wl"}];

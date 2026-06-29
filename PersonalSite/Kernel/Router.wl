@@ -84,6 +84,7 @@ dispatcher[] := Delayed @ URLDispatcher[{
   "/apariencia" ~~ EndOfString        :> PersonalSite`Controller`appearance[HTTPRequestData[]],
   "/flow"          ~~ EndOfString :> PersonalSite`Controller`flow[HTTPRequestData[]],
   "/perf"          ~~ EndOfString :> PersonalSite`Controller`perf[HTTPRequestData[]],
+  "/dag"                    ~~ EndOfString :> PersonalSite`Controller`dagDashboard[HTTPRequestData[]],
   "/tasks/summary"         ~~ EndOfString :> PersonalSite`Controller`tasksSummary[HTTPRequestData[]],
   "/tasks/dag"             ~~ EndOfString :> PersonalSite`Controller`tasksDag[HTTPRequestData[]],
   "/tasks/config/create"   ~~ EndOfString :> PersonalSite`Controller`tasksConfigCreate[HTTPRequestData[]],

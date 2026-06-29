@@ -1,0 +1,964 @@
+<!DOCTYPE html>
+<html lang="es" data-theme="<*$theme*>"
+      data-theme-mode="<*$themeMode*>"
+      data-theme-order="<*$themeOrder*>"
+      data-theme-interval="<*$themeInterval*>"
+      data-theme-epoch="<*$themeEpoch*>">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>DAG Engineer — <*$siteName*></title>
+  <link rel="stylesheet" href="/static/styles.css">
+</head>
+<body>
+<div class="theme-bar" aria-hidden="true"></div>
+<nav class="navbar">
+  <div class="nav-container">
+    <a class="nav-brand" href="/"><*$siteName*></a>
+    <button class="nav-toggle" id="nt" aria-label="Menú"><span></span><span></span><span></span></button>
+    <ul class="nav-links" id="nl">
+      <li><a href="/">Inicio</a></li>
+      <li><a href="/tasks">Task Manager</a></li>
+      <li><a class="nav-cta active" href="/dag">DAG Engineer</a></li>
+    </ul>
+  </div>
+</nav>
+
+<div class="de-app">
+
+  <!-- ══ HEADER ═══════════════════════════════════════════════════════ -->
+  <header class="de-header">
+    <div class="de-header__brand">
+      <span class="de-header__icon">🔗</span>
+      <div>
+        <h1 class="de-header__title">DAG Engineer</h1>
+        <p class="de-header__sub">Task Scheduler · Kernel&nbsp;<strong id="hdr-kernel"><*$kernelID*></strong>
+          · <span id="hdr-live" class="de-live-dot" title="Live polling"></span> Live
+        </p>
+      </div>
+    </div>
+    <div class="de-kpi-row" id="kpi-row">
+      <div class="de-kpi" id="kpi-total"><span class="de-kpi__n">—</span><span class="de-kpi__l">Tareas</span></div>
+      <div class="de-kpi de-kpi--on" id="kpi-running"><span class="de-kpi__n">—</span><span class="de-kpi__l">Corriendo</span></div>
+      <div class="de-kpi" id="kpi-runs"><span class="de-kpi__n">—</span><span class="de-kpi__l">Runs total</span></div>
+      <div class="de-kpi de-kpi--warn" id="kpi-errors"><span class="de-kpi__n">—</span><span class="de-kpi__l">Errores</span></div>
+      <div class="de-kpi" id="kpi-groups"><span class="de-kpi__n">—</span><span class="de-kpi__l">Grupos</span></div>
+      <div class="de-kpi" id="kpi-avgms"><span class="de-kpi__n">—</span><span class="de-kpi__l">Avg ms</span></div>
+    </div>
+    <div class="de-header__tools">
+      <input id="de-search" class="de-search" type="search" placeholder="🔍 Filtrar nodos…" autocomplete="off">
+      <button id="btn-live" class="btn btn--ghost btn--sm de-btn-live is-live" title="Toggle auto-refresh">⟳ Live</button>
+      <button id="btn-refresh" class="btn btn--ghost btn--sm" title="Refrescar ahora">↺</button>
+    </div>
+  </header>
+
+  <!-- ══ GROUP FILTER PILLS ════════════════════════════════════════════ -->
+  <div class="de-group-bar" id="group-bar">
+    <button class="de-gpill de-gpill--all is-active" data-group="all">Todos</button>
+  </div>
+
+  <!-- ══ TABS ══════════════════════════════════════════════════════════ -->
+  <div class="de-tabs">
+    <button class="de-tab is-active" data-tab="viz">🔗 Grafo DAG</button>
+    <button class="de-tab" data-tab="metrics">📊 Métricas</button>
+    <button class="de-tab" data-tab="create">⊕ Nueva tarea</button>
+  </div>
+
+  <!-- ══ TAB: VISUALIZATION ════════════════════════════════════════════ -->
+  <div id="tab-viz" class="de-panel">
+    <div class="de-viz-layout">
+
+      <!-- DAG canvas (left/center, scrollable) -->
+      <div class="de-canvas-wrap" id="canvas-wrap">
+        <div class="de-layer-bar" id="layer-bar"><!-- L-level labels by JS --></div>
+        <div class="de-scroll" id="dag-scroll">
+          <svg id="dag-svg" xmlns="http://www.w3.org/2000/svg" style="display:block"></svg>
+        </div>
+        <div class="de-canvas-legend" id="canvas-legend"><!-- group legend by JS --></div>
+      </div>
+
+      <!-- Detail panel (right, slides in on node click) -->
+      <aside class="de-detail" id="de-detail" aria-hidden="true">
+        <div class="de-detail__head">
+          <div>
+            <span class="de-detail__group" id="d-group-badge"></span>
+            <h3 class="de-detail__title" id="d-title">Selecciona un nodo</h3>
+            <code class="de-detail__id" id="d-id"></code>
+          </div>
+          <button class="btn btn--ghost btn--xs" id="d-close">✕</button>
+        </div>
+        <div class="de-detail__body" id="d-body">
+          <p class="de-detail__hint">Haz clic en cualquier nodo del grafo para ver sus métricas.</p>
+        </div>
+        <div class="de-detail__actions" id="d-actions" style="display:none">
+          <button class="btn btn--sm btn--primary" id="d-start">▶ Start</button>
+          <button class="btn btn--sm btn--ghost"   id="d-stop">⏹ Stop</button>
+          <button class="btn btn--sm btn--ghost"   id="d-restart">↺ Restart</button>
+        </div>
+      </aside>
+    </div>
+  </div>
+
+  <!-- ══ TAB: METRICS ══════════════════════════════════════════════════ -->
+  <div id="tab-metrics" class="de-panel" hidden>
+
+    <!-- Group metrics cards -->
+    <section class="de-section">
+      <h2 class="de-section__title">📦 Métricas por grupo</h2>
+      <div class="de-metrics-grid" id="metrics-grid"><!-- by JS --></div>
+    </section>
+
+    <!-- Per-task latency heatmap -->
+    <section class="de-section">
+      <h2 class="de-section__title">⏱ Heatmap de latencia — últimos 20 ticks por tarea</h2>
+      <p class="de-section__sub">Columna = tick más reciente (izquierda) → más antiguo (derecha). Color = latencia relativa.</p>
+      <div class="de-heatmap-wrap">
+        <div class="de-heatmap" id="heatmap"><!-- by JS --></div>
+      </div>
+    </section>
+
+    <!-- Error log -->
+    <section class="de-section">
+      <h2 class="de-section__title">⚠ Tareas con errores</h2>
+      <div id="error-list" class="de-error-list"><!-- by JS --></div>
+    </section>
+  </div>
+
+  <!-- ══ TAB: CREATE TASK ══════════════════════════════════════════════ -->
+  <div id="tab-create" class="de-panel" hidden>
+    <div class="de-create-layout">
+
+      <!-- Left: form -->
+      <div class="de-create-form-wrap">
+        <h2 class="de-section__title">⊕ Registrar nueva tarea en el DAG</h2>
+        <form id="create-form" autocomplete="off">
+
+          <div class="de-form-row de-form-row--2">
+            <div class="de-field">
+              <label for="c-id">ID <em>*</em></label>
+              <input id="c-id" type="text" class="de-input" placeholder="mi-tarea-custom"
+                     pattern="[a-z0-9\-]+" title="minúsculas, números y guiones" required>
+              <span class="de-field__hint">Solo a-z, 0-9, guiones. Único.</span>
+            </div>
+            <div class="de-field">
+              <label for="c-label">Label</label>
+              <input id="c-label" type="text" class="de-input" placeholder="Mi tarea personalizada">
+            </div>
+          </div>
+
+          <div class="de-form-row de-form-row--3">
+            <div class="de-field">
+              <label for="c-group">Grupo</label>
+              <select id="c-group" class="de-select">
+                <option value="user">user</option>
+                <option value="system">system</option>
+                <option value="ux">ux</option>
+                <option value="theme">theme</option>
+                <option value="cache">cache</option>
+                <option value="flow">flow</option>
+                <option value="dev">dev</option>
+                <option value="test">test</option>
+                <option value="build">build</option>
+                <option value="git">git</option>
+                <option value="ops">ops</option>
+              </select>
+            </div>
+            <div class="de-field">
+              <label for="c-interval">Intervalo (s)</label>
+              <div class="de-interval-row">
+                <input id="c-interval-range" type="range" min="3" max="3600" value="60" class="de-range">
+                <input id="c-interval" type="number" min="3" max="86400" value="60" class="de-input de-input--num">
+              </div>
+            </div>
+            <div class="de-field">
+              <label for="c-dag-order">DAG order <span id="c-dag-order-hint" class="de-field__hint">(auto)</span></label>
+              <input id="c-dag-order" type="number" min="0" max="10" value="0"
+                     class="de-input" readonly>
+            </div>
+          </div>
+
+          <div class="de-field de-field--full">
+            <label for="c-enabled">Estado inicial</label>
+            <label class="de-toggle">
+              <input id="c-enabled" type="checkbox" checked>
+              <span class="de-toggle__track"></span>
+              <span class="de-toggle__label" id="c-enabled-label">Habilitada</span>
+            </label>
+          </div>
+
+          <div class="de-field de-field--full">
+            <label for="c-code">Acción Wolfram Language <em>*</em></label>
+            <div class="de-code-wrap">
+              <textarea id="c-code" class="de-code" rows="4" required
+                placeholder="Function[True]
+(* Ejemplos:
+   Function[PersonalSite`Cache`warm[]]
+   Function[PersonalSite`UXColorRules`eval[]]
+   Function[Quiet@Check[PersonalSite`Post`recent[5];True, False]]
+*)"></textarea>
+            </div>
+            <span class="de-field__hint">Se evalúa en el kernel WolframWebEngine en cada disparo.</span>
+          </div>
+
+          <div class="de-submit-bar">
+            <label class="de-checkbox">
+              <input type="checkbox" id="c-persist" checked>
+              <span>Persistir en DB <code>scheduler_tasks</code></span>
+            </label>
+            <label class="de-checkbox">
+              <input type="checkbox" id="c-start-now" checked>
+              <span>Registrar en runtime ahora</span>
+            </label>
+            <button type="submit" class="btn btn--primary de-submit-btn">⊕ Crear tarea</button>
+            <div id="create-status" class="de-status" aria-live="polite"></div>
+          </div>
+        </form>
+      </div>
+
+      <!-- Right: visual dependency picker -->
+      <div class="de-deps-wrap">
+        <h3 class="de-section__title">🔗 Dependencias</h3>
+        <p class="de-section__sub">Selecciona las tareas de las que depende esta tarea.
+           El DAG order se calcula automáticamente.</p>
+        <div class="de-deps-search-wrap">
+          <input id="deps-search" class="de-input" type="search" placeholder="Filtrar tareas…">
+        </div>
+        <div class="de-dep-list" id="dep-list"><!-- chips by JS --></div>
+        <div class="de-selected-deps">
+          <strong>Seleccionadas:</strong>
+          <div id="selected-deps-chips" class="de-chips">
+            <em class="de-chips__empty">Ninguna (tarea raíz L0)</em>
+          </div>
+        </div>
+        <!-- Mini preview DAG -->
+        <div class="de-mini-dag">
+          <h4>Vista previa del DAG</h4>
+          <svg id="mini-dag-svg" xmlns="http://www.w3.org/2000/svg" width="100%" height="140"></svg>
+        </div>
+      </div>
+
+    </div>
+  </div>
+
+</div><!-- /de-app -->
+
+<script>
+/* ═══════════════════════════════════════════════════════════════════════════
+   DAG Engineer Dashboard — Wolfram PersonalSite
+   ═══════════════════════════════════════════════════════════════════════════ */
+
+'use strict';
+
+// ── State ─────────────────────────────────────────────────────────────────
+const STATE = {
+  tasks:       {},          // id → task object
+  dagEdges:    [],          // [{from, to}]
+  critPath:    [],          // [id, ...]
+  selectedId:  null,
+  filterGroup: 'all',
+  filterText:  '',
+  selectedDeps: new Set(),
+  liveOn:      true,
+  pollTimer:   null,
+  POLL_MS:     3000,
+};
+
+// ── Group palette ──────────────────────────────────────────────────────────
+const G = {
+  system : '#7c4dff',  theme  : '#ff9800',  ux     : '#00bcd4',
+  cache  : '#2196f3',  flow   : '#9c27b0',  dev    : '#607d8b',
+  test   : '#4caf50',  build  : '#ff5722',  git    : '#795548',
+  ops    : '#ef5350',  user   : '#9e9e9e',
+};
+const groupColor = g => G[g] || '#9e9e9e';
+
+// ── Bootstrap ─────────────────────────────────────────────────────────────
+document.addEventListener('DOMContentLoaded', () => {
+  bindUI();
+  fetchAll().then(() => {
+    startPoll();
+  });
+});
+
+// ── Bindings ──────────────────────────────────────────────────────────────
+function bindUI() {
+  // tabs
+  document.querySelectorAll('.de-tab').forEach(btn => {
+    btn.addEventListener('click', () => switchTab(btn.dataset.tab));
+  });
+  // live toggle
+  document.getElementById('btn-live').addEventListener('click', toggleLive);
+  document.getElementById('btn-refresh').addEventListener('click', fetchAll);
+  // search
+  document.getElementById('de-search').addEventListener('input', e => {
+    STATE.filterText = e.target.value.toLowerCase();
+    applyFilters();
+  });
+  // detail close
+  document.getElementById('d-close').addEventListener('click', closeDetail);
+  // detail action buttons
+  document.getElementById('d-start').addEventListener('click', () => taskAction('start'));
+  document.getElementById('d-stop').addEventListener('click', () => taskAction('stop'));
+  document.getElementById('d-restart').addEventListener('click', () => taskAction('restart'));
+  // create form
+  document.getElementById('create-form').addEventListener('submit', submitCreate);
+  document.getElementById('c-interval').addEventListener('input', e => {
+    document.getElementById('c-interval-range').value = e.target.value;
+  });
+  document.getElementById('c-interval-range').addEventListener('input', e => {
+    document.getElementById('c-interval').value = e.target.value;
+  });
+  document.getElementById('c-enabled').addEventListener('change', e => {
+    document.getElementById('c-enabled-label').textContent = e.target.checked ? 'Habilitada' : 'Deshabilitada';
+  });
+  document.getElementById('deps-search').addEventListener('input', e => {
+    renderDepList(e.target.value.toLowerCase());
+  });
+}
+
+// ── Tab switching ──────────────────────────────────────────────────────────
+function switchTab(tab) {
+  document.querySelectorAll('.de-tab').forEach(b => b.classList.toggle('is-active', b.dataset.tab === tab));
+  ['viz','metrics','create'].forEach(t => {
+    const el = document.getElementById('tab-' + t);
+    if (t === tab) { el.hidden = false; el.removeAttribute('hidden'); }
+    else el.hidden = true;
+  });
+  if (tab === 'metrics') renderMetrics();
+  if (tab === 'create')  renderDepList('');
+}
+
+// ── Data fetching ──────────────────────────────────────────────────────────
+async function fetchAll() {
+  try {
+    const [sumRes, dagRes] = await Promise.all([
+      fetch('/tasks/summary'),
+      fetch('/tasks/dag'),
+    ]);
+    const sum = await sumRes.json();
+    const dag = await dagRes.json();
+    STATE.tasks   = sum.tasks || {};
+    STATE.dagEdges = dag.edges || [];
+    STATE.critPath = dag.criticalPath || [];
+    updateKPIs(sum);
+    renderGroupBar();
+    renderDAG();
+    if (document.getElementById('tab-metrics').hidden === false) renderMetrics();
+    if (document.getElementById('tab-create').hidden === false) renderDepList('');
+    if (STATE.selectedId) refreshDetail(STATE.selectedId);
+  } catch(e) {
+    console.warn('fetch error', e);
+  }
+}
+
+// ── Live polling ───────────────────────────────────────────────────────────
+function startPoll() {
+  if (STATE.pollTimer) clearInterval(STATE.pollTimer);
+  STATE.pollTimer = setInterval(() => {
+    if (STATE.liveOn) fetchAll();
+  }, STATE.POLL_MS);
+}
+function toggleLive() {
+  STATE.liveOn = !STATE.liveOn;
+  const btn = document.getElementById('btn-live');
+  btn.classList.toggle('is-live', STATE.liveOn);
+  btn.textContent = STATE.liveOn ? '⟳ Live' : '⟳ Paused';
+  document.getElementById('hdr-live').classList.toggle('is-live', STATE.liveOn);
+}
+
+// ── KPIs ──────────────────────────────────────────────────────────────────
+function updateKPIs(sum) {
+  const tasks = sum.tasks || {};
+  const ids = Object.keys(tasks);
+  const totalRuns   = ids.reduce((a, id) => a + (tasks[id].runs   || 0), 0);
+  const totalErrors = ids.reduce((a, id) => a + (tasks[id].errors || 0), 0);
+  const avgMs = ids.filter(id => tasks[id].runs > 0)
+                   .reduce((a, id) => a + (tasks[id].avgMs || 0), 0) /
+                (ids.filter(id => tasks[id].runs > 0).length || 1);
+  const groups = new Set(ids.map(id => tasks[id].group)).size;
+
+  setKPI('kpi-total',   sum.taskCount || ids.length);
+  setKPI('kpi-running', sum.running   || 0);
+  setKPI('kpi-runs',    fmtNum(totalRuns));
+  setKPI('kpi-errors',  totalErrors, totalErrors > 0 ? 'de-kpi--err' : '');
+  setKPI('kpi-groups',  groups);
+  setKPI('kpi-avgms',   avgMs.toFixed(1) + ' ms');
+}
+function setKPI(id, val) {
+  const el = document.getElementById(id);
+  if (el) el.querySelector('.de-kpi__n').textContent = val;
+}
+function fmtNum(n) {
+  return n >= 1000 ? (n/1000).toFixed(1) + 'k' : n;
+}
+
+// ── Group filter bar ───────────────────────────────────────────────────────
+function renderGroupBar() {
+  const bar = document.getElementById('group-bar');
+  const groups = [...new Set(Object.values(STATE.tasks).map(t => t.group || 'user'))].sort();
+  const current = STATE.filterGroup;
+
+  let html = `<button class="de-gpill de-gpill--all ${current==='all'?'is-active':''}" data-group="all">Todos</button>`;
+  groups.forEach(g => {
+    const count = Object.values(STATE.tasks).filter(t => t.group === g).length;
+    html += `<button class="de-gpill ${current===g?'is-active':''}" data-group="${g}"
+               style="--gpill-color:${groupColor(g)}">${g} <span>${count}</span></button>`;
+  });
+  bar.innerHTML = html;
+  bar.querySelectorAll('.de-gpill').forEach(btn => {
+    btn.addEventListener('click', () => {
+      STATE.filterGroup = btn.dataset.group;
+      bar.querySelectorAll('.de-gpill').forEach(b => b.classList.toggle('is-active', b === btn));
+      applyFilters();
+    });
+  });
+}
+
+function applyFilters() {
+  const svg = document.getElementById('dag-svg');
+  svg.querySelectorAll('.dag-node').forEach(node => {
+    const id    = node.dataset.id;
+    const task  = STATE.tasks[id] || {};
+    const group = task.group || 'user';
+    const label = (task.label || id).toLowerCase();
+    const groupOk = STATE.filterGroup === 'all' || group === STATE.filterGroup;
+    const textOk  = !STATE.filterText || id.includes(STATE.filterText) || label.includes(STATE.filterText);
+    node.style.opacity = (groupOk && textOk) ? '1' : '0.12';
+  });
+}
+
+// ── DAG RENDERER ──────────────────────────────────────────────────────────
+const NODE_W = 148, NODE_H = 56, COL_GAP = 190, ROW_GAP = 76;
+const PAD = { l: 50, t: 48, r: 60, b: 40 };
+
+function computePositions() {
+  const byLevel = {};
+  Object.entries(STATE.tasks).forEach(([id, t]) => {
+    const lv = t.dag_order != null ? t.dag_order : 0;
+    (byLevel[lv] = byLevel[lv] || []).push(id);
+  });
+  Object.values(byLevel).forEach(ids => ids.sort((a,b) => {
+    const ga = STATE.tasks[a]?.group || '';
+    const gb = STATE.tasks[b]?.group || '';
+    return ga.localeCompare(gb) || a.localeCompare(b);
+  }));
+  const pos = {};
+  Object.entries(byLevel).forEach(([lv, ids]) => {
+    ids.forEach((id, i) => {
+      pos[id] = { x: PAD.l + parseInt(lv)*COL_GAP, y: PAD.t + i*ROW_GAP };
+    });
+  });
+  return { pos, byLevel };
+}
+
+function renderDAG() {
+  const svg  = document.getElementById('dag-svg');
+  const { pos, byLevel } = computePositions();
+
+  const maxLv      = Math.max(...Object.keys(byLevel).map(Number), 0);
+  const maxPerLv   = Math.max(...Object.values(byLevel).map(a => a.length), 1);
+  const svgW = PAD.l + (maxLv+1)*COL_GAP + NODE_W + PAD.r;
+  const svgH = PAD.t + maxPerLv*ROW_GAP   + NODE_H + PAD.b;
+
+  svg.style.width  = svgW + 'px';
+  svg.style.height = svgH + 'px';
+  svg.setAttribute('viewBox', `0 0 ${svgW} ${svgH}`);
+
+  // Scroll area
+  document.getElementById('dag-scroll').style.minWidth  = svgW + 'px';
+  document.getElementById('dag-scroll').style.minHeight = (svgH + 60) + 'px';
+
+  // Level labels
+  const layerBar = document.getElementById('layer-bar');
+  let lbHtml = '';
+  for (let i = 0; i <= maxLv; i++) {
+    lbHtml += `<span class="de-lv-label" style="left:${PAD.l + i*COL_GAP + NODE_W/2}px">L${i}</span>`;
+  }
+  layerBar.innerHTML = lbHtml;
+
+  // Build SVG
+  let defs = `<defs>
+    <marker id="arr"  viewBox="0 0 10 10" refX="9" refY="5" markerWidth="6" markerHeight="6" orient="auto">
+      <path d="M0,0 L10,5 L0,10 Z" fill="#6b7280"/></marker>
+    <marker id="arr-c" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="6" markerHeight="6" orient="auto">
+      <path d="M0,0 L10,5 L0,10 Z" fill="#ff6b35"/></marker>
+    <filter id="glow" x="-20%" y="-20%" width="140%" height="140%">
+      <feGaussianBlur stdDeviation="2.5" result="blur"/>
+      <feMerge><feMergeNode in="blur"/><feMergeNode in="SourceGraphic"/></feMerge>
+    </filter>
+    <filter id="glow-run" x="-30%" y="-30%" width="160%" height="160%">
+      <feGaussianBlur stdDeviation="4" result="blur"/>
+      <feMerge><feMergeNode in="blur"/><feMergeNode in="SourceGraphic"/></feMerge>
+    </filter>
+  </defs>`;
+
+  let edges = '', nodes = '';
+
+  // Edges
+  STATE.dagEdges.forEach(e => {
+    const f = pos[e.from], t = pos[e.to];
+    if (!f || !t) return;
+    const x1=f.x+NODE_W, y1=f.y+NODE_H/2, x2=t.x, y2=t.y+NODE_H/2;
+    const cx = (x1+x2)/2;
+    const isCrit = STATE.critPath.includes(e.from) && STATE.critPath.includes(e.to);
+    const cls = isCrit ? 'dag-edge dag-edge--crit' : 'dag-edge';
+    edges += `<path class="${cls}" d="M${x1},${y1} C${cx},${y1} ${cx},${y2} ${x2},${y2}"
+                marker-end="url(#${isCrit?'arr-c':'arr'})" data-from="${e.from}" data-to="${e.to}"/>`;
+  });
+
+  // Nodes
+  Object.entries(pos).forEach(([id, p]) => {
+    const t = STATE.tasks[id];
+    if (!t) return;
+    const g    = t.group || 'user';
+    const col  = groupColor(g);
+    const run  = t.running;
+    const err  = (t.errors || 0) > 0;
+    const sel  = STATE.selectedId === id;
+    const lbl  = (t.label || id).length > 20 ? (t.label||id).slice(0,19)+'…' : (t.label||id);
+    const av   = t.avgMs ? t.avgMs.toFixed(0)+'ms' : '—';
+    const ivsec = t.interval ? t.interval+'s' : '';
+    const runs = t.runs || 0;
+
+    nodes += `
+    <g class="dag-node${run?' is-running':''}${err?' has-error':''}${sel?' is-selected':''}"
+       data-id="${id}" style="cursor:pointer" transform="translate(${p.x},${p.y})">
+      ${run ? `<rect class="dag-node__halo" width="${NODE_W}" height="${NODE_H}" rx="9"
+                     style="fill:${col};opacity:.12"/>` : ''}
+      <rect class="dag-node__bg" width="${NODE_W}" height="${NODE_H}" rx="8"
+            style="fill:${sel?col:'var(--surface)'};stroke:${col};stroke-width:${sel?2:1.5}"/>
+      <rect class="dag-node__top" width="${NODE_W}" height="4" rx="8"
+            style="fill:${col};clip-path:inset(0 0 -10px 0)"/>
+      <text class="dag-node__id"    x="8" y="19"  fill="${sel?'#fff':col}"    font-size="10" font-weight="700">${id}</text>
+      <text class="dag-node__label" x="8" y="34"  fill="${sel?'rgba(255,255,255,.85)':'var(--text)'}" font-size="11">${lbl}</text>
+      <text class="dag-node__meta"  x="8" y="49"  fill="${sel?'rgba(255,255,255,.6)':'var(--text-muted)'}" font-size="9.5">${ivsec}${ivsec&&runs?' · ':''}${runs} runs · ${av}</text>
+      ${run ? `<circle class="dag-node__pulse" cx="${NODE_W-10}" cy="10" r="5" style="fill:${col}"/>` : ''}
+      ${err ? `<circle class="dag-node__err"   cx="${NODE_W-10}" cy="10" r="5" fill="#ef5350"/>` : ''}
+    </g>`;
+  });
+
+  svg.innerHTML = defs + edges + nodes;
+
+  // Bind click events
+  svg.querySelectorAll('.dag-node').forEach(n => {
+    n.addEventListener('click', () => selectNode(n.dataset.id));
+  });
+
+  // Legend
+  const groups = [...new Set(Object.values(STATE.tasks).map(t=>t.group||'user'))].sort();
+  document.getElementById('canvas-legend').innerHTML =
+    groups.map(g => `<span class="de-legend-item"><i style="background:${groupColor(g)}"></i>${g}</span>`).join('');
+
+  applyFilters();
+}
+
+// ── Node selection & detail panel ─────────────────────────────────────────
+function selectNode(id) {
+  STATE.selectedId = id;
+  // Re-highlight in SVG
+  document.querySelectorAll('.dag-node').forEach(n => {
+    n.classList.toggle('is-selected', n.dataset.id === id);
+    const t = STATE.tasks[n.dataset.id];
+    const col = groupColor(t?.group||'user');
+    const bg = n.querySelector('.dag-node__bg');
+    if (bg) {
+      bg.style.fill = n.classList.contains('is-selected') ? col : 'var(--surface)';
+      bg.style.strokeWidth = n.classList.contains('is-selected') ? '2' : '1.5';
+    }
+  });
+  loadDetail(id);
+  document.getElementById('de-detail').setAttribute('aria-hidden', 'false');
+  document.getElementById('de-detail').classList.add('is-open');
+}
+
+function closeDetail() {
+  STATE.selectedId = null;
+  document.getElementById('de-detail').classList.remove('is-open');
+  document.getElementById('de-detail').setAttribute('aria-hidden', 'true');
+  document.querySelectorAll('.dag-node.is-selected').forEach(n => n.classList.remove('is-selected'));
+}
+
+async function loadDetail(id) {
+  const t = STATE.tasks[id];
+  if (!t) return;
+  const g = t.group || 'user';
+  const col = groupColor(g);
+
+  document.getElementById('d-title').textContent = t.label || id;
+  document.getElementById('d-id').textContent = id;
+  const badge = document.getElementById('d-group-badge');
+  badge.textContent = g;
+  badge.style.background = col + '22';
+  badge.style.color = col;
+
+  const deps = Array.isArray(t.deps) ? t.deps : [];
+  const err = t.errors || 0;
+
+  // Stat grid
+  let html = `<div class="d-stats">
+    <div class="d-stat ${t.running ? 'd-stat--on' : ''}">
+      <span>${t.running ? '● Corriendo' : '○ Detenida'}</span>
+    </div>
+    <div class="d-stat"><span class="d-stat__n">${t.runs||0}</span><span class="d-stat__l">Runs</span></div>
+    <div class="d-stat ${err>0?'d-stat--err':''}"><span class="d-stat__n">${err}</span><span class="d-stat__l">Errores</span></div>
+    <div class="d-stat"><span class="d-stat__n">${t.avgMs?t.avgMs.toFixed(1):'—'}</span><span class="d-stat__l">Avg ms</span></div>
+    <div class="d-stat"><span class="d-stat__n">${t.interval||'—'}s</span><span class="d-stat__l">Intervalo</span></div>
+    <div class="d-stat"><span class="d-stat__n">L${t.dag_order||0}</span><span class="d-stat__l">DAG</span></div>
+  </div>`;
+
+  if (deps.length) {
+    html += `<div class="d-deps"><strong>Deps:</strong> ${deps.map(d=>`<code>${d}</code>`).join(' ')}</div>`;
+  }
+  if (t.lastRun && t.lastRun !== '') {
+    html += `<div class="d-last">Último: <code>${t.lastRun}</code> · ${t.lastMs?.toFixed(0)||'—'} ms</div>`;
+  }
+
+  // Fetch history and render sparkline
+  try {
+    const hr = await fetch(`/tasks/history/${id}`);
+    const hist = await hr.json();
+    const items = Array.isArray(hist) ? hist : (hist.history || []);
+    if (items.length > 0) {
+      html += renderSparkline(items, col);
+      html += renderHistTable(items.slice(0,8));
+    }
+  } catch(_) {}
+
+  document.getElementById('d-body').innerHTML = html;
+  document.getElementById('d-actions').style.display = '';
+}
+
+function renderSparkline(items, col) {
+  const vals = items.map(h => h.ms || 0);
+  const max = Math.max(...vals, 1);
+  const bars = vals.map((v, i) => {
+    const pct = Math.max(4, Math.round((v/max)*52));
+    const ok = items[i].ok !== false;
+    const color = ok ? col : '#ef5350';
+    return `<span class="d-bar" style="height:${pct}px;background:${color}"
+              title="${v.toFixed(1)}ms${ok?'':' ✗'}"></span>`;
+  }).reverse().join('');
+  return `<div class="d-sparkline">${bars}</div>`;
+}
+
+function renderHistTable(items) {
+  const rows = items.map(h => {
+    const ok = h.ok !== false;
+    return `<tr class="${ok?'':'tr-err'}">
+      <td>${h.at||'—'}</td><td>${(h.ms||0).toFixed(1)}</td>
+      <td>${ok ? '✓' : '✗'}</td>
+      <td class="d-errtxt">${h.err||''}</td>
+    </tr>`;
+  }).join('');
+  return `<table class="d-hist-tbl"><thead><tr><th>Hora</th><th>ms</th><th>OK</th><th>Error</th></tr></thead>
+    <tbody>${rows}</tbody></table>`;
+}
+
+async function refreshDetail(id) {
+  if (id && document.getElementById('de-detail').classList.contains('is-open')) {
+    await loadDetail(id);
+  }
+}
+
+// ── Task actions ───────────────────────────────────────────────────────────
+async function taskAction(action) {
+  const id = STATE.selectedId;
+  if (!id) return;
+  await fetch(`/tasks/${action}/${id}`, { method: 'POST' });
+  await fetchAll();
+  await loadDetail(id);
+}
+
+// ── METRICS TAB ───────────────────────────────────────────────────────────
+function renderMetrics() {
+  renderGroupCards();
+  renderHeatmap();
+  renderErrorList();
+}
+
+function renderGroupCards() {
+  const groups = {};
+  Object.entries(STATE.tasks).forEach(([id, t]) => {
+    const g = t.group || 'user';
+    if (!groups[g]) groups[g] = { runs:0, errors:0, avgMsSum:0, runCount:0, running:0, total:0 };
+    groups[g].runs    += t.runs    || 0;
+    groups[g].errors  += t.errors  || 0;
+    groups[g].total   += 1;
+    if (t.running) groups[g].running++;
+    if (t.runs > 0) { groups[g].avgMsSum += t.avgMs || 0; groups[g].runCount++; }
+  });
+
+  const html = Object.entries(groups).sort(([a],[b]) => a.localeCompare(b)).map(([g, m]) => {
+    const col = groupColor(g);
+    const avg = m.runCount ? (m.avgMsSum/m.runCount).toFixed(1) : '—';
+    const errRate = m.runs ? ((m.errors/m.runs)*100).toFixed(1) : '0.0';
+    return `<div class="de-gcard" style="--gcard-color:${col}">
+      <div class="de-gcard__top">
+        <span class="de-gcard__name">${g}</span>
+        <span class="de-gcard__running">${m.running}/${m.total} <small>activas</small></span>
+      </div>
+      <div class="de-gcard__stats">
+        <div class="de-gcard__stat"><span>${fmtNum(m.runs)}</span><small>runs</small></div>
+        <div class="de-gcard__stat"><span>${avg}ms</span><small>avg</small></div>
+        <div class="de-gcard__stat ${m.errors>0?'de-gcard__stat--err':''}"><span>${errRate}%</span><small>err rate</small></div>
+      </div>
+      <div class="de-gcard__bar">
+        <div class="de-gcard__bar-fill" style="width:${Math.min(100,m.running/Math.max(m.total,1)*100)}%;background:${col}"></div>
+      </div>
+    </div>`;
+  }).join('');
+  document.getElementById('metrics-grid').innerHTML = html || '<p class="de-empty">Sin datos</p>';
+}
+
+function renderHeatmap() {
+  const tasks = Object.entries(STATE.tasks)
+    .filter(([,t]) => t.runs > 0)
+    .sort(([a],[b]) => a.localeCompare(b));
+  if (!tasks.length) { document.getElementById('heatmap').innerHTML = '<p class="de-empty">Sin datos</p>'; return; }
+
+  const allMs = tasks.flatMap(([,t]) => (t.history||[]).map(h=>h.ms||0));
+  const maxMs = Math.max(...allMs, 1);
+
+  const html = tasks.map(([id, t]) => {
+    const col = groupColor(t.group||'user');
+    const cells = (t.history||[]).slice(0,20).map(h => {
+      const pct = Math.min(1, (h.ms||0)/maxMs);
+      const ok = h.ok !== false;
+      const opacity = ok ? 0.15 + pct*0.85 : 1;
+      const bg = ok ? col : '#ef5350';
+      return `<span class="de-hcell" style="background:${bg};opacity:${opacity.toFixed(2)}"
+                    title="${id}: ${(h.ms||0).toFixed(1)}ms${ok?'':' ERR'}"></span>`;
+    }).join('');
+    return `<div class="de-hrow">
+      <span class="de-hrow__label" style="color:${col}">${id}</span>
+      <div class="de-hrow__cells">${cells}</div>
+      <span class="de-hrow__avg">${t.avgMs?t.avgMs.toFixed(0)+'ms':'—'}</span>
+    </div>`;
+  }).join('');
+  document.getElementById('heatmap').innerHTML = html;
+}
+
+function renderErrorList() {
+  const errTasks = Object.entries(STATE.tasks)
+    .filter(([,t]) => (t.errors||0) > 0)
+    .sort(([,a],[,b]) => (b.errors||0) - (a.errors||0));
+  if (!errTasks.length) {
+    document.getElementById('error-list').innerHTML = '<p class="de-ok">✓ Sin errores activos.</p>';
+    return;
+  }
+  const html = errTasks.map(([id, t]) => {
+    const last = (t.history||[]).find(h => h.ok === false);
+    return `<div class="de-err-item">
+      <strong>${id}</strong>
+      <span class="de-err-badge">${t.errors} errores</span>
+      ${last ? `<code class="de-err-msg">${last.err||'—'} @ ${last.at||'?'}</code>` : ''}
+    </div>`;
+  }).join('');
+  document.getElementById('error-list').innerHTML = html;
+}
+
+// ── DEPENDENCY PICKER ─────────────────────────────────────────────────────
+function renderDepList(filter) {
+  const list = document.getElementById('dep-list');
+  const ids = Object.keys(STATE.tasks).sort();
+  const filtered = filter ? ids.filter(id => id.includes(filter) || (STATE.tasks[id].group||'').includes(filter)) : ids;
+  const html = filtered.map(id => {
+    const t = STATE.tasks[id];
+    const g = t?.group || 'user';
+    const col = groupColor(g);
+    const sel = STATE.selectedDeps.has(id);
+    return `<button type="button" class="de-dep-chip ${sel?'is-sel':''}" data-dep="${id}"
+               style="--chip-col:${col}">
+      <span class="de-dep-chip__group">${g}</span>
+      <span class="de-dep-chip__id">${id}</span>
+      <span class="de-dep-chip__iv">${t?.interval||'?'}s</span>
+    </button>`;
+  }).join('');
+  list.innerHTML = html || '<p class="de-empty">Sin tareas disponibles</p>';
+  list.querySelectorAll('.de-dep-chip').forEach(btn => {
+    btn.addEventListener('click', () => toggleDep(btn.dataset.dep));
+  });
+  updateSelectedDeps();
+}
+
+function toggleDep(id) {
+  if (STATE.selectedDeps.has(id)) STATE.selectedDeps.delete(id);
+  else STATE.selectedDeps.add(id);
+  renderDepList(document.getElementById('deps-search').value.toLowerCase());
+  autoComputeDagOrder();
+  renderMiniDAG();
+}
+
+function updateSelectedDeps() {
+  const chips = document.getElementById('selected-deps-chips');
+  const deps = [...STATE.selectedDeps];
+  if (!deps.length) {
+    chips.innerHTML = '<em class="de-chips__empty">Ninguna (tarea raíz L0)</em>';
+  } else {
+    chips.innerHTML = deps.map(id => {
+      const col = groupColor(STATE.tasks[id]?.group||'user');
+      return `<span class="de-sel-chip" style="background:${col}22;border-color:${col};color:${col}">${id}
+        <button type="button" data-dep="${id}" class="de-sel-chip__rm">×</button></span>`;
+    }).join('');
+    chips.querySelectorAll('.de-sel-chip__rm').forEach(b => {
+      b.addEventListener('click', () => toggleDep(b.dataset.dep));
+    });
+  }
+}
+
+function autoComputeDagOrder() {
+  const maxOrder = Math.max(
+    0,
+    ...[...STATE.selectedDeps].map(id => (STATE.tasks[id]?.dag_order || 0))
+  );
+  const newOrder = STATE.selectedDeps.size > 0 ? maxOrder + 1 : 0;
+  const input = document.getElementById('c-dag-order');
+  input.value = newOrder;
+  document.getElementById('c-dag-order-hint').textContent =
+    STATE.selectedDeps.size ? `(max deps L${maxOrder} + 1)` : '(raíz)';
+}
+
+function renderMiniDAG() {
+  const svg = document.getElementById('mini-dag-svg');
+  if (!STATE.selectedDeps.size) { svg.innerHTML = '<text x="50%" y="50%" text-anchor="middle" font-size="12" fill="var(--text-muted)">Sin dependencias (raíz L0)</text>'; return; }
+  const depIds = [...STATE.selectedDeps];
+  const newId  = document.getElementById('c-id').value || 'nueva-tarea';
+  const newCol = groupColor(document.getElementById('c-group').value || 'user');
+  const W = 110, H = 36, GAP = 30;
+  const items = [...depIds, newId];
+  const svgW = Math.max(300, depIds.length * (W+10) + GAP + W + 60);
+  svg.setAttribute('viewBox', `0 0 ${svgW} 140`);
+
+  let defs = `<defs><marker id="ma" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="5" markerHeight="5" orient="auto">
+    <path d="M0,0 L10,5 L0,10 Z" fill="#6b7280"/></marker></defs>`;
+  let edges = '', nodes = '';
+
+  const depX = 20;
+  depIds.forEach((id, i) => {
+    const t = STATE.tasks[id];
+    const col = groupColor(t?.group||'user');
+    const y = 20 + i * (H+14);
+    const tx = depX + W;
+    const nx = tx + GAP;
+    const ny = depIds.length === 1 ? y : 20 + (depIds.length-1)*(H+14)/2;
+    edges += `<path d="M${tx},${y+H/2} C${(tx+nx)/2},${y+H/2} ${(tx+nx)/2},${ny+H/2} ${nx},${ny+H/2}"
+       stroke="#6b7280" fill="none" stroke-width="1.5" marker-end="url(#ma)"/>`;
+    nodes += `<g transform="translate(${depX},${y})">
+      <rect width="${W}" height="${H}" rx="6" fill="${col}22" stroke="${col}" stroke-width="1.5"/>
+      <text x="6" y="14" font-size="9" fill="${col}" font-weight="700">${t?.group||'user'}</text>
+      <text x="6" y="27" font-size="10" fill="var(--text)">${id.length>15?id.slice(0,14)+'…':id}</text>
+    </g>`;
+  });
+
+  const ny = depIds.length === 1 ? 20 : 20 + (depIds.length-1)*(H+14)/2;
+  const nx = depX + W + GAP;
+  nodes += `<g transform="translate(${nx},${ny})">
+    <rect width="${W}" height="${H}" rx="6" fill="${newCol}22" stroke="${newCol}" stroke-width="2" stroke-dasharray="4 2"/>
+    <text x="6" y="14" font-size="9" fill="${newCol}" font-weight="700">${document.getElementById('c-group').value||'user'}</text>
+    <text x="6" y="27" font-size="10" fill="var(--text)">${newId.length>15?newId.slice(0,14)+'…':newId}</text>
+  </g>`;
+
+  svg.innerHTML = defs + edges + nodes;
+  svg.style.height = Math.max(100, 20 + depIds.length*(H+14)) + 'px';
+}
+
+// ── CREATE FORM ───────────────────────────────────────────────────────────
+document.addEventListener('DOMContentLoaded', () => {
+  ['c-id','c-group'].forEach(id => {
+    document.getElementById(id)?.addEventListener('input', renderMiniDAG);
+  });
+});
+
+async function submitCreate(e) {
+  e.preventDefault();
+  const id       = document.getElementById('c-id').value.trim();
+  const label    = document.getElementById('c-label').value.trim() || id;
+  const group    = document.getElementById('c-group').value;
+  const interval = parseInt(document.getElementById('c-interval').value) || 60;
+  const dagOrder = parseInt(document.getElementById('c-dag-order').value) || 0;
+  const code     = document.getElementById('c-code').value.trim();
+  const enabled  = document.getElementById('c-enabled').checked;
+  const persist  = document.getElementById('c-persist').checked;
+  const startNow = document.getElementById('c-start-now').checked;
+
+  if (!id) return setStatus('ID requerido', 'error');
+  if (!code) return setStatus('Acción WL requerida', 'error');
+  if (!/^[a-z0-9\-]+$/.test(id)) return setStatus('ID: solo a-z, 0-9, guiones', 'error');
+
+  const deps = [...STATE.selectedDeps];
+  setStatus('Creando…', 'info');
+
+  try {
+    // 1. Persist to DB
+    if (persist) {
+      const body = new URLSearchParams({
+        task_id: id, label, group_name: group,
+        interval_s: interval, enabled: enabled ? 1 : 0,
+        deps: JSON.stringify(deps), dag_order: dagOrder,
+        action_code: code
+      });
+      const res = await fetch('/tasks/config/create', { method:'POST', body });
+      const j = await res.json();
+      if (!j.ok && j.error !== 'already exists') {
+        return setStatus('Error DB: ' + (j.error||''), 'error');
+      }
+    }
+
+    // 2. Register in runtime
+    if (startNow) {
+      const body = new URLSearchParams({
+        id, label, group, interval, enabled: enabled ? 'true' : 'false',
+        deps: deps.join(','), actionCode: code
+      });
+      const res = await fetch('/tasks/register', { method:'POST', body });
+      const j = await res.json();
+      if (!j.ok) return setStatus('Error runtime: ' + (j.error||''), 'error');
+      if (enabled) {
+        await fetch(`/tasks/start/${id}`, { method:'POST' });
+      }
+    }
+
+    setStatus(`✓ Tarea "${id}" creada correctamente.`, 'ok');
+    STATE.selectedDeps.clear();
+    document.getElementById('create-form').reset();
+    document.getElementById('c-dag-order').value = '0';
+    updateSelectedDeps();
+    await fetchAll();
+    setTimeout(() => switchTab('viz'), 1200);
+  } catch (err) {
+    setStatus('Error: ' + err.message, 'error');
+  }
+}
+
+function setStatus(msg, type) {
+  const el = document.getElementById('create-status');
+  el.textContent = msg;
+  el.className = 'de-status de-status--' + type;
+}
+
+// ── Theme rotation (same as other pages) ─────────────────────────────────
+(function(){
+  const h = document.documentElement;
+  const m = h.dataset.themeMode;
+  if (m !== 'auto') return;
+  const order = h.dataset.themeOrder.split(',').map(s=>s.trim()).filter(Boolean);
+  const iv    = parseInt(h.dataset.themeInterval)||20;
+  const epoch = parseInt(h.dataset.themeEpoch)||0;
+  if (!order.length || !epoch) return;
+  function tick(){
+    const t = Math.floor(Date.now()/1000);
+    const i = Math.floor(t/iv) % order.length;
+    h.dataset.theme = order[i];
+  }
+  tick();
+  setInterval(tick, (iv - (Math.floor(Date.now()/1000) % iv)) * 1000);
+})();
+</script>
+
+<script>
+// Navbar toggle
+document.getElementById('nt')?.addEventListener('click', () =>
+  document.getElementById('nl').classList.toggle('is-open'));
+</script>
+</body>
+</html>

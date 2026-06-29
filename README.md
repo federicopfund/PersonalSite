@@ -39,10 +39,13 @@ graph TD
   Config --> WA
   Config --> Mailer
   Settings --> Theme
+  Settings --> UXColorRules["🎯 UXColorRules"]
+  Theme --> UXColorRules
   Flow --> NestScheduler
   Cache --> Assets
   NestScheduler --> TaskManager
   TaskManager --> Scheduler
+  UXColorRules --> Scheduler
   Post --> Renderer
   Theme --> Renderer
   Assets --> Renderer
@@ -110,7 +113,7 @@ PacletObject["PersonalSite"]["Version"]   (* → "1.0.1" *)
 ### Opción A — Contra el servidor en ejecución (más rápida)
 
 El servidor en `http://localhost:8080` ya tiene el `TaskManager` cargado
-con las 6 tareas del sistema corriendo.
+con las 32 tareas (10 activas en producción) corriendo.
 
 ```bash
 # Snapshot completo del runtime
@@ -179,19 +182,176 @@ PersonalSite`TaskManager`unregister["test-cli"]
 
 (* Confirmar que desapareció *)
 PersonalSite`TaskManager`info["test-cli"]    (* → $Failed *)
-Keys @ PersonalSite`TaskManager`allTasks[]   (* → 6 tareas del sistema *)
+Keys @ PersonalSite`TaskManager`allTasks[]   (* → 32 tareas del sistema *)
 ```
 
-### Tareas registradas por defecto
+### Pipeline de tareas — 32 tareas en 8 grupos
 
-| ID | Grupo | Intervalo | Deps |
-|----|-------|-----------|------|
-| `heartbeat` | system | 30 s | — |
-| `cache-warm` | system | 300 s | heartbeat |
-| `theme-rotate` | theme | 10 s | heartbeat |
-| `cards-refresh` | cache | 20 s | cache-warm |
-| `metric-refresh` | cache | 300 s | cards-refresh |
-| `nest-refresh` | flow | 300 s | cache-warm |
+#### DAG activo en producción (10 tareas `enabled=True`)
+
+```mermaid
+flowchart LR
+    subgraph SYS["⚙ system"]
+        HB["heartbeat\n30 s"]
+        CW["cache-warm\n300 s"]
+    end
+    subgraph THEME["🎨 theme"]
+        TR["theme-rotate\n10 s"]
+    end
+    subgraph UX["✨ ux — UX Color Rules"]
+        CU["contact-ux\n5 s"]
+        UCE["ux-color-eval\n15 s"]
+        UCA["ux-color-apply\n15 s"]
+        UCR["ux-color-report\n60 s"]
+    end
+    subgraph CACHE["💾 cache"]
+        CR["cards-refresh\n20 s"]
+        MR["metric-refresh\n300 s"]
+    end
+    subgraph FLOW["⚡ flow"]
+        NR["nest-refresh\n300 s"]
+    end
+
+    HB --> CW
+    HB --> TR
+    HB --> CU
+    HB --> UCE
+    TR --> UCE
+    UCE --> UCA
+    UCA --> UCR
+    CW --> CR
+    CR --> MR
+    CW --> NR
+```
+
+**Motor de reglas UX (`ux-color-eval`)** evalúa 4 fuentes con arbitraje por score:
+
+| Regla | Score | Lógica |
+|-------|------:|--------|
+| `engagement` | **90** | CTA Contacto activo → `pulse-green / energize` |
+| `time-of-day` | 60 | Franja horaria UTC → acento semántico (dawn-indigo, morning-amber, afternoon-cyan…) |
+| `weekday-mode` | 40 | Lun-Jue → `focus-sky`, Vie → `creative-violet`, Sáb-Dom → `relax-sage` |
+| `theme-sync` | 30 | Armoniza con el tema activo del sitio (tiebreaker) |
+
+Tokens persistidos en `Settings` DB → leídos por el frontend:
+`ux.color.accent` · `ux.color.surface` · `ux.color.intent` · `ux.color.rule` · `ux.color.score` · `ux.color.epoch`
+
+---
+
+#### Pipeline DevOps (17 tareas `enabled=False`, activar manualmente)
+
+```mermaid
+flowchart LR
+    subgraph L0["L0 — roots"]
+        CL["code-lint\n120 s"]
+        GS["git-status\n60 s"]
+    end
+    subgraph L1
+        TRN["test-run\n300 s"]
+        GD["git-diff\n60 s"]
+    end
+    subgraph L2
+        TRP["test-report\n300 s"]
+        PCL["paclet-clean\n600 s"]
+    end
+    subgraph L3
+        PB["paclet-build\n600 s"]
+        GST["git-stage\n3600 s"]
+    end
+    subgraph L4
+        PV["paclet-verify\n600 s"]
+        DBB["docker-build\n3600 s"]
+        GCO["git-commit\n3600 s"]
+    end
+    subgraph L5
+        DV["docker-verify\n300 s"]
+        GP["git-push\n3600 s"]
+    end
+    subgraph L6
+        ST["smoke-test\n120 s"]
+        DN["deploy-notify\n3600 s"]
+    end
+    subgraph L7
+        PC["perf-check\n120 s"]
+        CG["changelog-gen\n3600 s"]
+    end
+
+    CL --> TRN
+    GS --> GD
+    TRN --> TRP
+    TRN --> PCL
+    GD --> GST
+    TRP --> PB
+    PCL --> PB
+    TRP --> GCO
+    PB --> PV
+    PB --> DBB
+    GST --> GCO
+    PV --> GP
+    DBB --> DV
+    GCO --> GP
+    DV --> ST
+    GP --> ST
+    GP --> DN
+    ST --> PC
+    GP --> CG
+```
+
+#### Pipeline SCSS hot-reload (5 tareas `enabled=False`, solo dev)
+
+```mermaid
+flowchart LR
+    subgraph DEV["🛠 dev"]
+        SW["scss-watch\n3 s"]
+        SC["scss-compile\n3 s"]
+        CV["css-version\n3 s"]
+        CB["css-cache-bust\n3 s"]
+        SR["scss-report\n30 s"]
+    end
+    SW --> SC --> CV --> SR
+    SC --> CB
+```
+
+Activar en caliente: `PersonalSite\`TaskManager\`start["scss-watch"]`
+
+---
+
+#### Tabla completa — 32 tareas
+
+| ID | Grupo | Intervalo | DAG orden | `enabled` | Dependencias |
+|----|-------|----------:|:---------:|:---------:|--------------|
+| `heartbeat` | system | 30 s | L0 | ✅ | — |
+| `cache-warm` | system | 300 s | L1 | ✅ | heartbeat |
+| `theme-rotate` | theme | 10 s | L1 | ✅ | heartbeat |
+| `contact-ux` | ux | 5 s | L1 | ✅ | heartbeat |
+| `cards-refresh` | cache | 20 s | L2 | ✅ | cache-warm |
+| `nest-refresh` | flow | 300 s | L2 | ✅ | cache-warm |
+| `ux-color-eval` | ux | 15 s | L2 | ✅ | heartbeat, theme-rotate |
+| `metric-refresh` | cache | 300 s | L3 | ✅ | cards-refresh |
+| `ux-color-apply` | ux | 15 s | L3 | ✅ | ux-color-eval |
+| `ux-color-report` | ux | 60 s | L4 | ✅ | ux-color-apply |
+| `scss-watch` | dev | 3 s | L0 | ❌ | — |
+| `scss-compile` | dev | 3 s | L1 | ❌ | scss-watch |
+| `css-version` | dev | 3 s | L2 | ❌ | scss-compile |
+| `css-cache-bust` | dev | 3 s | L2 | ❌ | scss-compile |
+| `scss-report` | dev | 30 s | L3 | ❌ | css-version |
+| `code-lint` | test | 120 s | L0 | ❌ | — |
+| `git-status` | git | 60 s | L0 | ❌ | — |
+| `test-run` | test | 300 s | L1 | ❌ | code-lint |
+| `git-diff` | git | 60 s | L1 | ❌ | git-status |
+| `test-report` | test | 300 s | L2 | ❌ | test-run |
+| `paclet-clean` | build | 600 s | L2 | ❌ | test-run |
+| `paclet-build` | build | 600 s | L3 | ❌ | paclet-clean, test-report |
+| `git-stage` | git | 3600 s | L3 | ❌ | git-diff |
+| `paclet-verify` | build | 600 s | L4 | ❌ | paclet-build |
+| `docker-build` | ops | 3600 s | L4 | ❌ | paclet-build |
+| `git-commit` | git | 3600 s | L4 | ❌ | git-stage, test-report |
+| `docker-verify` | ops | 300 s | L5 | ❌ | docker-build |
+| `git-push` | git | 3600 s | L5 | ❌ | git-commit, paclet-verify |
+| `smoke-test` | ops | 120 s | L6 | ❌ | docker-verify, git-push |
+| `deploy-notify` | ops | 3600 s | L6 | ❌ | git-push |
+| `perf-check` | ops | 120 s | L7 | ❌ | smoke-test |
+| `changelog-gen` | git | 3600 s | L7 | ❌ | git-push |
 
 ---
 
@@ -373,7 +533,7 @@ Tests formales en Wolfram Language organizados por **layer** de módulos.
 Cada suite corre con `TestReport` nativo y reporta `pass / total` por archivo.
 
 ```bash
-# Todos los módulos (193 tests)
+# Todos los módulos (258 tests)
 docker exec profile-web-1 wolframscript -script /app/PersonalSite/Tests/TestReport.wl
 
 # Solo la capa de sesiones: SessionFSM + SessionStore (106 tests)
@@ -381,6 +541,9 @@ docker exec profile-web-1 wolframscript -script /app/PersonalSite/Tests/TestRepo
 
 # Solo la capa de flujo: Flow + NestScheduler (65 tests)
 docker exec profile-web-1 wolframscript -script /app/PersonalSite/Tests/TestReport.wl -- --layer flow
+
+# Solo UX Color Rules (65 tests)
+docker exec profile-web-1 wolframscript -script /app/PersonalSite/Tests/TestReport.wl -- --layer ux
 
 # Solo base de datos: Database (22 tests)
 docker exec profile-web-1 wolframscript -script /app/PersonalSite/Tests/TestReport.wl -- --layer db
@@ -396,9 +559,10 @@ docker exec profile-web-1 wolframscript -script /app/PersonalSite/Tests/TestRepo
 
 | `--layer` | Suites | Tests |
 |-----------|--------|------:|
-| `all` *(default)* | SessionFSM, SessionStore, Flow, NestScheduler, Database | 193 |
+| `all` *(default)* | SessionFSM, SessionStore, Flow, NestScheduler, Database, UXColorRules | 258 |
 | `session` | SessionFSM, SessionStore | 106 |
 | `flow` | Flow, NestScheduler | 65 |
+| `ux` | UXColorRules | 65 |
 | `models` | Flow, NestScheduler, Database | 87 |
 | `db` | Database | 22 |
 
@@ -411,6 +575,7 @@ docker exec profile-web-1 wolframscript -script /app/PersonalSite/Tests/TestRepo
 | `Tests/Flow.wlt` | Pure WL | `edges`, `acyclicQ`, `layers`, `run` con backends sync/session/parallel |
 | `Tests/NestScheduler.wlt` | Pure WL | `build`, `records` por nivel, `run`, `export` CSV/JSON |
 | `Tests/Database.wlt` | Integración SQLite | `setup`, `diag`, `execute`, CRUD, datos de seed |
+| `Tests/UXColorRules.wlt` | Pure WL + DB | 9 secciones: reglas puras, árbitro, engagement, apply/palette, ring-buffer, DAG estructural, seeds |
 
 #### Variables de entorno de sesión
 
@@ -472,7 +637,7 @@ Variables disponibles (ver `docker-compose.yml`):
 | `SMTP_FROM`     | `SMTP_USER`                 | Dirección remitente                 |
 
 Si `SMTP_USER`/`SMTP_PASSWORD` no están definidos, el formulario sigue
-visible pero informa que el envío no está configurado (sin romper el sitio).
+visible pero informa que el envío no está configurado (sin romper el sitio).---
 #Resultado — WolframScript 14.2.1 — todos los casos ✓
 CREATE     sessionId: 530b16b4...  expiresAt: 2026-06-29 01:29:55
 
