@@ -59,6 +59,45 @@ VALUES
   ('css-cache-bust','CSS cache bust (clear WL fragment cache)',   'dev', 3,  0, '["scss-compile"]', '2', 'Function[PersonalSite`DevStyle`cacheBust[]]'),
   ('scss-report',   'SCSS pipeline report',                       'dev', 30, 0, '["css-version"]',  '3', 'Function[PersonalSite`DevStyle`report[]]');
 
+-- ── DevOps pipeline (17 tareas, enabled=0 — activar manualmente) ───────
+-- DAG de 8 niveles:
+--   L0: code-lint           git-status
+--   L1: test-run            git-diff
+--   L2: test-report         paclet-clean
+--   L3: paclet-build        git-stage
+--   L4: paclet-verify       docker-build     git-commit
+--   L5: docker-verify       git-push
+--   L6: smoke-test          deploy-notify
+--   L7: perf-check          changelog-gen
+INSERT OR IGNORE INTO scheduler_tasks
+  (task_id, label, group_name, interval_s, enabled, deps, dag_order, action_code)
+VALUES
+  -- L0: roots
+  ('code-lint',      'Code lint (SyntaxQ .wl files)',          'test',  120, 0, '[]',                              '0', 'Function[PersonalSite`DevOps`codeLint[]]'),
+  ('git-status',     'Git status (porcelain)',                  'git',    60, 0, '[]',                              '0', 'Function[PersonalSite`DevOps`gitStatus[]]'),
+  -- L1
+  ('test-run',       'Test suite runner',                       'test',  300, 0, '["code-lint"]',                   '1', 'Function[PersonalSite`DevOps`runTests[]]'),
+  ('git-diff',       'Git diff --stat HEAD',                    'git',    60, 0, '["git-status"]',                  '1', 'Function[PersonalSite`DevOps`gitDiff[]]'),
+  -- L2
+  ('test-report',    'Test report snapshot',                    'test',  300, 0, '["test-run"]',                    '2', 'Function[PersonalSite`DevOps`testReport[]]'),
+  ('paclet-clean',   'Paclet clean build/ artifacts',           'build', 600, 0, '["test-run"]',                    '2', 'Function[PersonalSite`DevOps`pacletClean[]]'),
+  -- L3
+  ('paclet-build',   'Paclet build (build_paclet.py)',          'build', 600, 0, '["paclet-clean","test-report"]',  '3', 'Function[PersonalSite`DevOps`pacletBuild[]]'),
+  ('git-stage',      'Git stage all changes (git add -A)',      'git',  3600, 0, '["git-diff"]',                   '3', 'Function[PersonalSite`DevOps`gitStage[]]'),
+  -- L4
+  ('paclet-verify',  'Paclet verify (size + exists)',           'build', 600, 0, '["paclet-build"]',                '4', 'Function[PersonalSite`DevOps`pacletVerify[]]'),
+  ('docker-build',   'Docker build personalsite:latest',        'ops',  3600, 0, '["paclet-build"]',               '4', 'Function[PersonalSite`DevOps`dockerBuild[]]'),
+  ('git-commit',     'Git commit (auto message + ISO ts)',       'git',  3600, 0, '["git-stage","test-report"]',    '4', 'Function[PersonalSite`DevOps`gitCommit[]]'),
+  -- L5
+  ('docker-verify',  'Docker verify container running',         'ops',   300, 0, '["docker-build"]',                '5', 'Function[PersonalSite`DevOps`dockerVerify[]]'),
+  ('git-push',       'Git push origin main',                    'git',  3600, 0, '["git-commit","paclet-verify"]', '5', 'Function[PersonalSite`DevOps`gitPush[]]'),
+  -- L6
+  ('smoke-test',     'HTTP smoke test GET / (status + latency)','ops',   120, 0, '["docker-verify","git-push"]',   '6', 'Function[PersonalSite`DevOps`smokeTest[]]'),
+  ('deploy-notify',  'Deploy notification (log event)',         'ops',  3600, 0, '["git-push"]',                   '6', 'Function[PersonalSite`DevOps`deployNotify[]]'),
+  -- L7
+  ('perf-check',     'Perf check avg latency (3 samples)',      'ops',   120, 0, '["smoke-test"]',                  '7', 'Function[PersonalSite`DevOps`perfCheck[]]'),
+  ('changelog-gen',  'Changelog gen (git log -10)',             'git',  3600, 0, '["git-push"]',                   '7', 'Function[PersonalSite`DevOps`changelogGen[]]');
+
 
 
 -- ── Session store (NestGraph permission FSM) ───────────────────────────

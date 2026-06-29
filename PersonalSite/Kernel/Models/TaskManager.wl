@@ -317,12 +317,17 @@ dagData[] :=
    layout LayeredDigraphEmbedding izquierda→derecha.         *)
 
 $groupPalette = <|
-  "system" -> RGBColor[0.35, 0.69, 1.00],
-  "dev"    -> RGBColor[0.66, 0.33, 0.97],
-  "cache"  -> RGBColor[0.00, 0.90, 1.00],
-  "flow"   -> RGBColor[0.66, 0.85, 0.66],
-  "theme"  -> RGBColor[1.00, 0.72, 0.40],
-  "kernel" -> RGBColor[0.92, 0.48, 0.10]
+  "system" -> RGBColor[0.35, 0.69, 1.00],   (* azul          *)
+  "dev"    -> RGBColor[0.66, 0.33, 0.97],   (* violeta       *)
+  "cache"  -> RGBColor[0.00, 0.90, 1.00],   (* cyan          *)
+  "flow"   -> RGBColor[0.66, 0.85, 0.66],   (* verde         *)
+  "theme"  -> RGBColor[1.00, 0.72, 0.40],   (* naranja       *)
+  "kernel" -> RGBColor[0.92, 0.48, 0.10],   (* WL orange     *)
+  (* ── DevOps pipeline ── *)
+  "test"   -> RGBColor[0.92, 0.86, 0.18],   (* amarillo lima *)
+  "git"    -> RGBColor[0.06, 0.78, 0.52],   (* esmeralda     *)
+  "build"  -> RGBColor[0.42, 0.28, 0.94],   (* indigo        *)
+  "ops"    -> RGBColor[0.96, 0.28, 0.37]    (* rosa/rojo     *)
 |>;
 
 PersonalSite`TaskManager`depGraph[] :=
@@ -384,14 +389,14 @@ PersonalSite`TaskManager`depGraph[] :=
       VertexStyle  -> vStyles,
       VertexSize   -> vSizes,
       EdgeStyle    -> Directive[
-        GrayLevel[0.45], Arrowheads[{{0.025, 1}}], AbsoluteThickness[1.1]],
+        GrayLevel[0.45], Arrowheads[{{0.018, 1}}], AbsoluteThickness[1.0]],
       GraphLayout  -> {
         "LayeredDigraphEmbedding",
         "Orientation" -> Left,
         If[roots =!= {}, "RootVertex" -> First[roots], Nothing]},
       Background   -> RGBColor[0.05, 0.05, 0.07],
-      ImageSize    -> {720, 360},
-      ImagePadding -> {{35, 35}, {55, 15}},
+      ImageSize    -> {1100, 520},
+      ImagePadding -> {{45, 45}, {70, 20}},
       PlotTheme    -> "Monochrome",
       (* Resaltar las running con halo amarillo *)
       GraphHighlight      -> running,

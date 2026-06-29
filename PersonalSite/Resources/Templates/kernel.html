@@ -113,7 +113,100 @@
         <button class="kernel-trigger-btn kta-poll" style="border-color:rgba(168,85,247,.35);background:rgba(168,85,247,.06)"
           data-expr="PersonalSite`TaskManager`depGraph[]">
           <span class="kta-label" style="color:rgba(168,85,247,.9)">&#9674;&nbsp;Pipeline&nbsp;Graph</span>
-          <code class="kta-expr">TaskManager`depGraph[]</code>
+          <code class="kta-expr">TaskManager`depGraph[] — 28 nodos</code>
+        </button>
+
+        <!-- ── DevOps Pipeline triggers ────────────────────────────── -->
+        <div class="kta-section-hdr" style="margin:.7rem 0 .3rem;font-size:.65rem;color:#555;text-transform:uppercase;letter-spacing:.06em;padding:.2rem .3rem;border-top:1px solid rgba(255,255,255,.07)">
+          &#128736; DevOps Pipeline
+        </div>
+
+        <!-- test group (amarillo) -->
+        <button class="kernel-trigger-btn kta-poll" style="border-color:rgba(235,220,47,.3);background:rgba(235,220,47,.05)"
+          data-expr="PersonalSite`DevOps`codeLint[]">
+          <span class="kta-label" style="color:rgba(235,220,47,.9)">&#10003;&nbsp;code-lint</span>
+          <code class="kta-expr">SyntaxQ todos los .wl</code>
+        </button>
+        <button class="kernel-trigger-btn kta-poll" style="border-color:rgba(235,220,47,.3);background:rgba(235,220,47,.05)"
+          data-expr="PersonalSite`DevOps`runTests[]">
+          <span class="kta-label" style="color:rgba(235,220,47,.9)">&#9654;&nbsp;test-run</span>
+          <code class="kta-expr">python tools/test_tasks.py</code>
+        </button>
+        <button class="kernel-trigger-btn kta-poll" style="border-color:rgba(235,220,47,.3);background:rgba(235,220,47,.05)"
+          data-expr="PersonalSite`DevOps`testReport[]">
+          <span class="kta-label" style="color:rgba(235,220,47,.9)">&#128196;&nbsp;test-report</span>
+          <code class="kta-expr">commit + timestamp snapshot</code>
+        </button>
+
+        <!-- git group (esmeralda) -->
+        <button class="kernel-trigger-btn kta-poll" style="border-color:rgba(15,200,133,.3);background:rgba(15,200,133,.05)"
+          data-expr="PersonalSite`DevOps`gitStatus[]">
+          <span class="kta-label" style="color:rgba(15,200,133,.9)">&#9432;&nbsp;git-status</span>
+          <code class="kta-expr">git status --porcelain</code>
+        </button>
+        <button class="kernel-trigger-btn kta-poll" style="border-color:rgba(15,200,133,.3);background:rgba(15,200,133,.05)"
+          data-expr="PersonalSite`DevOps`gitDiff[]">
+          <span class="kta-label" style="color:rgba(15,200,133,.9)">&#8942;&nbsp;git-diff</span>
+          <code class="kta-expr">git diff --stat HEAD</code>
+        </button>
+        <button class="kernel-trigger-btn kta-poll" style="border-color:rgba(15,200,133,.3);background:rgba(15,200,133,.05)"
+          data-expr="PersonalSite`DevOps`gitStage[]">
+          <span class="kta-label" style="color:rgba(15,200,133,.9)">&#43;&nbsp;git-stage</span>
+          <code class="kta-expr">git add -A</code>
+        </button>
+        <button class="kernel-trigger-btn kta-poll" style="border-color:rgba(15,200,133,.3);background:rgba(15,200,133,.05)"
+          data-expr="PersonalSite`DevOps`gitCommit[]">
+          <span class="kta-label" style="color:rgba(15,200,133,.9)">&#10003;&nbsp;git-commit</span>
+          <code class="kta-expr">commit auto ISO message</code>
+        </button>
+        <button class="kernel-trigger-btn kta-poll" style="border-color:rgba(15,200,133,.3);background:rgba(15,200,133,.05)"
+          data-expr="PersonalSite`DevOps`gitPush[]">
+          <span class="kta-label" style="color:rgba(15,200,133,.9)">&#8593;&nbsp;git-push</span>
+          <code class="kta-expr">git push origin main</code>
+        </button>
+        <button class="kernel-trigger-btn kta-poll" style="border-color:rgba(15,200,133,.3);background:rgba(15,200,133,.05)"
+          data-expr="PersonalSite`DevOps`changelogGen[]">
+          <span class="kta-label" style="color:rgba(15,200,133,.9)">&#128218;&nbsp;changelog</span>
+          <code class="kta-expr">git log --oneline -10</code>
+        </button>
+
+        <!-- build group (indigo) -->
+        <button class="kernel-trigger-btn kta-poll" style="border-color:rgba(107,71,240,.3);background:rgba(107,71,240,.05)"
+          data-expr="PersonalSite`DevOps`pacletClean[]">
+          <span class="kta-label" style="color:rgba(107,71,240,.9)">&#128465;&nbsp;paclet-clean</span>
+          <code class="kta-expr">rm build/*.paclet</code>
+        </button>
+        <button class="kernel-trigger-btn kta-poll" style="border-color:rgba(107,71,240,.3);background:rgba(107,71,240,.05)"
+          data-expr="PersonalSite`DevOps`pacletBuild[]">
+          <span class="kta-label" style="color:rgba(107,71,240,.9)">&#9874;&nbsp;paclet-build</span>
+          <code class="kta-expr">python tools/build_paclet.py</code>
+        </button>
+        <button class="kernel-trigger-btn kta-poll" style="border-color:rgba(107,71,240,.3);background:rgba(107,71,240,.05)"
+          data-expr="PersonalSite`DevOps`pacletVerify[]">
+          <span class="kta-label" style="color:rgba(107,71,240,.9)">&#9745;&nbsp;paclet-verify</span>
+          <code class="kta-expr">check .paclet size + exists</code>
+        </button>
+
+        <!-- ops group (rosa) -->
+        <button class="kernel-trigger-btn kta-poll" style="border-color:rgba(245,71,95,.3);background:rgba(245,71,95,.05)"
+          data-expr="PersonalSite`DevOps`dockerVerify[]">
+          <span class="kta-label" style="color:rgba(245,71,95,.9)">&#128994;&nbsp;docker-verify</span>
+          <code class="kta-expr">docker ps profile-web-1</code>
+        </button>
+        <button class="kernel-trigger-btn kta-poll" style="border-color:rgba(245,71,95,.3);background:rgba(245,71,95,.05)"
+          data-expr="PersonalSite`DevOps`smokeTest[]">
+          <span class="kta-label" style="color:rgba(245,71,95,.9)">&#128293;&nbsp;smoke-test</span>
+          <code class="kta-expr">GET / status + latency</code>
+        </button>
+        <button class="kernel-trigger-btn kta-poll" style="border-color:rgba(245,71,95,.3);background:rgba(245,71,95,.05)"
+          data-expr="PersonalSite`DevOps`perfCheck[]">
+          <span class="kta-label" style="color:rgba(245,71,95,.9)">&#9201;&nbsp;perf-check</span>
+          <code class="kta-expr">avg latency 3 probes</code>
+        </button>
+        <button class="kernel-trigger-btn kta-poll" style="border-color:rgba(245,71,95,.3);background:rgba(245,71,95,.05)"
+          data-expr="PersonalSite`DevOps`deployNotify[]">
+          <span class="kta-label" style="color:rgba(245,71,95,.9)">&#128276;&nbsp;deploy-notify</span>
+          <code class="kta-expr">log deploy event + commit</code>
         </button>
 
         <button class="kernel-trigger-btn kta-poll"
