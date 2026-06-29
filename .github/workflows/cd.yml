@@ -23,19 +23,39 @@ env:
   IMAGE:              us.icr.io/personalsitewolframresource/personalsite:latest
 
 jobs:
-  # ── 1. Esperar que CI pase (re-usa los checks del workflow ci.yml) ─────────
+  # ── 1. Esperar que CI pase — usa gh run watch (nativo, sin race condition) ──
   wait-ci:
     name: Esperar CI verde
     runs-on: ubuntu-latest
+    permissions:
+      actions: read
+      contents: read
     steps:
-      - name: Verificar que CI paso en este commit
-        uses: lewagon/wait-on-check-action@v1.3.4
-        with:
-          ref:              ${{ github.sha }}
-          check-name:       "Build imagen Code Engine"   # ultimo job de ci.yml
-          repo-token:       ${{ secrets.GITHUB_TOKEN }}
-          wait-interval:    20
-          allowed-conclusions: success
+      - name: Esperar CI verde para este commit
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          echo "Buscando CI run para commit ${{ github.sha }}..."
+          # Dar tiempo a que GitHub registre el run (puede tardar unos segundos)
+          for i in $(seq 1 12); do
+            RUN_ID=$(gh run list \
+              --repo "${{ github.repository }}" \
+              --commit "${{ github.sha }}" \
+              --workflow ci.yml \
+              --json databaseId \
+              --jq '.[0].databaseId // empty' 2>/dev/null)
+            [ -n "$RUN_ID" ] && break
+            echo "  intento $i/12 — CI run aun no registrado, esperando 10s..."
+            sleep 10
+          done
+          if [ -z "$RUN_ID" ]; then
+            echo "::error::No se encontro un CI run para este commit despues de 2 min."
+            exit 1
+          fi
+          echo "CI run encontrado: $RUN_ID — esperando resultado..."
+          gh run watch "$RUN_ID" \
+            --repo "${{ github.repository }}" \
+            --exit-status
 
   # ── 2. Build + Push imagen CE a IBM Container Registry ───────────────────
   build-push:
