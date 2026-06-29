@@ -106,3 +106,38 @@ ce-deploy:
 ## Uso: make encode-mathpass  (copia la salida y pega en Settings > Secrets)
 encode-mathpass:
 	@cat PersonalSite/deploy/mathpass | base64 -w0 && echo
+
+# ── DevOps Bridge ───────────────────────────────────────────────────
+## Arrancar DevOps Bridge en background (requiere puerto 8091 libre)
+bridge:
+	@pkill -f devops_bridge.py 2>/dev/null || true
+	@sleep 0.5
+	@python3 tools/devops_bridge.py &
+	@sleep 1
+	@curl -s http://localhost:8091/health && echo ""
+
+## Detener el bridge
+bridge-stop:
+	@pkill -f devops_bridge.py 2>/dev/null && echo "bridge detenido" || echo "bridge no corria"
+
+## Estado del bridge
+bridge-status:
+	@curl -s http://localhost:8091/health 2>/dev/null || echo "bridge no responde — run: make bridge"
+
+# ── Dev workflow completo ────────────────────────────────────────────
+## Ciclo de desarrollo: css + deploy al container corriendo
+dev: css deploy
+
+## Deploy en caliente: copia archivos modificados y reinicia el container
+deploy:
+	docker cp PersonalSite/Kernel   profile-web-1:/app/PersonalSite/
+	docker cp PersonalSite/Resources/Templates profile-web-1:/app/PersonalSite/Resources/
+	docker cp PersonalSite/Resources/Static    profile-web-1:/app/PersonalSite/Resources/
+	docker restart profile-web-1
+	@echo "Deploy OK — http://localhost:8080"
+
+## Entorno dev completo: container up + bridge + logs
+dev-up: up bridge
+	@echo "Dev ready: http://localhost:8080/kernel — bridge: http://localhost:8091/health"
+
+.PHONY: bridge bridge-stop bridge-status dev deploy dev-up
