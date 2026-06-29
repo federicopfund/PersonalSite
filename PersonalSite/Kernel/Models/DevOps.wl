@@ -215,7 +215,7 @@ EndPackage[];
      (campos adicionales segun la etapa)
    -------------------------------------------------------------------------- *)
 
-BeginPackage["PersonalSite`DevOps`", {"PersonalSite`Flow`"}];
+BeginPackage["PersonalSite`DevOps`"];
 
 (* ── API publica ─────────────────────────────────────────────────────── *)
 codeLint::usage      = "codeLint[] SyntaxQ-check de todos los .wl en Kernel/.";
