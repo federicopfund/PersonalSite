@@ -7,6 +7,7 @@ PacletObject[<|
   "Extensions" -> {
     {"Kernel", "Root" -> "Kernel", "Context" -> "PersonalSite`"},
     {"Resource", "Root" -> "Resources",
-       "Resources" -> {"Templates", "Static", "Img"}}
+       "Resources" -> {"Templates", "Static", "Img"}},
+    {"Test", "Root" -> "Tests"}
   }
 |>]

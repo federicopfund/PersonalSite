@@ -50,6 +50,27 @@ VALUES
 
 
 
+-- ── Session store (NestGraph permission FSM) ───────────────────────────
+-- state     : unauthenticated | active | elevated | suspended | expired | revoked
+-- role      : 1=reader  2=writer  3=admin  (maps to NestGraph depth)
+-- permissions: JSON array derivado del permission NestGraph (3 rules, depth=3)
+-- meta       : JSON libre (IP, user-agent, origin, etc.)
+CREATE TABLE IF NOT EXISTS sessions (
+    session_id  TEXT    NOT NULL PRIMARY KEY,
+    user_id     TEXT    NOT NULL,
+    role        INTEGER NOT NULL DEFAULT 1,
+    state       TEXT    NOT NULL DEFAULT 'active',
+    permissions TEXT    NOT NULL DEFAULT '[]',
+    meta        TEXT    NOT NULL DEFAULT '{}',
+    created_at  TEXT    NOT NULL DEFAULT '1970-01-01 00:00:00',
+    expires_at  TEXT    NOT NULL,
+    last_seen   TEXT    NOT NULL DEFAULT '1970-01-01 00:00:00'
+);
+
+CREATE INDEX IF NOT EXISTS idx_sessions_expires ON sessions(expires_at);
+CREATE INDEX IF NOT EXISTS idx_sessions_user    ON sessions(user_id);
+CREATE INDEX IF NOT EXISTS idx_sessions_state   ON sessions(state);
+
 -- Datos de ejemplo
 INSERT OR IGNORE INTO posts (slug, title, summary, body, date) VALUES
   ('hola-wolfram',

@@ -195,6 +195,234 @@ Keys @ PersonalSite`TaskManager`allTasks[]   (* → 6 tareas del sistema *)
 
 ---
 
+## Sesiones — NestGraph Permission FSM
+
+El sistema de sesiones modela los permisos como un **NestGraph de profundidad 3**,
+mapeando directamente el diagrama `NestGraph[{2#+1, #+14, #-18}&, {1}, 3]` del UI:
+
+```
+Seed      = contexto de autenticación base  <| role -> R, perms -> {} |>
+Regla 1   = public.read    (role ≥ 1)   ← rama "2x+1"
+Regla 2   = content.write  (role ≥ 2)   ← rama "x+14"
+Regla 3   = kernel.eval    (role ≥ 3)   ← rama "x-18"
+Depth = 3  →  40 nodos (1 + 3 + 9 + 27), igual al NestGraph del UI
+```
+
+### Ciclo de vida — FSM de estados
+
+```mermaid
+stateDiagram-v2
+    [*] --> unauthenticated
+    unauthenticated --> active      : login
+    active          --> elevated    : elevate (MFA/sudo)
+    elevated        --> active      : downgrade
+    active          --> suspended   : suspend
+    suspended       --> active      : resume
+    active          --> expired     : logout / timeout
+    elevated        --> expired     : logout / timeout
+    expired         --> active      : relogin
+```
+
+### Árbol de permisos por role
+
+| Role | Permisos derivados (unión del NestGraph) |
+|------|------------------------------------------|
+| 1 | `public.read`, `blog.read`, `arch.view` |
+| 2 | + `content.write`, `blog.write`, `tasks.view`, `nest.run`, `flow.run`, `contact.send` |
+| 3 | + `kernel.eval`, `kernel.schedule`, `tasks.manage`, `admin.*`, `arch.data`, `ruliology.eval` |
+
+### Endpoints de sesión
+
+| Método | Ruta | Descripción |
+|--------|------|-------------|
+| `POST` | `/session/create` | Crea sesión; body `{"userId","role","meta"}` |
+| `POST` | `/session/destroy` | Logout via Bearer token |
+| `GET` | `/session/validate` | Valida token, devuelve estado |
+| `GET` | `/session/info` | Sesión completa (requiere `public.read`) |
+| `POST` | `/session/transition` | Aplica evento FSM: `elevate`, `suspend`, etc. |
+| `GET` | `/session/graph` | Árbol NestGraph de permisos (40 nodos, JSON) |
+| `GET` | `/session/fsm` | Grafo de transiciones FSM |
+| `GET` | `/session/stats` | Métricas de sesiones activas |
+
+### Probar el sistema de sesiones
+
+#### Opción A — Suite de debug paso a paso (recomendada)
+
+```bash
+# 10 bloques explicados: token HMAC, árbol NestGraph, FSM, middleware, GC
+python3 tools/test_sessions.py
+
+# Con JSON completo en cada respuesta
+python3 tools/test_sessions.py --verbose
+
+# Contra otro servidor
+python3 tools/test_sessions.py --base http://mi-servidor:8080
+```
+
+Cubre: anatomía del token HMAC-SHA256, validación, token corrupto → 401,
+permisos por role, árbol NestGraph 40 nodos (L0/L1/L2/L3), transiciones FSM
+válidas e inválidas, ciclo suspend/resume, middleware guard sin token → 401,
+métricas Cache + DB, logout e invalidación post-destroy.
+
+#### Opción B — curl contra el servidor en ejecución
+
+```bash
+BASE=http://localhost:8080
+
+# 1. Crear sesión (role 2 = writer)
+TOKEN=$(curl -s -X POST $BASE/session/create \
+  -H "Content-Type: application/json" \
+  -d '{"userId":"federico","role":2}' \
+  | python3 -c "import sys,json; print(json.load(sys.stdin)['token'])")
+
+echo "TOKEN: $TOKEN"
+
+# 2. Validar token
+curl -s $BASE/session/validate \
+  -H "Authorization: Bearer $TOKEN" | python3 -m json.tool
+
+# 3. Ver info completa + permisos
+curl -s $BASE/session/info \
+  -H "Authorization: Bearer $TOKEN" | python3 -m json.tool
+
+# 4. Elevar privilegios (active → elevated)
+curl -s -X POST $BASE/session/transition \
+  -H "Authorization: Bearer $TOKEN" \
+  -H "Content-Type: application/json" \
+  -d '{"event":"elevate"}' | python3 -m json.tool
+
+# 5. Ver árbol NestGraph de permisos (role 2, 40 nodos)
+curl -s "$BASE/session/graph" \
+  -H "Authorization: Bearer $TOKEN" | python3 -m json.tool
+
+# 6. Ver grafo FSM de transiciones
+curl -s $BASE/session/fsm | python3 -m json.tool
+
+# 7. Métricas
+curl -s $BASE/session/stats | python3 -m json.tool
+
+# 8. Cerrar sesión
+curl -s -X POST $BASE/session/destroy \
+  -H "Authorization: Bearer $TOKEN" | python3 -m json.tool
+
+# 9. Confirmar invalidación (debe devolver 401)
+curl -s $BASE/session/validate \
+  -H "Authorization: Bearer $TOKEN" | python3 -m json.tool
+```
+
+#### Opción B — WolframScript interactivo
+
+```bash
+docker exec -it profile-web-1 wolframscript
+```
+
+```wolfram
+PacletDirectoryLoad["/app"];
+Needs["PersonalSite`"]
+
+(* Crear sesión role=3 (admin) *)
+result = PersonalSite`SessionStore`createSession["federico", 3, <|"origin"->"wolframscript"|>]
+token  = result["token"]
+
+(* Validar y ver permisos derivados del NestGraph *)
+session = PersonalSite`SessionStore`validateToken[token]
+session["permissions"]    (* 40-node tree collapsed to union *)
+
+(* Árbol completo (40 nodos, depth=3, 3 reglas) *)
+PersonalSite`SessionFSM`permissionTree[3]
+
+(* Verificar capability *)
+PersonalSite`SessionFSM`can[session, "kernel.eval"]   (* True *)
+PersonalSite`SessionFSM`can[session, "admin.*"]        (* True *)
+
+(* FSM: elevar a elevated *)
+{newSession, status} = PersonalSite`SessionStore`applyTransition[
+  session["sessionId"], "elevate"]
+newSession["state"]   (* "elevated" *)
+
+(* FSM: bajar de nuevo *)
+{s2, _} = PersonalSite`SessionStore`applyTransition[
+  session["sessionId"], "downgrade"]
+s2["state"]   (* "active" *)
+
+(* Transición inválida: debe fallar *)
+{bad, reason} = PersonalSite`SessionStore`applyTransition[
+  session["sessionId"], "resume"]   (* suspended->active, pero estado es active *)
+bad    (* $Failed *)
+reason (* "invalid_transition:active->resume" *)
+
+(* Grafo de transiciones FSM como JSON *)
+PersonalSite`SessionFSM`fsmGraph[]
+
+(* Métricas *)
+PersonalSite`SessionStore`sessionStats[]
+
+(* GC: purgar expiradas *)
+PersonalSite`SessionStore`gcSessions[]
+
+(* Destruir sesión *)
+PersonalSite`SessionStore`destroySession[session["sessionId"]]
+
+(* Confirmar invalidación *)
+PersonalSite`SessionStore`validateToken[token]   (* $Failed *)
+```
+
+#### Opción C — WLT tests con `TestReport.wl` (paclet)
+
+Tests formales en Wolfram Language organizados por **layer** de módulos.
+Cada suite corre con `TestReport` nativo y reporta `pass / total` por archivo.
+
+```bash
+# Todos los módulos (193 tests)
+docker exec profile-web-1 wolframscript -script /app/PersonalSite/Tests/TestReport.wl
+
+# Solo la capa de sesiones: SessionFSM + SessionStore (106 tests)
+docker exec profile-web-1 wolframscript -script /app/PersonalSite/Tests/TestReport.wl -- --layer session
+
+# Solo la capa de flujo: Flow + NestScheduler (65 tests)
+docker exec profile-web-1 wolframscript -script /app/PersonalSite/Tests/TestReport.wl -- --layer flow
+
+# Solo base de datos: Database (22 tests)
+docker exec profile-web-1 wolframscript -script /app/PersonalSite/Tests/TestReport.wl -- --layer db
+
+# Flow + NestScheduler + Database (87 tests)
+docker exec profile-web-1 wolframscript -script /app/PersonalSite/Tests/TestReport.wl -- --layer models
+
+# Formato alternativo con signo igual
+docker exec profile-web-1 wolframscript -script /app/PersonalSite/Tests/TestReport.wl -- --layer=session
+```
+
+**Layers disponibles:**
+
+| `--layer` | Suites | Tests |
+|-----------|--------|------:|
+| `all` *(default)* | SessionFSM, SessionStore, Flow, NestScheduler, Database | 193 |
+| `session` | SessionFSM, SessionStore | 106 |
+| `flow` | Flow, NestScheduler | 65 |
+| `models` | Flow, NestScheduler, Database | 87 |
+| `db` | Database | 22 |
+
+**Archivos de tests:**
+
+| Archivo | Tipo | Descripción |
+|---------|------|-------------|
+| `Tests/SessionFSM.wlt` | Pure WL | `derivePermissions`, `permissionTree`, `transition`, `can`, `fsmGraph` |
+| `Tests/SessionStore.wlt` | Integración DB | `createSession`, `validateToken`, `applyTransition`, `refreshSession`, `destroySession`, GC |
+| `Tests/Flow.wlt` | Pure WL | `edges`, `acyclicQ`, `layers`, `run` con backends sync/session/parallel |
+| `Tests/NestScheduler.wlt` | Pure WL | `build`, `records` por nivel, `run`, `export` CSV/JSON |
+| `Tests/Database.wlt` | Integración SQLite | `setup`, `diag`, `execute`, CRUD, datos de seed |
+
+#### Variables de entorno de sesión
+
+| Variable | Default | Descripción |
+|----------|---------|-------------|
+| `SESSION_SECRET` | *(generado por proceso en dev)* | Secreto HMAC-SHA256 — **debe ser fijo en producción**. Si no se define, el secreto se genera una sola vez al arrancar el kernel (válido solo en dev) |
+| `SESSION_TTL` | `3600` | Duración de sesión en segundos |
+
+> **Producción**: exportar `SESSION_SECRET` con mínimo 32 caracteres de entropía antes de levantar el contenedor.
+
+---
+
 ## Levantar el servidor
 
 ```bash

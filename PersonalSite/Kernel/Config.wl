@@ -91,5 +91,12 @@ $smtpUser    = value["SMTP_USER", ""];
 $smtpPassword = value["SMTP_PASSWORD", ""];
 $smtpFrom    = value["SMTP_FROM", If[$smtpUser =!= "", $smtpUser, $contactTo]];
 
+(* --- Sesiones -----------------------------------------------------------
+   SESSION_SECRET   secreto HMAC-SHA256 (min 32 chars). Si esta vacio se
+                    genera uno por proceso (solo valido para dev local).
+   SESSION_TTL      duracion de la sesion en segundos (default 3600 = 1h).*)
+$sessionSecret = value["SESSION_SECRET", ""];
+$sessionTtl    = value["SESSION_TTL", "3600"];
+
 End[];
 EndPackage[];

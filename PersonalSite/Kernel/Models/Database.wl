@@ -69,6 +69,7 @@ diag[] :=
     ping = Quiet @ Check[execute["SELECT 1"], $Failed];
     <|
       "driver"      -> PersonalSite`Config`$dbDriver,
+      "backend"     -> If[TrueQ[$usePythonFallback], "python/sqlite3", "jdbc"],
       "dbPath"      -> path,
       "fileExists"  -> FileExistsQ[path],
       "pacletRoot"  -> PersonalSite`$Root,
@@ -83,7 +84,9 @@ diag[] :=
    - postgresql : servidor externo (produccion stateless), con SSL.
    Para SQLite prueba primero el alias "SQLite" (WE local); si falla intenta
    la clase explicita "org.sqlite.JDBC" con URL jdbc:sqlite: (necesario en
-   algunos entornos como Wolfram Cloud donde el alias puede no estar registrado). *)
+   algunos entornos como Wolfram Cloud donde el alias puede no estar registrado).
+   Intento 3: modo read-only via URI sqlite3 (file:path?mode=ro) para cuando el
+   directorio del paclet es read-only (sin posibilidad de crear journal). *)
 openConnection[] :=
   If[ToLowerCase[PersonalSite`Config`$dbDriver] === "postgresql",
     OpenSQLConnection[
@@ -95,14 +98,42 @@ openConnection[] :=
       "Username" -> PersonalSite`Config`$pgUser,
       "Password" -> PersonalSite`Config`$pgPassword],
     Module[{path = PersonalSite`Config`$databasePath, conn},
-      (* Intento 1: alias "SQLite" (Wolfram Engine local, Docker) *)
+      (* Intento 1: alias "SQLite" rw (Wolfram Engine local, Docker) *)
       conn = Quiet[OpenSQLConnection[JDBC["SQLite", path]], All];
-      (* Intento 2: clase JDBC explicita con URL completa (Wolfram Cloud) *)
+      (* Intento 2: clase JDBC explicita + URL completa (Wolfram Cloud rw) *)
       If[Head[conn] =!= SQLConnection,
         conn = Quiet[OpenSQLConnection[
           JDBC["org.sqlite.JDBC", "jdbc:sqlite:" <> path]], All]];
+      (* Intento 3: URI read-only (directorio del paclet es read-only) *)
+      If[Head[conn] =!= SQLConnection,
+        conn = Quiet[OpenSQLConnection[
+          JDBC["org.sqlite.JDBC",
+            "jdbc:sqlite:file:" <> path <> "?mode=ro"]], All]];
       conn
     ]
+  ];
+
+(* ── Fallback Python para WolframCloud (JDBC nativo no disponible) ─────
+   WolframCloud ejecuta Java en un sandbox que bloquea la extraccion de la
+   libreria nativa libsqlitejdbc.so. ExternalEvaluate["Python"] accede a
+   sqlite3 (stdlib) directamente sin JNI.
+   Retorna el mismo formato que SQLExecute: {{row1col1, row1col2}, ...}
+   o {} para INSERT/UPDATE/DDL sin filas de resultado.              *)
+$usePythonFallback = False;
+
+executePython[sql_String, params_List] :=
+  Module[{path = PersonalSite`Config`$databasePath, rows},
+    rows = Quiet @ Check[
+      ExternalEvaluate["Python",
+        "import sqlite3, json\n" <>
+        "con = sqlite3.connect('" <> StringReplace[path, "'" -> "\\'"] <> "')\n" <>
+        "cur = con.execute(" <> ExportString[sql, "JSON"] <>
+              ", json.loads('" <>
+              StringReplace[ExportString[params, "JSON"], "'" -> "\\'"] <> "'))\n" <>
+        "rows = [list(r) for r in cur.fetchall()]\n" <>
+        "con.commit()\ncon.close()\nrows"],
+      $Failed];
+    rows
   ];
 
 (* Conexion JDBC persistente por kernel: se abre UNA vez y se reutiliza en cada
@@ -112,17 +143,28 @@ openConnection[] :=
 connection[] :=
   If[Head[$conn] === SQLConnection,
     $conn,
-    $conn = openConnection[]];
+    $conn = openConnection[];
+    (* Si todos los intentos JDBC fallaron en Cloud, activar Python fallback *)
+    If[Head[$conn] =!= SQLConnection && TrueQ[$CloudEvaluation],
+      $usePythonFallback = True];
+    $conn];
 
 closeConnection[] := (Quiet @ CloseSQLConnection[$conn]; $conn = Null);
 
 execute[sql_String, params_List : {}] :=
   Module[{r},
+    (* Ruta rapida: Python fallback ya activo (Cloud sin JDBC nativo) *)
+    If[TrueQ[$usePythonFallback],
+      Return[executePython[sql, params]]];
     r = Quiet @ Check[SQLExecute[connection[], sql, params], $Failed];
     If[r === $Failed,
-      (* conexion posiblemente stale: reabrir y reintentar una vez *)
+      (* Conexion posiblemente stale: reabrir y reintentar una vez *)
       closeConnection[];
       r = Quiet @ Check[SQLExecute[connection[], sql, params], $Failed]];
+    (* Segunda oportunidad: activar Python fallback si JDBC sigue fallando *)
+    If[r === $Failed && TrueQ[$CloudEvaluation],
+      $usePythonFallback = True;
+      r = executePython[sql, params]];
     r
   ];
 
