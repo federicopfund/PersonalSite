@@ -197,6 +197,8 @@ class BridgeHandler(http.server.BaseHTTPRequestHandler):
 
 
 if __name__ == "__main__":
+    # SO_REUSEADDR: permite reiniciar sin esperar TIME_WAIT
+    http.server.ThreadingHTTPServer.allow_reuse_address = True
     server = http.server.ThreadingHTTPServer((HOST, PORT), BridgeHandler)
     print(f"[bridge] DevOps Bridge listening on {HOST}:{PORT}")
     print(f"[bridge] Workspace root: {ROOT}")
