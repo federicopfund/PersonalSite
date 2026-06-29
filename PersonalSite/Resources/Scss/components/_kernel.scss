@@ -579,3 +579,143 @@
   &--in  { color: #eb7a1a; }
   &--out { color: #2db85e; }
 }
+
+// ══════════════════════════════════════════════════════════════════
+//  WL Native Notebook Cell Styles  (generado por FrontEnd/Output.wl)
+//  .wl-nb-*  →  replica el aspecto del FrontEnd de Wolfram Language
+// ══════════════════════════════════════════════════════════════════
+
+// Wrapper para el HTML nativo que reemplaza KaTeX+pre cuando
+// Output.wl puede generar MathML o SVG.
+.wl-nb-output {
+  width: 100%;
+}
+
+// ── Grid In/Out interno de cada celda ───────────────────────────
+.wl-nb-in,
+.wl-nb-out {
+  display: grid;
+  grid-template-columns: 76px 1fr;
+  align-items: start;
+  min-height: 2.2rem;
+}
+
+.wl-nb-in {
+  background: rgba(#1a0a00, .5);
+  border-bottom: 1px solid rgba(#eb7a1a, .1);
+}
+
+.wl-nb-out {
+  position: relative;
+}
+
+// ── Labels In[n]:= / Out[n]= ─────────────────────────────────────
+.wl-nb-label {
+  font-size: .7rem;
+  font-weight: 700;
+  font-family: $font-mono;
+  text-align: right;
+  padding: .65rem .6rem .65rem 0;
+  user-select: none;
+  white-space: nowrap;
+  line-height: 1.5;
+
+  &--in {
+    color: #eb7a1a;
+    border-right: 2px solid rgba(#eb7a1a, .4);
+    background: rgba(#eb7a1a, .04);
+  }
+
+  &--out {
+    color: #5aafff;
+    border-right: 2px solid rgba(#5aafff, .3);
+    background: rgba(#5aafff, .03);
+  }
+}
+
+// ── Source code (Input cell) ──────────────────────────────────────
+.wl-nb-src {
+  padding: .55rem .75rem;
+
+  pre {
+    margin: 0;
+    font-size: .85rem;
+    color: #e8d5b0;
+    font-family: $font-mono;
+    white-space: pre-wrap;
+    word-break: break-word;
+    line-height: 1.6;
+  }
+}
+
+// ── Output body (Output cell) ─────────────────────────────────────
+.wl-nb-body {
+  padding: .7rem .75rem;
+  min-height: 1.8rem;
+  overflow-x: auto;
+}
+
+// ── Timing badge ─────────────────────────────────────────────────
+.wl-nb-timing {
+  position: absolute;
+  bottom: .3rem;
+  right: .5rem;
+  font-size: .6rem;
+  color: rgba(#fff, .2);
+  font-family: $font-mono;
+  pointer-events: none;
+}
+
+// ── MathML output ────────────────────────────────────────────────
+.wl-nb-mathml {
+  font-size: 1.05rem;
+  color: rgba(#fff, .88);
+  line-height: 1.7;
+  overflow-x: auto;
+
+  // MathML elements use serif by default (matches WL FrontEnd)
+  math, mi, mn, mo, mrow, mfrac, msup, msub, msqrt {
+    font-family: 'STIX Two Math', 'Latin Modern Math', 'Times New Roman', serif;
+  }
+
+  math { display: block; margin: .25rem 0; }
+}
+
+// ── SVG output (Graphics / Plot / Graph) ─────────────────────────
+.wl-nb-svg {
+  max-width: 100%;
+  overflow: hidden;
+  line-height: 0;
+
+  svg {
+    max-width: 100%;
+    height: auto;
+    display: block;
+    border-radius: radius(sm);
+    background: rgba(#fff, .04);
+  }
+}
+
+// ── OutputForm text fallback ──────────────────────────────────────
+pre.wl-nb-text {
+  margin: 0;
+  font-size: .85rem;
+  color: rgba(#fff, .82);
+  font-family: $font-mono;
+  white-space: pre-wrap;
+  word-break: break-word;
+  line-height: 1.6;
+
+  &.wl-nb-string { color: #a8d8a8; }   // strings → verde claro
+}
+
+// ── Number inline ─────────────────────────────────────────────────
+.wl-nb-number {
+  font-family: $font-mono;
+  font-size: .95rem;
+  color: #c8e8ff;
+}
+
+// ── Special states ────────────────────────────────────────────────
+.wl-nb-void  { color: rgba(#fff, .2); font-size: .9rem; font-family: $font-mono; }
+.wl-nb-error { color: #ff4c4c; font-family: $font-mono; font-size: .85rem; font-weight: 700; }

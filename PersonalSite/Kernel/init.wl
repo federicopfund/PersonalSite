@@ -41,6 +41,7 @@ With[{load = Function[parts,
   load[{"Models", "TaskConfig.wl"}];
   load[{"Models", "TaskManager.wl"}];
   load[{"Models", "Scheduler.wl"}];
+  load[{"FrontEnd", "Output.wl"}];
   load[{"Views", "Renderer.wl"}];
   load[{"Controllers", "HomeController.wl"}];
   load[{"Controllers", "BlogController.wl"}];

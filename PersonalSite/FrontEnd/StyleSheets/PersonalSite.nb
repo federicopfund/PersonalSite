@@ -1,0 +1,114 @@
+(* Content-type: application/vnd.wolfram.mathematica *)
+(*** Wolfram Notebook File ***)
+(* http://www.wolfram.com/nb *)
+
+(* CreatedBy='Wolfram 14' *)
+
+(*CacheID: 234*)
+(* Internal cache information:
+NotebookFileLineBreakTest
+NotebookFileLineBreakTest *)
+
+Notebook[{
+
+(* ── Inherit Wolfram defaults first ─────────────────────── *)
+Cell[StyleData[StyleDefinitions -> "Default.nb"]],
+
+(* ═══════════════════════════════════════════════════════════
+   NOTEBOOK  —  PersonalSite stylesheet
+   Replica la apariencia visual del FrontEnd de Wolfram:
+   · Input  → fondo crema / label naranja #eb7a1a
+   · Output → fondo blanco / label azul   #5aafff
+   · Print  → gris claro
+   · Message→ amarillo con borde naranja
+   ═══════════════════════════════════════════════════════════*)
+
+(* ── Input ──────────────────────────────────────────────── *)
+Cell[StyleData["Input"],
+  Background -> RGBColor[0.12, 0.08, 0.02],
+  CellFrame -> {{2, 0}, {0, 0}},
+  CellFrameColor -> RGBColor[0.92, 0.48, 0.10],
+  CellMargins -> {{66, 10}, {3, 3}},
+  CellLabelStyle -> {
+    FontFamily -> "Helvetica Neue",
+    FontSize -> 9,
+    FontWeight -> Bold,
+    FontColor -> RGBColor[0.92, 0.48, 0.10]
+  },
+  FontFamily -> "Courier New",
+  FontSize -> 12,
+  FontColor -> RGBColor[0.91, 0.84, 0.69],
+  ShowCellLabel -> True
+],
+
+(* ── Output ──────────────────────────────────────────────── *)
+Cell[StyleData["Output"],
+  Background -> RGBColor[0.05, 0.05, 0.07],
+  CellFrame -> {{2, 0}, {0, 0}},
+  CellFrameColor -> RGBColor[0.35, 0.69, 1.00],
+  CellMargins -> {{66, 10}, {3, 8}},
+  CellLabelStyle -> {
+    FontFamily -> "Helvetica Neue",
+    FontSize -> 9,
+    FontWeight -> Bold,
+    FontColor -> RGBColor[0.35, 0.69, 1.00]
+  },
+  FontFamily -> "Times New Roman",
+  FontSize -> 13,
+  FontColor -> RGBColor[0.93, 0.93, 0.93],
+  ShowCellLabel -> True
+],
+
+(* ── Print ───────────────────────────────────────────────── *)
+Cell[StyleData["Print"],
+  Background -> RGBColor[0.07, 0.07, 0.09],
+  CellFrame -> {{1, 0}, {0, 0}},
+  CellFrameColor -> RGBColor[0.3, 0.3, 0.4],
+  CellMargins -> {{66, 10}, {2, 2}},
+  FontFamily -> "Courier New",
+  FontSize -> 11,
+  FontColor -> RGBColor[0.75, 0.75, 0.75],
+  ShowCellLabel -> False
+],
+
+(* ── Message ─────────────────────────────────────────────── *)
+Cell[StyleData["Message"],
+  Background -> RGBColor[0.16, 0.12, 0.03],
+  CellFrame -> {{3, 0}, {0, 0}},
+  CellFrameColor -> RGBColor[0.92, 0.60, 0.10],
+  CellMargins -> {{66, 10}, {2, 2}},
+  FontFamily -> "Helvetica Neue",
+  FontSize -> 11,
+  FontColor -> RGBColor[0.95, 0.75, 0.35],
+  ShowCellLabel -> False
+],
+
+(* ── Text ────────────────────────────────────────────────── *)
+Cell[StyleData["Text"],
+  Background -> None,
+  CellMargins -> {{66, 10}, {6, 6}},
+  FontFamily -> "Georgia",
+  FontSize -> 13,
+  FontColor -> RGBColor[0.85, 0.85, 0.85],
+  ShowCellLabel -> False
+],
+
+(* ── Section ─────────────────────────────────────────────── *)
+Cell[StyleData["Section"],
+  Background -> None,
+  CellFrame -> {{0, 0}, {0, 1}},
+  CellFrameColor -> RGBColor[0.92, 0.48, 0.10],
+  CellMargins -> {{10, 10}, {14, 4}},
+  FontFamily -> "Helvetica Neue",
+  FontSize -> 18,
+  FontWeight -> Bold,
+  FontColor -> RGBColor[0.92, 0.48, 0.10],
+  ShowCellLabel -> False
+]
+
+},
+WindowSize -> {900, 700},
+WindowMargins -> {{Automatic, Automatic}, {Automatic, Automatic}},
+FrontEndVersion -> "14.2 for Linux x86 (64-bit)",
+StyleDefinitions -> "PrivateStylesheetFormatting.nb"
+]

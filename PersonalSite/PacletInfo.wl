@@ -8,6 +8,7 @@ PacletObject[<|
     {"Kernel", "Root" -> "Kernel", "Context" -> "PersonalSite`"},
     {"Resource", "Root" -> "Resources",
        "Resources" -> {"Templates", "Static", "Img"}},
+    {"FrontEnd", "Root" -> "FrontEnd"},
     {"Test", "Root" -> "Tests"}
   }
 |>]

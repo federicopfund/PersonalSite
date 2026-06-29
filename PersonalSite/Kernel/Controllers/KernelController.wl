@@ -33,9 +33,10 @@ $maxHistory   = 40;
 
 (* ── Formatear salida WL a estructura JSON-serializable ─────── *)
 wlFmt[expr_] :=
-  Module[{outStr, texStr, typ},
-    outStr = Quiet @ Check[ToString[expr, OutputForm], "?"];
-    texStr = Quiet @ Check[ToString[expr, TeXForm],    ""];
+  Module[{outStr, texStr, htmlStr, typ},
+    outStr  = Quiet @ Check[ToString[expr, OutputForm], "?"];
+    texStr  = Quiet @ Check[ToString[expr, TeXForm],    ""];
+    htmlStr = Quiet @ Check[PersonalSite`FrontEnd`Output`toHtml[expr], ""];
     typ = Which[
       expr === $Failed,                                           "error",
       Head[expr] === String,                                      "string",
@@ -46,7 +47,8 @@ wlFmt[expr_] :=
     <|"type"    -> typ,
       "out"     -> StringTake[outStr, Min[800, StringLength[outStr]]],
       "tex"     -> texStr,
-      "full"    -> outStr
+      "full"    -> outStr,
+      "html"    -> htmlStr
     |>];
 
 (* ── POST /kernel/eval ────────────────────────────────────────── *)
