@@ -40,8 +40,13 @@ computeMetric[] :=
     res =
       If[IntegerQ[n] && n > 0,
         Quiet @ Check[
-          First @ WaitAll[{ParallelSubmit[
-            {Module[{s = 0.}, Do[s += Sin[1. k]/k, {k, 1, 350000}]; s], $KernelID}]}],
+          (* TimeConstrained evita que WaitAll bloquee el kernel si el
+             subkernel falla o no responde (produccion: POOLSIZE=1). *)
+          TimeConstrained[
+            First @ WaitAll[{ParallelSubmit[
+              {Module[{s = 0.}, Do[s += Sin[1. k]/k, {k, 1, 350000}]; s], $KernelID}]}],
+            25,    (* maximo 25 s; si vence, cae al fallback heavyValue *)
+            $Failed],
           $Failed],
         $Failed];
     {val, where} =

@@ -68,10 +68,14 @@ $taskSpecs = {
   {"metric-refresh", <|
     "label"    -> "Metric refresh (heavy)",
     "group"    -> "cache",
-    "interval" -> 300,
+    "interval" -> 360,   (* 6 min — corre con algo mas de separacion que cards-refresh *)
     "enabled"  -> True,
     "deps"     -> {"cards-refresh"},
-    "action"   -> Function[PersonalSite`Assets`refreshMetric[]]
+    "action"   -> Function[
+      (* Proteccion adicional: si el kernel paralelo no responde dentro de
+         computeMetric (TimeConstrained 25s), el fallback corre en el
+         kernel principal y esta tarea termina en <30s en cualquier caso. *)
+      Quiet @ Check[PersonalSite`Assets`refreshMetric[], False]]
   |>},
 
   (* ── Flow / NestGraph ───────────────────────────────────────────── *)
@@ -100,6 +104,41 @@ $taskSpecs = {
       Module[{active = If[Mod[Floor[UnixTime[] / 20], 2] === 1, "1", "0"]},
         PersonalSite`Settings`set["ux.contact.active", active];
         active === "1"]]  |>},
+
+  (* ── UX Color Rules — motor de reglas de color por dominio ─────────── *)
+  (*  DAG: heartbeat + theme-rotate → ux-color-eval
+                                      → ux-color-apply → ux-color-report
+      Las 3 tareas calculan y persisten los tokens de color activos del
+      sitio con logica de dominio UX (hora del dia, dia de semana,
+      engagement del CTA de Contacto, armonia con el tema activo).
+      Habilitadas en produccion: enabled=True.                              *)
+
+  {"ux-color-eval", <|
+    "label"    -> "UX color rule evaluation",
+    "group"    -> "ux",
+    "interval" -> 15,
+    "enabled"  -> True,
+    "deps"     -> {"heartbeat", "theme-rotate"},
+    "action"   -> Function[PersonalSite`UXColorRules`eval[]]
+  |>},
+
+  {"ux-color-apply", <|
+    "label"    -> "UX color apply tokens to Settings",
+    "group"    -> "ux",
+    "interval" -> 15,
+    "enabled"  -> True,
+    "deps"     -> {"ux-color-eval"},
+    "action"   -> Function[PersonalSite`UXColorRules`apply[]]
+  |>},
+
+  {"ux-color-report", <|
+    "label"    -> "UX color rules audit report",
+    "group"    -> "ux",
+    "interval" -> 60,
+    "enabled"  -> True,
+    "deps"     -> {"ux-color-apply"},
+    "action"   -> Function[PersonalSite`UXColorRules`report[]]
+  |>},
 
   (* ── Dev — SCSS hot-reload pipeline (disabled en production) ──────── *)
   (*  Las 5 tareas forman un DAG: detect → compile → {hash, bust} → report
