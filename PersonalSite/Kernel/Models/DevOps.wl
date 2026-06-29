@@ -429,6 +429,104 @@ PersonalSite`DevOps`changelogGen[] :=
       "log"    -> StringTrim[r["out"]],
       "msgs"   -> StringSplit[logR["out"], "\n"],
       "ts"     -> DateString["ISODateTime"]|>];
+(* ── bridge-health (nativo — ping al DevOps Bridge HTTP) ─────────── *)
+PersonalSite`DevOps`bridgeHealth[] :=
+  Module[{body, t0, ms},
+    t0   = AbsoluteTime[];
+    body = Quiet @ Check[
+      TimeConstrained[
+        URLRead[HTTPRequest["http://172.18.0.1:8091/health"], "Body"],
+        5, $Failed],
+      $Failed];
+    ms = Round[(AbsoluteTime[] - t0) * 1000, 0.1];
+    If[!StringQ[body],
+      <|"ok" -> False, "ms" -> ms,
+        "err" -> "bridge unavailable — run: python3 tools/devops_bridge.py &"|>,
+      <|"ok" -> True, "ms" -> ms, "host" -> "172.18.0.1:8091"|>]];
 
+(* ── DAG estático del pipeline DevOps ───────────────────────────────
+   Cada stage: {id, label, group, level, deps}
+   Levels siguen el esquema original de 8 capas (L0–L7).           *)
+$devopsStages = {
+  {"bridge-health", "Bridge Health",  "ops",   0, {}},
+  {"code-lint",     "Code Lint",      "build", 0, {}},
+  {"git-status",    "Git Status",     "git",   0, {}},
+  {"test-run",      "Test Runner",    "test",  1, {"code-lint"}},
+  {"git-diff",      "Git Diff",       "git",   1, {"git-status"}},
+  {"test-report",   "Test Report",    "test",  2, {"test-run"}},
+  {"paclet-clean",  "Paclet Clean",   "build", 2, {"git-diff"}},
+  {"paclet-build",  "Paclet Build",   "build", 3, {"paclet-clean", "test-report"}},
+  {"git-stage",     "Git Stage",      "git",   3, {"git-status", "git-diff"}},
+  {"paclet-verify", "Paclet Verify",  "build", 4, {"paclet-build"}},
+  {"docker-build",  "Docker Build",   "ops",   4, {"paclet-verify", "git-stage"}},
+  {"git-commit",    "Git Commit",     "git",   4, {"git-stage", "test-report"}},
+  {"docker-verify", "Docker Verify",  "ops",   5, {"docker-build"}},
+  {"git-push",      "Git Push",       "git",   5, {"git-commit", "docker-verify"}},
+  {"smoke-test",    "Smoke Test",     "ops",   6, {"git-push", "docker-verify"}},
+  {"deploy-notify", "Deploy Notify",  "ops",   6, {"git-push"}},
+  {"perf-check",    "Perf Check",     "ops",   7, {"smoke-test"}},
+  {"changelog-gen", "Changelog Gen",  "git",   7, {"deploy-notify"}}};
+
+(* Almacena el ultimo resultado de cada etapa (por kernel del pool). *)
+If[! AssociationQ[$devopsResults], $devopsResults = <||>];
+
+(* ── dag[] — estructura JSON del pipeline ───────────────────────── *)
+PersonalSite`DevOps`dag[] :=
+  Module[{nodes, edges},
+    nodes = Map[Function[s,
+      With[{id=s[[1]], lbl=s[[2]], grp=s[[3]], lv=s[[4]], deps=s[[5]]},
+        <|"id"        -> id,
+          "label"     -> lbl,
+          "group"     -> grp,
+          "level"     -> lv,
+          "dag_order" -> lv,
+          "deps"      -> deps,
+          "lastResult"-> If[KeyExistsQ[$devopsResults, id],
+                            $devopsResults[id], <||>]
+        |>]],
+      $devopsStages];
+    edges = Flatten @ Map[Function[s,
+      Map[Function[dep, <|"from"->dep, "to"->s[[1]]|>], s[[5]]]],
+      $devopsStages];
+    <|"nodes"      -> nodes,
+      "edges"      -> edges,
+      "stageCount" -> Length[$devopsStages]|>];
+
+(* ── runStage[name] — despacha a la funcion correcta ───────────── *)
+PersonalSite`DevOps`runStage[name_String] :=
+  Module[{fn, t0, result, ms},
+    fn = Switch[name,
+      "bridge-health", PersonalSite`DevOps`bridgeHealth,
+      "code-lint",     PersonalSite`DevOps`codeLint,
+      "git-status",    PersonalSite`DevOps`gitStatus,
+      "test-run",      PersonalSite`DevOps`runTests,
+      "git-diff",      PersonalSite`DevOps`gitDiff,
+      "test-report",   PersonalSite`DevOps`testReport,
+      "paclet-clean",  PersonalSite`DevOps`pacletClean,
+      "paclet-build",  PersonalSite`DevOps`pacletBuild,
+      "git-stage",     PersonalSite`DevOps`gitStage,
+      "paclet-verify", PersonalSite`DevOps`pacletVerify,
+      "docker-build",  PersonalSite`DevOps`dockerBuild,
+      "git-commit",    PersonalSite`DevOps`gitCommit,
+      "docker-verify", PersonalSite`DevOps`dockerVerify,
+      "git-push",      PersonalSite`DevOps`gitPush,
+      "smoke-test",    PersonalSite`DevOps`smokeTest,
+      "deploy-notify", PersonalSite`DevOps`deployNotify,
+      "perf-check",    PersonalSite`DevOps`perfCheck,
+      "changelog-gen", PersonalSite`DevOps`changelogGen,
+      _, Null];
+    If[fn === Null,
+      Return[<|"ok"->False, "err"->"unknown stage: "<>name,
+               "stage"->name, "ms"->0,
+               "ts"->DateString["ISODateTime"]|>]];
+    t0     = AbsoluteTime[];
+    result = Quiet @ Check[fn[], <|"ok"->False, "err"->"exception in stage"|>];
+    ms     = Round[(AbsoluteTime[] - t0) * 1000, 0.1];
+    result = <|result, "stage"->name, "ms"->ms, "ts"->DateString["ISODateTime"]|>;
+    $devopsResults[name] = result;
+    result];
+
+(* ── stageResults[] — snapshot de todos los resultados ─────────── *)
+PersonalSite`DevOps`stageResults[] := $devopsResults;
 End[];
 EndPackage[];

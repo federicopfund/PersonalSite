@@ -981,3 +981,173 @@
   &--build { background: color-mix(in srgb, #ff5722 15%, transparent); color: #ff8a65; }
   &--test  { background: color-mix(in srgb, #4caf50 15%, transparent); color: #81c784; }
 }
+
+// ── DevOps Pipeline Tab ────────────────────────────────────────────────────
+.de-devops-header {
+  display: flex;
+  align-items: center;
+  gap: 1rem;
+  padding: .75rem 1rem;
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  margin-bottom: 1rem;
+  flex-wrap: wrap;
+}
+
+.de-bridge-badge {
+  font-size: .82rem;
+  font-weight: 600;
+  padding: .3rem .75rem;
+  border-radius: 20px;
+  border: 1px solid var(--border);
+  white-space: nowrap;
+  &.de-bridge--ok   { border-color: #22c55e44; background: #22c55e14; color: #4ade80; }
+  &.de-bridge--down { border-color: #ef444444; background: #ef444414; color: #f87171; }
+}
+
+.de-devops-controls { display: flex; gap: .5rem; margin-left: auto; }
+.de-devops-stats    { font-size: .8rem; color: var(--text-muted); }
+
+.de-devops-layout {
+  display: grid;
+  grid-template-columns: 1fr 380px;
+  gap: 1rem;
+  @media (max-width: 1024px) { grid-template-columns: 1fr; }
+}
+
+.de-devops-dag-wrap {
+  position: relative;
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  overflow: hidden;
+}
+
+.de-devops-layer-bar {
+  position: sticky;
+  top: 0;
+  z-index: 4;
+  height: 32px;
+  background: var(--surface);
+  border-bottom: 1px solid var(--border);
+  .de-lv-label {
+    position: absolute;
+    top: 50%;
+    transform: translate(-50%, -50%);
+    font-size: .7rem;
+    font-weight: 700;
+    color: var(--text-muted);
+    letter-spacing: .06em;
+  }
+}
+
+.de-devops-scroll {
+  overflow-x: auto;
+  overflow-y: auto;
+  max-height: calc(100vh - 280px);
+  min-height: 320px;
+  padding-bottom: .5rem;
+}
+
+// DevOps node status variants
+.dv-node {
+  &--ok   rect:first-of-type { filter: drop-shadow(0 0 4px #22c55e44); }
+  &--fail rect:first-of-type { filter: drop-shadow(0 0 4px #ef444444); }
+  &.is-running rect:first-of-type {
+    animation: dv-pulse 1s ease-in-out infinite alternate;
+  }
+}
+
+@keyframes dv-pulse {
+  from { opacity: .7; }
+  to   { opacity: 1;  filter: drop-shadow(0 0 8px currentColor); }
+}
+
+// ── Simulation Log Panel ───────────────────────────────────────────────────
+.de-sim-panel {
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+}
+
+.de-sim-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: .6rem 1rem;
+  border-bottom: 1px solid var(--border);
+  font-size: .85rem;
+  font-weight: 600;
+  color: var(--text);
+}
+
+.de-sim-log {
+  flex: 1;
+  overflow-y: auto;
+  max-height: calc(100vh - 320px);
+  min-height: 300px;
+  padding: .5rem;
+  display: flex;
+  flex-direction: column;
+  gap: .3rem;
+}
+
+.de-sim-hint {
+  color: var(--text-muted);
+  font-size: .82rem;
+  padding: .5rem;
+  text-align: center;
+  margin-top: auto;
+  margin-bottom: auto;
+}
+
+.de-sim-entry {
+  display: flex;
+  align-items: flex-start;
+  gap: .5rem;
+  padding: .4rem .6rem;
+  border-radius: 6px;
+  border: 1px solid transparent;
+  font-size: .8rem;
+  &--ok      { border-color: #22c55e22; background: #22c55e08; }
+  &--fail    { border-color: #ef444422; background: #ef444408; }
+  &--running { border-color: #f59e0b22; background: #f59e0b08; }
+}
+
+.de-sim-icon {
+  font-size: 1rem;
+  line-height: 1.4;
+  flex-shrink: 0;
+}
+
+.de-sim-body {
+  display: flex;
+  flex-direction: column;
+  gap: .15rem;
+  min-width: 0;
+}
+
+.de-sim-stage {
+  font-weight: 700;
+  font-size: .8rem;
+}
+
+.de-sim-meta {
+  color: var(--text-muted);
+  font-size: .74rem;
+}
+
+.de-sim-code {
+  font-family: monospace;
+  font-size: .72rem;
+  color: var(--text-muted);
+  white-space: pre-wrap;
+  word-break: break-all;
+  display: block;
+  margin-top: .15rem;
+  opacity: .85;
+}

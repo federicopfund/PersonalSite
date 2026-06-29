@@ -15,7 +15,7 @@
    -------------------------------------------------------------------------- *)
 
 BeginPackage["PersonalSite`Controller`",
-  {"PersonalSite`TaskManager`", "PersonalSite`TaskConfig`"}];
+  {"PersonalSite`TaskManager`", "PersonalSite`TaskConfig`", "PersonalSite`DevOps`"}];
 
 tasks::usage         = "tasks[req] sirve el dashboard de TaskObjects.";
 dagDashboard::usage  = "dagDashboard[req] sirve el DAG Engineer Dashboard.";
@@ -36,6 +36,9 @@ tasksConfigApply::usage  = "tasksConfigApply[req] aplica todos los configs de DB
 tasksConfigSeed::usage   = "tasksConfigSeed[req] siembra los defaults en la DB.";
 tasksConfigById::usage   = "tasksConfigById[id, req] devuelve un config por task_id.";
 uxContactState::usage    = "uxContactState[req] devuelve el estado UX del boton Contacto (JSON).";
+devopsDag::usage         = "devopsDag[req] devuelve el DAG del pipeline DevOps (18 stages).";
+devopsStatus::usage      = "devopsStatus[req] devuelve el estado del bridge y resultados recientes.";
+devopsRunStage::usage    = "devopsRunStage[stage, req] ejecuta una etapa del pipeline DevOps.";
 
 Begin["`Private`"];
 
@@ -256,6 +259,38 @@ uxContactState[req_] :=
       "lastMs" -> Lookup[taskInfo, "lastMs", 0.]
     |>]
   ];
+
+(* ══ DevOps Pipeline API ══════════════════════════════════════════════
+   GET  /devops/dag         → estructura del pipeline (18 stages)
+   GET  /devops/status      → bridge health + resultados recientes
+   POST /devops/run/:stage  → ejecuta una etapa puntual
+   ══════════════════════════════════════════════════════════════════ *)
+
+(* ── GET /devops/dag ─────────────────────────────────────────────── *)
+devopsDag[req_] :=
+  jsonResp[PersonalSite`DevOps`dag[]];
+
+(* ── GET /devops/status ─────────────────────────────────────────── *)
+devopsStatus[req_] :=
+  Module[{bh, results},
+    bh      = Quiet @ Check[PersonalSite`DevOps`bridgeHealth[], <|"ok"->False|>];
+    results = Quiet @ Check[PersonalSite`DevOps`stageResults[], <||>];
+    jsonResp[<|
+      "bridge_ok"   -> TrueQ[bh["ok"]],
+      "bridge_ms"   -> Lookup[bh, "ms", 0],
+      "bridge_host" -> Lookup[bh, "host", "172.18.0.1:8091"],
+      "bridge_err"  -> If[TrueQ[bh["ok"]], "", Lookup[bh, "err", ""]],
+      "stageResults"-> results,
+      "ts"          -> DateString["ISODateTime"]
+    |>]];
+
+(* ── POST /devops/run/:stage ─────────────────────────────────────── *)
+devopsRunStage[stage_String, req_] :=
+  Module[{result = Quiet @ Check[
+    PersonalSite`DevOps`runStage[stage],
+    <|"ok"->False, "stage"->stage, "err"->"exception",
+      "ms"->0, "ts"->DateString["ISODateTime"]|>]},
+    jsonResp[result]];
 
 End[];
 EndPackage[];

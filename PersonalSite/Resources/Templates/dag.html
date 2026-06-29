@@ -61,6 +61,7 @@
   <div class="de-tabs">
     <button class="de-tab is-active" data-tab="viz">🔗 Grafo DAG</button>
     <button class="de-tab" data-tab="metrics">📊 Métricas</button>
+    <button class="de-tab" data-tab="devops">🚀 DevOps Pipeline</button>
     <button class="de-tab" data-tab="create">⊕ Nueva tarea</button>
   </div>
 
@@ -125,6 +126,48 @@
   </div>
 
   <!-- ══ TAB: CREATE TASK ══════════════════════════════════════════════ -->
+
+  <!-- ══ TAB: DEVOPS PIPELINE ══════════════════════════════════════════ -->
+  <div id="tab-devops" class="de-panel" hidden>
+
+    <!-- Bridge health + pipeline controls -->
+    <div class="de-devops-header">
+      <div id="dv-health" class="de-bridge-badge">⏳ Verificando bridge…</div>
+      <div id="dv-progress" class="de-devops-stats">0 / 18 stages ejecutadas</div>
+      <div class="de-devops-controls">
+        <button id="dv-run-all" class="btn btn--primary btn--sm">▶ Run Full Pipeline</button>
+        <button id="dv-reset"   class="btn btn--ghost btn--sm">↺ Reset</button>
+        <button id="dv-refresh" class="btn btn--ghost btn--sm">⟳</button>
+      </div>
+    </div>
+
+    <!-- Main layout: DevOps DAG + Simulation Log -->
+    <div class="de-devops-layout">
+
+      <!-- Left: DevOps DAG -->
+      <div class="de-devops-dag-wrap">
+        <div class="de-devops-layer-bar" id="dv-layer-bar"></div>
+        <div class="de-devops-scroll" id="dv-scroll">
+          <svg id="dv-svg" xmlns="http://www.w3.org/2000/svg" style="display:block"></svg>
+        </div>
+      </div>
+
+      <!-- Right: Simulation Log -->
+      <aside class="de-sim-panel">
+        <div class="de-sim-header">
+          <span>Simulation Log</span>
+          <button id="dv-clear-log" class="btn btn--ghost btn--xs">✕ Limpiar</button>
+        </div>
+        <div id="dv-log" class="de-sim-log">
+          <p class="de-sim-hint">Haz clic en un nodo del DAG para ejecutar esa etapa,<br>
+            o presiona <strong>▶ Run Full Pipeline</strong> para correr todas en orden.</p>
+        </div>
+      </aside>
+
+    </div>
+  </div><!-- /tab-devops -->
+
+  <!-- ══ TAB: CREATE TASK ══════════════════════════════════════════════════ -->
   <div id="tab-create" class="de-panel" hidden>
     <div class="de-create-layout">
 
@@ -319,13 +362,14 @@ function bindUI() {
 // ── Tab switching ──────────────────────────────────────────────────────────
 function switchTab(tab) {
   document.querySelectorAll('.de-tab').forEach(b => b.classList.toggle('is-active', b.dataset.tab === tab));
-  ['viz','metrics','create'].forEach(t => {
+  ['viz','metrics','devops','create'].forEach(t => {
     const el = document.getElementById('tab-' + t);
     if (t === tab) { el.hidden = false; el.removeAttribute('hidden'); }
     else el.hidden = true;
   });
   if (tab === 'metrics') renderMetrics();
   if (tab === 'create')  renderDepList('');
+  if (tab === 'devops')  { fetchDevopsDag(); fetchDevopsStatus(); }
 }
 
 // ── Data fetching ──────────────────────────────────────────────────────────
@@ -953,6 +997,280 @@ function setStatus(msg, type) {
   tick();
   setInterval(tick, (iv - (Math.floor(Date.now()/1000) % iv)) * 1000);
 })();
+
+// ══════════════════════════════════════════════════════════════════════════
+// DevOps Pipeline — Simulation Box
+// ══════════════════════════════════════════════════════════════════════════
+
+const DV = {
+  dag:     { nodes: [], edges: [] },
+  running: false,
+  results: {},            // stage_id → result Association
+};
+
+// Group colour palette (same as main DAG)
+const DV_GC = {
+  test:  '#4caf50', build: '#ff5722', git: '#795548',
+  ops:   '#ef5350', user:  '#9e9e9e',
+};
+const dvCol = g => DV_GC[g] || '#9e9e9e';
+
+// ── Fetch DevOps DAG from backend ─────────────────────────────────────────
+async function fetchDevopsDag() {
+  try {
+    const res  = await fetch('/devops/dag');
+    const data = await res.json();
+    DV.dag = data;
+    // Merge last results from backend into DV.results
+    (data.nodes || []).forEach(n => {
+      if (n.lastResult && Object.keys(n.lastResult).length > 0) {
+        DV.results[n.id] = n.lastResult;
+      }
+    });
+    renderDevopsDAG();
+    updateDevopsStats();
+  } catch(e) { console.warn('devops dag fetch error', e); }
+}
+
+// ── Fetch bridge health ───────────────────────────────────────────────────
+async function fetchDevopsStatus() {
+  const badge = document.getElementById('dv-health');
+  try {
+    const res  = await fetch('/devops/status');
+    const data = await res.json();
+    if (data.bridge_ok) {
+      badge.className = 'de-bridge-badge de-bridge--ok';
+      badge.textContent = '🟢 Bridge OK — ' + (data.bridge_host || '172.18.0.1:8091') +
+                          (data.bridge_ms ? ' · ' + data.bridge_ms.toFixed(0) + 'ms' : '');
+    } else {
+      badge.className = 'de-bridge-badge de-bridge--down';
+      badge.textContent = '🔴 Bridge Down — python3 tools/devops_bridge.py &';
+    }
+  } catch(e) {
+    badge.className = 'de-bridge-badge de-bridge--down';
+    badge.textContent = '🔴 Bridge offline';
+  }
+}
+
+// ── Render DevOps DAG (SVG) ───────────────────────────────────────────────
+const DV_W=136, DV_H=50, DV_COL=172, DV_ROW=64, DV_PAD={l:42,t:44,r:52,b:36};
+
+function renderDevopsDAG() {
+  const svg   = document.getElementById('dv-svg');
+  if (!svg) return;
+  const nodes = DV.dag.nodes || [];
+  const edges = DV.dag.edges || [];
+
+  // Group by level
+  const byLv = {};
+  nodes.forEach(n => { const lv=n.level||0; (byLv[lv]=byLv[lv]||[]).push(n); });
+
+  // Sort each level by group then id for stable layout
+  Object.values(byLv).forEach(lvNodes =>
+    lvNodes.sort((a,b) => (a.group||'').localeCompare(b.group||'') || a.id.localeCompare(b.id)));
+
+  const maxLv   = Math.max(...Object.keys(byLv).map(Number), 0);
+  const maxRows = Math.max(...Object.values(byLv).map(a=>a.length), 1);
+  const svgW = DV_PAD.l + (maxLv+1)*DV_COL + DV_W + DV_PAD.r;
+  const svgH = DV_PAD.t + maxRows*DV_ROW   + DV_H + DV_PAD.b;
+  svg.setAttribute('viewBox', `0 0 ${svgW} ${svgH}`);
+  svg.style.width  = svgW + 'px';
+  svg.style.height = svgH + 'px';
+  document.getElementById('dv-scroll').style.minWidth  = svgW + 'px';
+  document.getElementById('dv-scroll').style.minHeight = (svgH + 40) + 'px';
+
+  // Level labels
+  const lb = document.getElementById('dv-layer-bar');
+  lb.innerHTML = Array.from({length: maxLv+1}, (_,i) =>
+    `<span class="de-lv-label" style="left:${DV_PAD.l + i*DV_COL + DV_W/2}px">L${i}</span>`
+  ).join('');
+
+  // Compute positions
+  const pos = {};
+  Object.entries(byLv).forEach(([lv, lvNodes]) => {
+    lvNodes.forEach((n,i) => {
+      pos[n.id] = { x: DV_PAD.l + parseInt(lv)*DV_COL, y: DV_PAD.t + i*DV_ROW };
+    });
+  });
+
+  // Build SVG
+  const defs = `<defs>
+    <marker id="dv-arr" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="5" markerHeight="5" orient="auto">
+      <path d="M0,0 L10,5 L0,10 Z" fill="#4b5563"/></marker>
+    <filter id="dv-glow" x="-25%" y="-25%" width="150%" height="150%">
+      <feGaussianBlur stdDeviation="3.5" result="b"/>
+      <feMerge><feMergeNode in="b"/><feMergeNode in="SourceGraphic"/></feMerge>
+    </filter>
+  </defs>`;
+
+  let edgesSvg = '';
+  edges.forEach(e => {
+    const f=pos[e.from], t=pos[e.to];
+    if (!f||!t) return;
+    const x1=f.x+DV_W, y1=f.y+DV_H/2, x2=t.x, y2=t.y+DV_H/2;
+    const cx=(x1+x2)/2;
+    edgesSvg += `<path class="dag-edge" d="M${x1},${y1} C${cx},${y1} ${cx},${y2} ${x2},${y2}" marker-end="url(#dv-arr)"/>`;
+  });
+
+  let nodesSvg = '';
+  nodes.forEach(n => {
+    const p = pos[n.id];
+    if (!p) return;
+    const res    = DV.results[n.id];
+    const status = res ? (res.ok ? 'ok' : 'fail') : 'idle';
+    const col    = dvCol(n.group);
+    const scol   = status==='ok'?'#22c55e': status==='fail'?'#ef4444': col;
+    const lbl    = (n.label||n.id).length>18 ? (n.label||n.id).slice(0,17)+'…' : (n.label||n.id);
+    const msStr  = res?.ms != null ? res.ms.toFixed(0)+'ms' : '';
+    const icon   = status==='ok'?'✓': status==='fail'?'✗': '';
+
+    nodesSvg += `
+    <g class="dag-node dv-node dv-node--${status}" data-stage="${n.id}"
+       style="cursor:pointer" transform="translate(${p.x},${p.y})" title="${n.id}">
+      <rect width="${DV_W}" height="${DV_H}" rx="7"
+            style="fill:var(--surface);stroke:${scol};stroke-width:${status!=='idle'?2:1.5}"/>
+      <rect width="${DV_W}" height="3" rx="7"
+            style="fill:${scol};clip-path:inset(0 0 -10px 0)"/>
+      <text x="7" y="16" font-size="9" font-weight="700" fill="${scol}">${n.id}</text>
+      <text x="7" y="30" font-size="10.5" fill="var(--text)">${lbl}</text>
+      <text x="7" y="44" font-size="8.5" fill="var(--text-muted)">${n.group}${msStr?' · '+msStr:''}</text>
+      ${icon?`<text x="${DV_W-14}" y="20" font-size="13" fill="${scol}" font-weight="bold">${icon}</text>`:''}
+    </g>`;
+  });
+
+  svg.innerHTML = defs + edgesSvg + nodesSvg;
+
+  // Click on node → run that stage
+  svg.querySelectorAll('.dv-node').forEach(el => {
+    el.addEventListener('click', () => {
+      if (!DV.running) runDevopsStage(el.dataset.stage);
+    });
+  });
+}
+
+// ── Run single stage ──────────────────────────────────────────────────────
+async function runDevopsStage(stage) {
+  if (DV.running) return;
+  DV.running = true;
+  dvMarkRunning(stage, true);
+  dvLog(stage, 'running', null, null);
+  try {
+    const res  = await fetch(`/devops/run/${stage}`, { method: 'POST' });
+    const data = await res.json();
+    DV.results[stage] = data;
+    dvLog(stage, data.ok ? 'ok' : 'fail', data.ms, data, true);
+  } catch(e) {
+    DV.results[stage] = { ok: false, err: e.message };
+    dvLog(stage, 'fail', null, { err: e.message }, true);
+  }
+  dvMarkRunning(stage, false);
+  renderDevopsDAG();
+  updateDevopsStats();
+  DV.running = false;
+}
+
+// ── Run full pipeline (sequential by level) ───────────────────────────────
+async function runDevopsPipeline() {
+  if (DV.running) return;
+  DV.running = true;
+  DV.results = {};
+  const logEl = document.getElementById('dv-log');
+  logEl.innerHTML = `<p class="de-sim-hint">Pipeline iniciado — ${new Date().toTimeString().slice(0,8)}</p>`;
+  renderDevopsDAG();
+
+  // Sort by level ascending
+  const sorted = [...(DV.dag.nodes||[])].sort((a,b)=>(a.level||0)-(b.level||0));
+
+  for (const n of sorted) {
+    dvMarkRunning(n.id, true);
+    dvLog(n.id, 'running', null, null);
+    try {
+      const res  = await fetch(`/devops/run/${n.id}`, { method: 'POST' });
+      const data = await res.json();
+      DV.results[n.id] = data;
+      dvMarkRunning(n.id, false);
+      dvLog(n.id, data.ok ? 'ok' : 'fail', data.ms, data, true);
+    } catch(e) {
+      DV.results[n.id] = { ok: false, err: e.message };
+      dvMarkRunning(n.id, false);
+      dvLog(n.id, 'fail', null, { err: e.message }, true);
+    }
+    renderDevopsDAG();
+    updateDevopsStats();
+    await new Promise(r => setTimeout(r, 200));
+  }
+
+  DV.running = false;
+  dvLog('✓ Pipeline completado', 'ok', null, null);
+  renderDevopsDAG();
+}
+
+// ── Helpers ───────────────────────────────────────────────────────────────
+function dvMarkRunning(stage, on) {
+  const el = document.querySelector(`.dv-node[data-stage="${stage}"]`);
+  if (el) el.classList.toggle('is-running', on);
+}
+
+function dvLog(stage, status, ms, data, replace = false) {
+  const log  = document.getElementById('dv-log');
+  const hint = log.querySelector('.de-sim-hint');
+  if (hint && stage !== '✓ Pipeline completado') hint.remove();
+  if (replace) {
+    const ex = log.querySelector(`[data-se="${stage}"]`);
+    if (ex) ex.remove();
+  }
+  const icons = { ok:'✓', fail:'✗', running:'⟳' };
+  const cols  = { ok:'#22c55e', fail:'#ef4444', running:'#f59e0b' };
+  const icon = icons[status]||'?', col = cols[status]||'#6b7280';
+  const msStr = ms != null ? ` · ${Number(ms).toFixed(0)}ms` : '';
+  let snippet = '';
+  if (data && status !== 'running') {
+    const raw = data.out||data.log||data.stat||data.commit||data.err||data.status||'';
+    if (raw) snippet = `<code class="de-sim-code">${dvEsc(String(raw).slice(0,150))}</code>`;
+  }
+  const entry = document.createElement('div');
+  entry.className  = `de-sim-entry de-sim-entry--${status}`;
+  entry.dataset.se = stage;
+  entry.innerHTML  = `
+    <span class="de-sim-icon" style="color:${col}">${icon}</span>
+    <div class="de-sim-body">
+      <span class="de-sim-stage" style="color:${col}">${stage}</span>
+      <span class="de-sim-meta">${new Date().toTimeString().slice(0,8)}${msStr}</span>
+      ${snippet}
+    </div>`;
+  log.insertBefore(entry, log.firstChild);
+}
+
+function dvEsc(s) {
+  return s.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
+}
+
+function updateDevopsStats() {
+  const total = (DV.dag.nodes||[]).length;
+  const done  = Object.keys(DV.results).length;
+  const ok    = Object.values(DV.results).filter(r=>r.ok).length;
+  document.getElementById('dv-progress').textContent =
+    `${done}/${total} stages · ✓ ${ok} · ✗ ${done-ok}`;
+}
+
+// ── Bootstrap DevOps bindings ─────────────────────────────────────────────
+document.addEventListener('DOMContentLoaded', () => {
+  document.getElementById('dv-run-all')?.addEventListener('click', runDevopsPipeline);
+  document.getElementById('dv-reset')?.addEventListener('click', () => {
+    DV.results = {};
+    document.getElementById('dv-log').innerHTML =
+      '<p class="de-sim-hint">Log limpiado. Listo para simular.</p>';
+    renderDevopsDAG();
+    updateDevopsStats();
+  });
+  document.getElementById('dv-refresh')?.addEventListener('click', () => {
+    fetchDevopsDag(); fetchDevopsStatus();
+  });
+  document.getElementById('dv-clear-log')?.addEventListener('click', () => {
+    document.getElementById('dv-log').innerHTML =
+      '<p class="de-sim-hint">Log limpiado.</p>';
+  });
+});
 </script>
 
 <script>

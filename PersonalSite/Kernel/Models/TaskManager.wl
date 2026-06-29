@@ -224,6 +224,8 @@ summary[] :=
           "group"    -> toJ @ Lookup[spec, "group", "user"],
           "interval" -> toJ @ Lookup[spec, "interval", 60],
           "enabled"  -> TrueQ @ Lookup[spec, "enabled", True],
+          "deps"     -> Lookup[spec, "deps", {}],
+          "dag_order"-> toJ @ Lookup[spec, "dag_order", 0],
           "running"  -> TrueQ[$states[name]["running"]],
           "runs"     -> toJ[$states[name]["runs"]],
           "errors"   -> toJ[$states[name]["errors"]],
@@ -263,7 +265,7 @@ dagData[] :=
 
     links = Flatten @ KeyValueMap[
       Function[{name, spec},
-        Map[Function[dep, <|"source"->dep, "target"->name|>],
+        Map[Function[dep, <|"from"->dep, "to"->name|>],
             Lookup[spec, "deps", {}]]],
       $specs];
 
@@ -305,10 +307,12 @@ dagData[] :=
           "enabled"  -> TrueQ @ Lookup[$specs[name], "enabled", True],
           "running"  -> TrueQ[$states[name]["running"]],
           "runs"     -> toJ[$states[name]["runs"]],
+          "deps"     -> Lookup[$specs[name], "deps", {}],
+          "dag_order"-> toJ @ Lookup[$specs[name], "dag_order", 0],
           "depth"    -> Quiet @ Check[depthOf[name], 0],
           "cp"       -> TrueQ[MemberQ[cp, name]]
         |>], ids],
-      "links"    -> links,
+      "edges"    -> links,
       "topoOrder"-> topo,
       "critPath" -> cp,
       "nodeCount"-> Length[ids],
