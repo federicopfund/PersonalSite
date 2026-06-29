@@ -868,6 +868,101 @@ pre.wl-nb-text {
 .wl-val--ellipsis { color: rgba(#fff, .25); font-style: italic; }
 
 // ══════════════════════════════════════════════════════════════════
+//  Expandable nested values  (.wl-expand)
+//  Replica el comportamiento ▶/▼ del FrontEnd nativo de WL.
+//  Usa <details>/<summary> HTML nativo — cero JS.
+// ══════════════════════════════════════════════════════════════════
+
+details.wl-expand {
+  display: block;
+  margin: .1rem 0;
+
+  // Quitar el marcador nativo del browser
+  > summary { list-style: none; }
+  > summary::-webkit-details-marker { display: none; }
+  > summary::marker { display: none; }
+}
+
+.wl-expand-sum {
+  display: inline-flex;
+  align-items: center;
+  gap: .3rem;
+  padding: .18rem .5rem .18rem .3rem;
+  border-radius: radius(sm);
+  border: 1px solid rgba(#5aafff, .18);
+  background: rgba(#5aafff, .05);
+  cursor: pointer;
+  user-select: none;
+  transition: background $ease, border-color $ease;
+  max-width: 100%;
+  overflow: hidden;
+
+  &:hover {
+    background: rgba(#5aafff, .12);
+    border-color: rgba(#5aafff, .35);
+  }
+}
+
+// ── Triángulo ▶ / ▼ ──────────────────────────────────────────────
+.wl-expand-tri {
+  display: inline-block;
+  width: .55rem;
+  height: .55rem;
+  color: rgba(#5aafff, .65);
+  font-size: .65rem;
+  line-height: 1;
+  flex-shrink: 0;
+  transition: transform $ease;
+
+  // ▶ cerrado
+  &::before { content: "▶"; }
+}
+
+details.wl-expand[open] > summary .wl-expand-tri {
+  transform: rotate(90deg);   // ▶ rotado = ▼
+}
+
+// ── Preview de contenido ─────────────────────────────────────────
+.wl-expand-preview {
+  font-family: $font-mono;
+  font-size: .72rem;
+  color: rgba(#5aafff, .75);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  max-width: 280px;
+}
+
+// ── Cuerpo expandido ─────────────────────────────────────────────
+.wl-expand-body {
+  margin-top: .2rem;
+  margin-left: .5rem;
+  padding-left: .5rem;
+  border-left: 2px solid rgba(#5aafff, .2);
+
+  // Animación de apertura
+  details.wl-expand[open] > & {
+    animation: wl-expand-open .15s ease forwards;
+  }
+}
+
+@keyframes wl-expand-open {
+  from { opacity: 0; transform: translateY(-4px); }
+  to   { opacity: 1; transform: translateY(0); }
+}
+
+// ── Anidamiento profundo — atenuar gradualmente ──────────────────
+.wl-expand-body .wl-expand-body {
+  border-left-color: rgba(#5aafff, .12);
+  .wl-expand-preview { color: rgba(#5aafff, .55); }
+}
+
+.wl-expand-body .wl-expand-body .wl-expand-body {
+  border-left-color: rgba(#5aafff, .07);
+  .wl-expand-preview { color: rgba(#5aafff, .4); }
+}
+
+// ══════════════════════════════════════════════════════════════════
 //  Style Rules sidebar panel  (.sr-*)
 //  Panel en el sidebar de /kernel para ver/agregar/eliminar reglas
 //  del StyleEngine en runtime.

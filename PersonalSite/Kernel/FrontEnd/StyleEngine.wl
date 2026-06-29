@@ -53,11 +53,64 @@ valClass[Null]            = "wl-val--null";
 valClass[$Failed]         = "wl-val--err";
 valClass[_]               = "wl-val--other";
 
-(* ── Render recursivo con guard de profundidad ──────────────── *)
+(* ── Expansión nativa: tipos que se colapsan como <details> ──── *)
+expandQ[_Association] = True;
+expandQ[_List]        = True;
+expandQ[_Dataset]     = True;
+expandQ[_]            = False;
+
+(* ── Resumen compacto para el <summary> del <details> ────────── *)
+(*   Replica la notación nativa de WL: ⟨|n|⟩ para Association,
+     {n} para List, Dataset[{dims}] para Dataset.               *)
+expandSummary[a_Association] :=
+  "\[LeftAngleBracket]\[VerticalSeparator]" <>
+    StringRiffle[
+      StringTake[esc[ToString[#]], Min[14, StringLength[esc[ToString[#]]]]] & /@
+        Take[Keys[a], Min[3, Length[a]]],
+      ", "] <>
+    If[Length[a] > 3, ", \[Ellipsis]", ""] <>
+  "\[VerticalSeparator]\[RightAngleBracket]" <>
+  " \[ThinSpace]\[LongDash] " <> ToString[Length[a]] <> " keys";
+
+expandSummary[l_List] :=
+  "{ " <>
+    StringRiffle[
+      (esc[StringTake[ToString[#, OutputForm], Min[12, StringLength[ToString[#, OutputForm]]]]] &) /@
+        Take[l, Min[4, Length[l]]],
+      ", "] <>
+    If[Length[l] > 4, ", \[Ellipsis]", ""] <>
+  " }";
+
+expandSummary[d_Dataset] :=
+  "Dataset \[Times] " <>
+    Quiet @ Check[StringRiffle[ToString /@ Dimensions[d], " \[Times] "], "?"];
+
+expandSummary[expr_] :=
+  esc[StringTake[ToString[Head[expr]], Min[18, StringLength[ToString[Head[expr]]]]] <> "[\[Ellipsis]]"];
+
+(* ── Render recursivo con guard + collapsible para hijos ────── *)
+(*   - depth=0 → top level, se renderiza directamente
+     - depth>0 y expandQ → envuelve en <details><summary>preview
+     - depth>=$maxDepth → símbolo de elipsis                     *)
 renderVal[expr_, depth_Integer] :=
-  If[depth >= $maxDepth,
-    "<span class=\"wl-val--ellipsis\">\[Ellipsis]</span>",
-    dispatch[expr, depth + 1]];
+  Which[
+    depth >= $maxDepth,
+      "<span class=\"wl-val--ellipsis\">\[Ellipsis]</span>",
+
+    expandQ[expr],
+      "<details class=\"wl-expand\">" <>
+        "<summary class=\"wl-expand-sum\">" <>
+          "<span class=\"wl-expand-tri\"></span>" <>
+          "<span class=\"wl-expand-preview\">" <> expandSummary[expr] <> "</span>" <>
+        "</summary>" <>
+        "<div class=\"wl-expand-body\">" <>
+          dispatch[expr, depth + 1] <>
+        "</div>" <>
+      "</details>",
+
+    True,
+      dispatch[expr, depth + 1]
+  ];
 
 (* ════════════════════════════════════════════════════════════════
    Renderers predeterminados
