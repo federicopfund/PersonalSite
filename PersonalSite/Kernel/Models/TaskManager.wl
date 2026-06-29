@@ -63,6 +63,12 @@ summary::usage =
 dagData::usage =
   "dagData[] devuelve el grafo DAG de dependencias entre tareas como JSON.";
 
+depGraph::usage =
+  "depGraph[] devuelve un Graph WL nativo con el DAG de dependencias. \n" <>
+  "V\u00e9rtices coloreados por grupo, tama\u00f1o por estado running/stopped, \n" <>
+  "layout LayeredDigraphEmbedding (izq \u2192 der). \n" <>
+  "Se puede usar como In[n]:= PersonalSite`TaskManager`depGraph[].";
+
 unregister::usage =
   "unregister[name] detiene y elimina la tarea del registro. Devuelve name o $Failed.";
 
@@ -304,6 +310,93 @@ dagData[] :=
       "nodeCount"-> Length[ids],
       "edgeCount"-> Length[links]
     |>
+  ];
+
+(* ── depGraph: WL Graph nativo del DAG de tareas ──────────────────
+   Vértices coloreados por grupo, aristas directed dep→tarea,
+   layout LayeredDigraphEmbedding izquierda→derecha.         *)
+
+$groupPalette = <|
+  "system" -> RGBColor[0.35, 0.69, 1.00],
+  "dev"    -> RGBColor[0.66, 0.33, 0.97],
+  "cache"  -> RGBColor[0.00, 0.90, 1.00],
+  "flow"   -> RGBColor[0.66, 0.85, 0.66],
+  "theme"  -> RGBColor[1.00, 0.72, 0.40],
+  "kernel" -> RGBColor[0.92, 0.48, 0.10]
+|>;
+
+PersonalSite`TaskManager`depGraph[] :=
+  Module[{ids, edges, roots, vLabels, vStyles, vSizes, vShapes, running},
+    ids = Keys[$specs];
+    If[Length[ids] == 0,
+      Return[Graph[{}, {}, ImageSize -> 500, Background -> RGBColor[0.05, 0.05, 0.07]]]];
+
+    (* dep → task: la dependencia apunta a quien la necesita *)
+    edges = Flatten @ KeyValueMap[
+      Function[{name, spec},
+        Map[Function[dep, DirectedEdge[dep, name]],
+            Lookup[spec, "deps", {}]]],
+      $specs];
+
+    (* Raíces = tareas sin dependencias *)
+    roots = Select[ids, Lookup[$specs[#], "deps", {}] === {} &];
+
+    (* Estado running para cada tarea *)
+    running = Select[ids, TrueQ[$states[#]["running"]] &];
+
+    (* Labels: task_id + ∆interval encima del vértice *)
+    vLabels = Map[
+      Function[name,
+        With[{lbl = Lookup[$specs[name], "label", name],
+              iv  = ToString[Lookup[$specs[name], "interval", 0]] <> "s"},
+          name -> Placed[
+            Column[{
+              Style[name, FontSize -> 7, FontFamily -> "Courier New",
+                    FontColor -> GrayLevel[0.85], FontWeight -> Bold],
+              Style[iv,   FontSize -> 6, FontFamily -> "Courier New",
+                    FontColor -> GrayLevel[0.5]]
+            }, Alignment -> Center],
+            Below]]],
+      ids];
+
+    (* Colores: por grupo, opacidad por enabled *)
+    vStyles = Map[
+      Function[name,
+        With[{grp  = Lookup[$specs[name], "group", "system"],
+              enab = TrueQ[Lookup[$specs[name], "enabled", True]],
+              run  = MemberQ[running, name]},
+          name -> Directive[
+            Lookup[$groupPalette, grp, GrayLevel[0.45]],
+            Opacity[If[enab, 1.0, 0.45]],
+            If[run,
+              EdgeForm[Directive[White, AbsoluteThickness[1.5]]],
+              EdgeForm[Directive[GrayLevel[0.35], AbsoluteThickness[0.8]]]]]]],
+      ids];
+
+    (* Tamaño: running=grande, stopped=mediano *)
+    vSizes = Map[
+      Function[name, name -> If[MemberQ[running, name], 0.55, 0.38]],
+      ids];
+
+    Graph[
+      ids, edges,
+      VertexLabels -> vLabels,
+      VertexStyle  -> vStyles,
+      VertexSize   -> vSizes,
+      EdgeStyle    -> Directive[
+        GrayLevel[0.45], Arrowheads[{{0.025, 1}}], AbsoluteThickness[1.1]],
+      GraphLayout  -> {
+        "LayeredDigraphEmbedding",
+        "Orientation" -> Left,
+        If[roots =!= {}, "RootVertex" -> First[roots], Nothing]},
+      Background   -> RGBColor[0.05, 0.05, 0.07],
+      ImageSize    -> {720, 360},
+      ImagePadding -> {{35, 35}, {55, 15}},
+      PlotTheme    -> "Monochrome",
+      (* Resaltar las running con halo amarillo *)
+      GraphHighlight      -> running,
+      GraphHighlightStyle -> Directive[Yellow, Opacity[0.25], AbsoluteThickness[3]]
+    ]
   ];
 
 End[];

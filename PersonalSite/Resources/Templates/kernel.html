@@ -110,6 +110,12 @@
           <code class="kta-expr">TaskManager`summary[]</code>
         </button>
 
+        <button class="kernel-trigger-btn kta-poll" style="border-color:rgba(168,85,247,.35);background:rgba(168,85,247,.06)"
+          data-expr="PersonalSite`TaskManager`depGraph[]">
+          <span class="kta-label" style="color:rgba(168,85,247,.9)">&#9674;&nbsp;Pipeline&nbsp;Graph</span>
+          <code class="kta-expr">TaskManager`depGraph[]</code>
+        </button>
+
         <button class="kernel-trigger-btn kta-poll"
           data-expr="Map[Function[s,&lt;|&quot;label&quot;->s[&quot;label&quot;],&quot;running&quot;->s[&quot;running&quot;],&quot;runs&quot;->s[&quot;runs&quot;],&quot;avgMs&quot;->Round[s[&quot;avgMs&quot;],.1],&quot;lastRun&quot;->s[&quot;lastRun&quot;]|&gt;],Values[PersonalSite`TaskManager`allTasks[]]]">
           <span class="kta-label">Task&nbsp;Stats</span>
