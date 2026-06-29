@@ -33,12 +33,15 @@
 }
 
 .tm-kernel-badge {
-  font-size: .65em;
+  font-size: .6em;
   font-weight: 700;
-  background: rgba(255,255,255,.18);
+  font-family: 'Courier New', Courier, monospace;
+  letter-spacing: .03em;
+  background: rgba(255,255,255,.15);
   color: var(--header-text);
-  padding: .15em .55em;
-  border-radius: 20px;
+  padding: .15em .6em;
+  border-radius: 4px;            // rectangular — más Wolfram notebook
+  border: 1px solid rgba(255,255,255,.25);
   vertical-align: middle;
 }
 
@@ -53,6 +56,10 @@
     font-weight: 700;
     color: var(--heading);
     margin: 0 0 1rem;
+    display: flex;
+    align-items: center;
+    gap: .4rem;
+    letter-spacing: .01em;
   }
 
   &__head {

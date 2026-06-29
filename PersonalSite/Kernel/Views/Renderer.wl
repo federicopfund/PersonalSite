@@ -27,7 +27,8 @@ Begin["`Private`"];
 template[name_String] :=
   template[name] = StringTemplate[
     ReadString[FileNameJoin[{
-      PersonalSite`$Root, "Resources", "Templates", name <> ".html"}]],
+      PersonalSite`$Root, "Resources", "Templates", name <> ".html"}],
+      CharacterEncoding -> "UTF-8"],
     Delimiters -> {"<*", "*>"}];
 
 escape[s_String] :=

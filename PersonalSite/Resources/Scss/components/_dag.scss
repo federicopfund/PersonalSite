@@ -28,14 +28,18 @@
   }
 
   &__icon {
-    font-size: 2rem;
+    font-size: 1.5rem;      // BMP symbol ◈ — smaller than emoji, ajustar
     line-height: 1;
+    color: var(--accent);
+    font-weight: 700;
   }
 
   &__title {
     margin: 0;
     font-size: 1.35rem;
+    font-weight: 700;
     color: var(--heading);
+    letter-spacing: .01em;
   }
 
   &__sub {
@@ -45,6 +49,7 @@
     display: flex;
     align-items: center;
     gap: .4rem;
+    font-family: 'Courier New', Courier, monospace; // IDs en monoespacio
   }
 
   &__tools {

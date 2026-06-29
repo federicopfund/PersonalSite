@@ -1,9 +1,9 @@
 <!DOCTYPE html>
-<html lang="es" data-theme="<*$theme*>"
-      data-theme-mode="<*$themeMode*>"
-      data-theme-order="<*$themeOrder*>"
-      data-theme-interval="<*$themeInterval*>"
-      data-theme-epoch="<*$themeEpoch*>">
+<html lang="es" data-theme="<*theme*>"
+      data-theme-mode="<*themeMode*>"
+      data-theme-order="<*themeOrder*>"
+      data-theme-interval="<*themeInterval*>"
+      data-theme-epoch="<*themeEpoch*>">
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
@@ -33,9 +33,9 @@
     <!-- ── Hero ────────────────────────────────────────────────────── -->
     <section class="tm-hero">
       <div class="tm-hero__inner">
-        <h1>Task Manager <span class="tm-kernel-badge">Kernel #<*$kernelID*></span></h1>
-        <p>Runtime scheduler — <strong id="h-running"><*$running*></strong> activas
-           de <strong><*$taskCount*></strong> registradas. Polling cada 3 s.</p>
+        <h1>Task Manager <span class="tm-kernel-badge">Kernel #<*kernelID*></span></h1>
+        <p>Runtime scheduler — <strong id="h-running"><*running*></strong> activas
+           de <strong><*taskCount*></strong> registradas. Polling cada 3 s.</p>
       </div>
       <div class="tm-hero__actions">
         <button id="btn-refresh" class="btn btn--ghost">↺ Actualizar</button>
@@ -46,7 +46,7 @@
     <!-- ── Tabs de navegación ─────────────────────────────────────── -->
     <div class="tm-tabs">
       <button class="tm-tab tm-tab--active" data-tab="runtime">⚡ Runtime</button>
-      <button class="tm-tab" data-tab="config">🗄 Config DB</button>
+      <button class="tm-tab" data-tab="config">≡ Config DB</button>
     </div>
 
     <!-- ═══════════════════════════ TAB: RUNTIME ═══════════════════ -->
@@ -87,7 +87,7 @@
 
     <!-- ── Tabla de tareas ───────────────────────────────────────── -->
     <section class="tm-section">
-      <h2 class="tm-section__title">📋 TaskObjects registrados</h2>
+      <h2 class="tm-section__title">⊟ TaskObjects registrados</h2>
       <div class="tm-table-wrap">
         <table class="tm-table" id="tm-table">
           <thead>
@@ -114,7 +114,7 @@
     <!-- ── DAG de dependencias ───────────────────────────────────── -->
     <section class="tm-section" id="dag-section">
       <div class="tm-section__head">
-        <h2 class="tm-section__title">🔗 Grafo de dependencias (DAG)</h2>
+        <h2 class="tm-section__title">◈ Grafo de dependencias (DAG)</h2>
         <button id="btn-dag" class="btn btn--ghost btn--sm">↺ Recargar DAG</button>
       </div>
       <div id="dag-meta" class="tm-dag-meta"></div>
@@ -127,7 +127,7 @@
     <!-- ── Historial de una tarea ─────────────────────────────────── -->
     <section class="tm-section" id="history-section" style="display:none">
       <div class="tm-section__head">
-        <h2 class="tm-section__title">📈 Historial — <span id="hist-title">—</span></h2>
+        <h2 class="tm-section__title">↗ Historial — <span id="hist-title">—</span></h2>
         <button id="hist-close" class="btn btn--ghost btn--sm">✕ Cerrar</button>
       </div>
       <div id="hist-chart" class="tm-hist-chart"></div>
@@ -184,7 +184,7 @@
       <!-- ── Barra de acciones ─────────────────────────────────── -->
       <section class="tm-section">
         <div class="tm-section__head">
-          <h2 class="tm-section__title">🗄 Configuración persistente (DB)</h2>
+          <h2 class="tm-section__title">≡ Configuración persistente (DB)</h2>
           <div class="tm-cfg-actions">
             <button id="cfg-btn-seed"  class="btn btn--ghost btn--sm">⚡ Seed defaults</button>
             <button id="cfg-btn-apply" class="btn btn--primary btn--sm">▶ Apply to runtime</button>
@@ -202,7 +202,7 @@
 
       <!-- ── Visualización por niveles DAG ─────────────────────── -->
       <section class="tm-section">
-        <h2 class="tm-section__title">🌿 Niveles NestGraph (dag_order)</h2>
+        <h2 class="tm-section__title">⊛ Niveles NestGraph (dag_order)</h2>
         <div id="cfg-levels" class="tm-levels"></div>
       </section>
 

@@ -1,20 +1,20 @@
 <!DOCTYPE html>
-<html lang="es" data-theme="<*$theme*>"
-      data-theme-mode="<*$themeMode*>"
-      data-theme-order="<*$themeOrder*>"
-      data-theme-interval="<*$themeInterval*>"
-      data-theme-epoch="<*$themeEpoch*>">
+<html lang="es" data-theme="<*theme*>"
+      data-theme-mode="<*themeMode*>"
+      data-theme-order="<*themeOrder*>"
+      data-theme-interval="<*themeInterval*>"
+      data-theme-epoch="<*themeEpoch*>">
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
-  <title>DAG Engineer — <*$siteName*></title>
+  <title>DAG Engineer — <*siteName*></title>
   <link rel="stylesheet" href="/static/styles.css">
 </head>
 <body>
 <div class="theme-bar" aria-hidden="true"></div>
 <nav class="navbar">
   <div class="nav-container">
-    <a class="nav-brand" href="/"><*$siteName*></a>
+    <a class="nav-brand" href="/"><*siteName*></a>
     <button class="nav-toggle" id="nt" aria-label="Menú"><span></span><span></span><span></span></button>
     <ul class="nav-links" id="nl">
       <li><a href="/">Inicio</a></li>
@@ -29,10 +29,10 @@
   <!-- ══ HEADER ═══════════════════════════════════════════════════════ -->
   <header class="de-header">
     <div class="de-header__brand">
-      <span class="de-header__icon">🔗</span>
+      <span class="de-header__icon">◈</span>
       <div>
         <h1 class="de-header__title">DAG Engineer</h1>
-        <p class="de-header__sub">Task Scheduler · Kernel&nbsp;<strong id="hdr-kernel"><*$kernelID*></strong>
+        <p class="de-header__sub">Task Scheduler · Kernel&nbsp;<strong id="hdr-kernel"><*kernelID*></strong>
           · <span id="hdr-live" class="de-live-dot" title="Live polling"></span> Live
         </p>
       </div>
@@ -46,7 +46,7 @@
       <div class="de-kpi" id="kpi-avgms"><span class="de-kpi__n">—</span><span class="de-kpi__l">Avg ms</span></div>
     </div>
     <div class="de-header__tools">
-      <input id="de-search" class="de-search" type="search" placeholder="🔍 Filtrar nodos…" autocomplete="off">
+      <input id="de-search" class="de-search" type="search" placeholder=" Filtrar nodos…" autocomplete="off">
       <button id="btn-live" class="btn btn--ghost btn--sm de-btn-live is-live" title="Toggle auto-refresh">⟳ Live</button>
       <button id="btn-refresh" class="btn btn--ghost btn--sm" title="Refrescar ahora">↺</button>
     </div>
@@ -59,9 +59,9 @@
 
   <!-- ══ TABS ══════════════════════════════════════════════════════════ -->
   <div class="de-tabs">
-    <button class="de-tab is-active" data-tab="viz">🔗 Grafo DAG</button>
-    <button class="de-tab" data-tab="metrics">📊 Métricas</button>
-    <button class="de-tab" data-tab="devops">🚀 DevOps Pipeline</button>
+    <button class="de-tab is-active" data-tab="viz">◈ Grafo DAG</button>
+    <button class="de-tab" data-tab="metrics">∑ Métricas</button>
+    <button class="de-tab" data-tab="devops">▷ DevOps Pipeline</button>
     <button class="de-tab" data-tab="create">⊕ Nueva tarea</button>
   </div>
 
@@ -105,7 +105,7 @@
 
     <!-- Group metrics cards -->
     <section class="de-section">
-      <h2 class="de-section__title">📦 Métricas por grupo</h2>
+      <h2 class="de-section__title">⊠ Métricas por grupo</h2>
       <div class="de-metrics-grid" id="metrics-grid"><!-- by JS --></div>
     </section>
 
@@ -136,7 +136,7 @@
       <div id="dv-progress" class="de-devops-stats">0 / 18 stages ejecutadas</div>
       <div class="de-devops-controls">
         <button id="dv-run-all"      class="btn btn--primary btn--sm">▶ Run Full Pipeline</button>
-        <button id="dv-run-history"  class="btn btn--ghost btn--sm">📋 History</button>
+        <button id="dv-run-history"  class="btn btn--ghost btn--sm">⊟ History</button>
         <button id="dv-reset"        class="btn btn--ghost btn--sm">↺ Reset</button>
         <button id="dv-refresh"      class="btn btn--ghost btn--sm">⟳</button>
       </div>
@@ -271,7 +271,7 @@
 
       <!-- Right: visual dependency picker -->
       <div class="de-deps-wrap">
-        <h3 class="de-section__title">🔗 Dependencias</h3>
+        <h3 class="de-section__title">◈ Dependencias</h3>
         <p class="de-section__sub">Selecciona las tareas de las que depende esta tarea.
            El DAG order se calcula automáticamente.</p>
         <div class="de-deps-search-wrap">
@@ -1051,15 +1051,15 @@ async function fetchDevopsStatus() {
     const data = await res.json();
     if (data.bridge_ok) {
       badge.className = 'de-bridge-badge de-bridge--ok';
-      badge.textContent = '🟢 Bridge OK — ' + (data.bridge_host || '172.18.0.1:8091') +
+      badge.textContent = '● Bridge OK — ' + (data.bridge_host || '172.18.0.1:8091') +
                           (data.bridge_ms ? ' · ' + data.bridge_ms.toFixed(0) + 'ms' : '');
     } else {
       badge.className = 'de-bridge-badge de-bridge--down';
-      badge.textContent = '🔴 Bridge Down — python3 tools/devops_bridge.py &';
+      badge.textContent = '○ Bridge Down — python3 tools/devops_bridge.py &';
     }
   } catch(e) {
     badge.className = 'de-bridge-badge de-bridge--down';
-    badge.textContent = '🔴 Bridge offline';
+    badge.textContent = '○ Bridge offline';
   }
 }
 
