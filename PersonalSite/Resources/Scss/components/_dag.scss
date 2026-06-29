@@ -977,16 +977,6 @@
   }
 }
 
-// ── _tasks.scss missing badge variants (backfill) ──────────────────────────
-.tm-badge {
-  &--ux    { background: color-mix(in srgb, #00bcd4 15%, transparent); color: #26c6da; }
-  &--dev   { background: color-mix(in srgb, #607d8b 15%, transparent); color: #90a4ae; }
-  &--git   { background: color-mix(in srgb, #795548 15%, transparent); color: #a1887f; }
-  &--ops   { background: color-mix(in srgb, #ef5350 15%, transparent); color: #ef9a9a; }
-  &--build { background: color-mix(in srgb, #ff5722 15%, transparent); color: #ff8a65; }
-  &--test  { background: color-mix(in srgb, #4caf50 15%, transparent); color: #81c784; }
-}
-
 // ── DevOps Pipeline Tab ────────────────────────────────────────────────────
 .de-devops-header {
   display: flex;

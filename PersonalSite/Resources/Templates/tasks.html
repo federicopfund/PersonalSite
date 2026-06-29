@@ -48,7 +48,29 @@
       <button class="tm-tab tm-tab--active" data-tab="runtime">⚡ Runtime</button>
       <button class="tm-tab" data-tab="config">≡ Config DB</button>
     </div>
-
+    <!-- ── KPI Stats ───────────────────────────────────────────── -->
+    <div class="tm-stats">
+      <div class="tm-stat tm-stat--running">
+        <span class="tm-stat__label">Activas</span>
+        <span class="tm-stat__value" id="stat-running">—</span>
+        <span class="tm-stat__sub">de <span id="stat-total">—</span> registradas</span>
+      </div>
+      <div class="tm-stat tm-stat--error">
+        <span class="tm-stat__label">Con errores</span>
+        <span class="tm-stat__value" id="stat-errors">—</span>
+        <span class="tm-stat__sub">tareas con &gt;0 errores</span>
+      </div>
+      <div class="tm-stat">
+        <span class="tm-stat__label">Runs totales</span>
+        <span class="tm-stat__value" id="stat-runs">—</span>
+        <span class="tm-stat__sub">ejecuciones acumuladas</span>
+      </div>
+      <div class="tm-stat">
+        <span class="tm-stat__label">Kernel</span>
+        <span class="tm-stat__value tm-mono" id="stat-kernel" style="font-size:1.2rem">—</span>
+        <span class="tm-stat__sub">kernel WL activo</span>
+      </div>
+    </div>
     <!-- ═══════════════════════════ TAB: RUNTIME ═══════════════════ -->
     <div id="tab-runtime" class="tm-tab-panel">
 
@@ -314,9 +336,12 @@
 
   /* ── Grupos → color ────────────────────────────────────────────── */
   const GROUP_CLASS = {
-    system: 'tm-badge--system', flow: 'tm-badge--flow',
+    system: 'tm-badge--system', flow:  'tm-badge--flow',
     cache:  'tm-badge--cache',  theme: 'tm-badge--theme',
-    nest:   'tm-badge--flow',   user:  'tm-badge--user'
+    nest:   'tm-badge--flow',   user:  'tm-badge--user',
+    git:    'tm-badge--git',    dev:   'tm-badge--dev',
+    ops:    'tm-badge--ops',    build: 'tm-badge--build',
+    test:   'tm-badge--test',   ux:    'tm-badge--ux'
   };
 
   /* ── CONFIG DB ──────────────────────────────────────────────────── */
@@ -494,7 +519,16 @@
   /* ── Render tabla runtime ───────────────────────────────────────── */
   function renderTable(snap){
     $('h-running').textContent = snap.running;
+    // KPI stat cards
     const tasks = snap.tasks || {};
+    const totalRuns  = Object.values(tasks).reduce((s,t) => s + (t.runs||0), 0);
+    const errTasks   = Object.values(tasks).filter(t => t.errors > 0).length;
+    const el = id => document.getElementById(id);
+    if(el('stat-running')) el('stat-running').textContent = snap.running ?? '—';
+    if(el('stat-total'))   el('stat-total').textContent   = snap.taskCount ?? '—';
+    if(el('stat-errors'))  el('stat-errors').textContent  = errTasks;
+    if(el('stat-runs'))    el('stat-runs').textContent    = totalRuns;
+    if(el('stat-kernel'))  el('stat-kernel').textContent  = '#' + (snap.kernel ?? '?');
     const rows  = Object.entries(tasks).map(([id, t]) => {
       const runCls = t.running ? 'tm-badge--on' : 'tm-badge--off';
       const grpCls = GROUP_CLASS[t.group] || 'tm-badge--user';

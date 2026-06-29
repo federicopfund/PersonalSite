@@ -187,13 +187,66 @@
   text-transform: uppercase;
   letter-spacing: .04em;
 
-  &--on     { background: color-mix(in srgb, #4caf50 18%, transparent); color: #4caf50; }
-  &--off    { background: var(--bg-alt); color: var(--text-muted); }
+  &--on     { background: color-mix(in srgb, #4caf50 18%, transparent); color: #4caf50; border: 1px solid color-mix(in srgb,#4caf50 35%,transparent); }
+  &--off    { background: var(--bg-alt); color: var(--text-muted); border: 1px solid var(--border); }
+  // grupo: sistema & infraestructura
   &--system { background: color-mix(in srgb, var(--accent) 15%, transparent); color: var(--accent-strong); }
   &--flow   { background: color-mix(in srgb, #9c27b0 15%, transparent); color: #ab47bc; }
   &--cache  { background: color-mix(in srgb, #2196f3 15%, transparent); color: #42a5f5; }
   &--theme  { background: color-mix(in srgb, #ff9800 15%, transparent); color: #ffa726; }
   &--user   { background: color-mix(in srgb, #607d8b 15%, transparent); color: #90a4ae; }
+  // grupos DevOps/dev
+  &--git    { background: color-mix(in srgb, #795548 15%, transparent); color: #a1887f; }
+  &--dev    { background: color-mix(in srgb, #455a64 15%, transparent); color: #78909c; }
+  &--ops    { background: color-mix(in srgb, #ef5350 15%, transparent); color: #ef9a9a; }
+  &--build  { background: color-mix(in srgb, #ff5722 15%, transparent); color: #ff8a65; }
+  &--test   { background: color-mix(in srgb, #4caf50 15%, transparent); color: #81c784; }
+  &--ux     { background: color-mix(in srgb, #00bcd4 15%, transparent); color: #26c6da; }
+}
+
+// ── KPI Stat Cards ────────────────────────────────────────────────────────
+.tm-stats {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(150px, 1fr));
+  gap: .75rem;
+  max-width: 1200px;
+  margin: 1.5rem auto .25rem;
+  padding: 0 1.5rem;
+}
+
+.tm-stat {
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  padding: 1rem 1.25rem;
+  display: flex;
+  flex-direction: column;
+  gap: .15rem;
+
+  &__label {
+    font-size: .68rem;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: .07em;
+    color: var(--text-muted);
+  }
+
+  &__value {
+    font-size: 2rem;
+    font-weight: 800;
+    color: var(--heading);
+    line-height: 1.1;
+    font-variant-numeric: tabular-nums;
+  }
+
+  &__sub {
+    font-size: .72rem;
+    color: var(--text-muted);
+    margin-top: .1rem;
+  }
+
+  &--running .tm-stat__value { color: #4caf50; }
+  &--error   .tm-stat__value { color: #ef5350; }
 }
 
 // ── Acciones de fila ──────────────────────────────────────────────────────
