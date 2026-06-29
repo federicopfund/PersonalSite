@@ -379,17 +379,17 @@ PersonalSite`TaskManager`depGraph[] :=
       Function[name,
         With[{iv = ToString[Lookup[$specs[name], "interval", 0]] <> "s"},
           If[name === "heartbeat",
-            (* ♩ latiendo: nota musical + beat count + intervalo *)
+            (* ♥ latiendo: corazon + beat count + intervalo *)
             name -> Placed[
               Column[{
-                Style["\[MusicNote] \[MusicNote]",
+                Style["\:2665 \:2665",
                       FontSize -> 12,
                       FontColor -> RGBColor[1.00, 0.85, 0.15],
                       FontWeight -> Bold],
                 Style["heartbeat",
                       FontSize -> 7, FontFamily -> "Courier New",
                       FontColor -> GrayLevel[0.95], FontWeight -> Bold],
-                Style[ToString[hbRuns] <> "\[CenterDot]" <> iv,
+                Style[ToString[hbRuns] <> "\:00b7" <> iv,
                       FontSize -> 6, FontFamily -> "Courier New",
                       FontColor -> RGBColor[1.00, 0.82, 0.12]]
               }, Alignment -> Center],

@@ -1040,3 +1040,115 @@ details.wl-expand[open] > summary .wl-expand-tri {
     text-align: center;
   }
 }
+
+/* ── Heartbeat Simulation Monitor ──────────────────────── */
+.kernel-hb-monitor {
+  margin-top: .8rem;
+  padding: .5rem .4rem .6rem;
+  border-top: 1px solid rgba(#ffd700, .08);
+}
+
+.hb-display {
+  background: rgba(0,0,0,.35);
+  border: 1px solid rgba(#ffd700, .12);
+  border-radius: .45rem;
+  padding: .55rem .5rem .45rem;
+  margin-bottom: .4rem;
+}
+
+.hb-pulse-wrap {
+  position: relative;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  height: 3.2rem;
+  margin-bottom: .3rem;
+}
+
+.hb-heart {
+  font-size: 2rem;
+  color: rgba(#ffd700, .35);
+  z-index: 2;
+  user-select: none;
+  line-height: 1;
+  transition: color .3s;
+}
+
+.hb-ring {
+  position: absolute;
+  width: 2.4rem;
+  height: 2.4rem;
+  border: 2px solid #ffd700;
+  border-radius: 50%;
+  opacity: 0;
+  pointer-events: none;
+}
+
+@keyframes hb-beat-kf {
+  0%   { transform: scale(1);   }
+  15%  { transform: scale(1.45);}
+  35%  { transform: scale(.92); }
+  55%  { transform: scale(1.18);}
+  75%  { transform: scale(.97); }
+  100% { transform: scale(1);   }
+}
+
+@keyframes hb-ripple-kf {
+  0%   { transform: scale(.4); opacity: .9; }
+  100% { transform: scale(3.2); opacity: 0; }
+}
+
+.hb-heart.hb-beat   { animation: hb-beat-kf   .55s ease-out; }
+.hb-ring.hb-ripple  { animation: hb-ripple-kf  .85s ease-out forwards; }
+
+.hb-stats-grid {
+  display: flex;
+  justify-content: space-around;
+  margin-bottom: .4rem;
+}
+
+.hb-stat {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: .08rem;
+}
+
+.hb-stat-n {
+  font-size: .9rem;
+  font-weight: 700;
+  color: #ffd700;
+  font-family: 'Courier New', monospace;
+  line-height: 1;
+}
+
+.hb-stat-l {
+  font-size: .58rem;
+  color: #555;
+  text-transform: uppercase;
+  letter-spacing: .04em;
+}
+
+.hb-history-bars {
+  display: flex;
+  align-items: flex-end;
+  gap: 2px;
+  height: 30px;
+  padding: 0 .1rem;
+  margin-bottom: .3rem;
+}
+
+.hb-bar {
+  flex: 1;
+  min-height: 3px;
+  background: rgba(#22c55e, .7);
+  border-radius: 2px 2px 0 0;
+  transition: height .25s ease;
+}
+
+.hb-last-run {
+  font-size: .58rem;
+  color: #444;
+  text-align: center;
+  font-family: 'Courier New', monospace;
+}

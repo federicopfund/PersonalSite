@@ -267,6 +267,60 @@
         </div>
       </div>
 
+      <!-- ── Heartbeat Simulation Monitor ────────────────── -->
+      <div class="kernel-hb-monitor">
+        <div class="kta-group-label" style="margin-bottom:.55rem">&#9829; Heartbeat Simulation</div>
+
+        <div class="hb-display" id="hb-display">
+          <!-- Pulse ring + heart core -->
+          <div class="hb-pulse-wrap">
+            <div class="hb-ring" id="hb-ring"></div>
+            <div class="hb-heart" id="hb-heart">&#9829;</div>
+          </div>
+          <!-- Stats row -->
+          <div class="hb-stats-grid">
+            <div class="hb-stat">
+              <span class="hb-stat-n" id="hb-beats">&#8212;</span>
+              <span class="hb-stat-l">beats</span>
+            </div>
+            <div class="hb-stat">
+              <span class="hb-stat-n" id="hb-avg">&#8212;</span>
+              <span class="hb-stat-l">avg ms</span>
+            </div>
+            <div class="hb-stat">
+              <span class="hb-stat-n" id="hb-status-dot" style="font-size:.7rem">&#9679;</span>
+              <span class="hb-stat-l" id="hb-status-lbl">stopped</span>
+            </div>
+          </div>
+          <!-- History sparkline bars -->
+          <div class="hb-history-bars" id="hb-history-bars"></div>
+          <div class="hb-last-run" id="hb-last-run">&#250;ltima ejecuci&#243;n: &#8212;</div>
+        </div>
+
+        <!-- Controls -->
+        <button id="hb-sim-btn" class="kernel-btn kernel-btn--eval"
+                style="width:100%;margin-top:.4rem">
+          &#9654; Iniciar Simulaci&#243;n
+        </button>
+        <div style="display:flex;gap:.5rem;margin-top:.35rem;align-items:center">
+          <label style="font-size:.6rem;color:#555">Cada</label>
+          <select id="hb-iv" style="flex:1;font-size:.62rem;background:#111;color:#888;border:1px solid #2a2a2a;padding:.15rem .2rem;border-radius:.25rem">
+            <option value="2">2 s</option>
+            <option value="3" selected>3 s</option>
+            <option value="5">5 s</option>
+            <option value="10">10 s</option>
+          </select>
+          <label style="font-size:.6rem;color:#555;display:flex;align-items:center;gap:.25rem;cursor:pointer">
+            <input type="checkbox" id="hb-refresh-graph" checked style="accent-color:#ffd700">
+            <span>graph</span>
+          </label>
+        </div>
+        <!-- Entangled count badge -->
+        <div style="margin-top:.4rem;font-size:.6rem;color:#555;text-align:center">
+          entangled: <span id="hb-entangled-n" style="color:#ffd700">&#8212;</span> nodos
+        </div>
+      </div>
+
     </aside>
 
     <!-- ── Main notebook area ─────────────────────────── -->
@@ -632,6 +686,137 @@
   inputEl.addEventListener('keydown', function(e){
     if (e.shiftKey && e.key === 'Enter') { e.preventDefault(); doEval(); }
   });
+
+  /* ── Heartbeat Simulation Monitor ──────────────────────── */
+  (function() {
+    var hbBtn        = document.getElementById('hb-sim-btn');
+    var hbBeatsEl    = document.getElementById('hb-beats');
+    var hbAvgEl      = document.getElementById('hb-avg');
+    var hbDotEl      = document.getElementById('hb-status-dot');
+    var hbLblEl      = document.getElementById('hb-status-lbl');
+    var hbBarsEl     = document.getElementById('hb-history-bars');
+    var hbLastEl     = document.getElementById('hb-last-run');
+    var hbHeartEl    = document.getElementById('hb-heart');
+    var hbRingEl     = document.getElementById('hb-ring');
+    var hbIvEl       = document.getElementById('hb-iv');
+    var hbGraphChk   = document.getElementById('hb-refresh-graph');
+    var hbEntangledEl= document.getElementById('hb-entangled-n');
+    var hbTimer      = null;
+    var simActive    = false;
+    var prevRuns     = null;
+
+    function parsePairs(raw) {
+      /* Parse WL Association output text into a JS object */
+      var obj = {};
+      var rp = /(\w+)\s*->\s*([^,|>]+)/g;
+      var m;
+      while ((m = rp.exec(raw)) !== null) {
+        obj[m[1].trim()] = m[2].trim();
+      }
+      return obj;
+    }
+
+    function beat() {
+      /* CSS beat animation — remove + reflow + re-add to retrigger */
+      if (hbHeartEl) {
+        hbHeartEl.classList.remove('hb-beat');
+        void hbHeartEl.offsetWidth;
+        hbHeartEl.classList.add('hb-beat');
+      }
+      if (hbRingEl) {
+        hbRingEl.classList.remove('hb-ripple');
+        void hbRingEl.offsetWidth;
+        hbRingEl.classList.add('hb-ripple');
+      }
+    }
+
+    function pollHB() {
+      fetch('/kernel/eval', {
+        method: 'POST',
+        headers: {'Content-Type': 'application/x-www-form-urlencoded'},
+        body: 'input=' + encodeURIComponent(
+          '<|"runs"->PersonalSite`TaskManager`Private`$states["heartbeat"]["runs"],' +
+          '"avgMs"->Round[PersonalSite`TaskManager`Private`$states["heartbeat"]["avgMs"],.1],' +
+          '"running"->TrueQ[PersonalSite`TaskManager`Private`$states["heartbeat"]["running"]],' +
+          '"lastRun"->If[PersonalSite`TaskManager`Private`$states["heartbeat"]["lastRun"]===None,"—",' +
+            'DateString[PersonalSite`TaskManager`Private`$states["heartbeat"]["lastRun"],{"Hour24",":","Minute",":","Second"}]],' +
+          '"history"->Take[PersonalSite`TaskManager`Private`$states["heartbeat"]["history"],UpTo[10]],' +
+          '"entangled"->Length[Select[Keys[PersonalSite`TaskManager`Private`$specs],' +
+            'MemberQ[Lookup[PersonalSite`TaskManager`Private`$specs[#],"deps",{}],"heartbeat"]&]]|>'
+        )
+      })
+      .then(function(r) { return r.json(); })
+      .then(function(cell) {
+        var raw = (cell.out && cell.out.out) || '';
+        var d   = parsePairs(raw);
+
+        var runs    = parseInt(d.runs);
+        var avgMs   = parseFloat(d.avgMs);
+        var running = d.running === 'True';
+        var last    = d.lastRun || '—';
+        var entN    = parseInt(d.entangled) || 0;
+
+        if (hbBeatsEl)    hbBeatsEl.textContent    = isNaN(runs) ? '—' : runs;
+        if (hbAvgEl)      hbAvgEl.textContent      = isNaN(avgMs) ? '—' : avgMs.toFixed(1) + 'ms';
+        if (hbDotEl)      hbDotEl.style.color      = running ? '#ffd700' : '#444';
+        if (hbLblEl)      hbLblEl.textContent      = running ? 'running' : 'stopped';
+        if (hbLastEl)     hbLastEl.textContent      = 'última: ' + last;
+        if (hbEntangledEl)hbEntangledEl.textContent = entN;
+
+        /* Fire beat animation if run count increased */
+        if (prevRuns !== null && !isNaN(runs) && runs > prevRuns) { beat(); }
+        prevRuns = isNaN(runs) ? prevRuns : runs;
+
+        /* Sparkline bars from history */
+        if (hbBarsEl && raw.indexOf('"ms"') !== -1) {
+          var msVals = [];
+          var mp = /"ms"\s*->\s*([\d.]+)/g, mv;
+          while ((mv = mp.exec(raw)) !== null) { msVals.push(parseFloat(mv[1])); }
+          var maxMs = Math.max.apply(null, msVals.concat([1]));
+          hbBarsEl.innerHTML = msVals.slice(0, 10).map(function(v, i) {
+            var h = Math.max(3, Math.round(v / maxMs * 28));
+            var ok = raw.indexOf('"ok" -> True') !== -1;
+            return '<div class="hb-bar" style="height:' + h + 'px" title="' + v + 'ms"></div>';
+          }).join('');
+        }
+
+        /* Refresh depGraph if checkbox is on */
+        if (hbGraphChk && hbGraphChk.checked) {
+          doEval('PersonalSite`TaskManager`depGraph[]');
+        }
+      })
+      .catch(function(e) { console.warn('hb poll', e); });
+    }
+
+    function startSim() {
+      simActive = true;
+      hbBtn.innerHTML = '&#9632; Detener Simulaci&#243;n';
+      hbBtn.style.background = 'rgba(244,63,94,.15)';
+      hbBtn.style.borderColor = 'rgba(244,63,94,.4)';
+      if (hbHeartEl) hbHeartEl.style.color = '#ffd700';
+      var iv = (parseInt((hbIvEl && hbIvEl.value) || '3')) * 1000;
+      pollHB();
+      hbTimer = setInterval(pollHB, iv);
+    }
+
+    function stopSim() {
+      simActive = false;
+      clearInterval(hbTimer);
+      hbTimer = null;
+      hbBtn.innerHTML = '&#9654; Iniciar Simulaci&#243;n';
+      hbBtn.style.background = '';
+      hbBtn.style.borderColor = '';
+      if (hbHeartEl) { hbHeartEl.style.color = ''; hbHeartEl.classList.remove('hb-beat'); }
+      if (hbRingEl)  hbRingEl.classList.remove('hb-ripple');
+    }
+
+    if (hbBtn) hbBtn.addEventListener('click', function() {
+      if (simActive) stopSim(); else startSim();
+    });
+    if (hbIvEl) hbIvEl.addEventListener('change', function() {
+      if (simActive) { stopSim(); startSim(); }
+    });
+  })();
 
 })();
 </script>
