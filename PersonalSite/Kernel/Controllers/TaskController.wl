@@ -302,7 +302,11 @@ devopsRunStage[stage_String, req_] :=
 devopsPipelineRun[req_] :=
   Module[{res, saved},
     res   = Quiet @ Check[
-      PersonalSite`DevOps`runPipeline[],
+      TimeConstrained[
+        PersonalSite`DevOps`runPipeline[],
+        90,
+        <|"ok"->False, "err"->"pipeline timeout (90s)",
+          "ts"->DateString["ISODateTime"]|>],
       <|"ok"->False, "err"->"runPipeline exception",
         "ts"->DateString["ISODateTime"]|>];
     saved = Quiet @ Check[

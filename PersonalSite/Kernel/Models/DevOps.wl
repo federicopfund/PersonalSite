@@ -250,10 +250,14 @@ $appRoot = FileNameJoin[{$root, "PersonalSite"}];
 (* ── Helper: ejecutar proceso externo ───────────────────────────────── *)
 run[args_List] :=
   Module[{r},
-    r = RunProcess[args, All, ProcessDirectory -> $root];
-    <|"exit" -> r["ExitCode"],
-      "out"  -> StringTake[r["StandardOutput"],  UpTo[600]],
-      "err"  -> StringTake[r["StandardError"],   UpTo[300]]|>];
+    r = TimeConstrained[
+          RunProcess[args, All, ProcessDirectory -> $root],
+          30,
+          <|"ExitCode" -> -1, "StandardOutput" -> "",
+            "StandardError" -> "process timeout (30s)"|>];
+    <|"exit" -> Lookup[r, "ExitCode", -1],
+      "out"  -> StringTake[Lookup[r, "StandardOutput",  ""], UpTo[600]],
+      "err"  -> StringTake[Lookup[r, "StandardError",   ""], UpTo[300]]|>];
 
 runQ[args_List] := run[args]["exit"] === 0;
 
@@ -393,11 +397,13 @@ PersonalSite`DevOps`gitPush[] :=
 PersonalSite`DevOps`smokeTest[] :=
   Module[{t0, r, ms, code},
     t0 = AbsoluteTime[];
-    r  = Quiet @ URLRead[
-           HTTPRequest["http://localhost:18000/"],
-           {"StatusCode"}];
+    r  = Quiet @ Check[
+           TimeConstrained[
+             URLRead[HTTPRequest["http://127.0.0.1:18000/"], "StatusCode"],
+             5, -1],
+           -1];
     ms   = Round[(AbsoluteTime[] - t0) * 1000, 0.1];
-    code = Quiet @ Check[r["StatusCode"], -1];
+    code = If[IntegerQ[r], r, -1];
     <|"ok"        -> TrueQ[code === 200],
       "statusCode"-> code,
       "latencyMs" -> ms|>];
@@ -413,10 +419,12 @@ PersonalSite`DevOps`deployNotify[] :=
 
 (* ── L7 · perf-check ────────────────────────────────────────────────── *)
 PersonalSite`DevOps`perfCheck[] :=
-  Module[{times, t0, r, ms},
+  Module[{times, t0, ms},
     times = Table[
       (t0 = AbsoluteTime[];
-       Quiet @ URLRead[HTTPRequest["http://localhost:18000/"], "StatusCode"];
+       Quiet @ Check[
+         TimeConstrained[URLRead[HTTPRequest["http://127.0.0.1:18000/"], "StatusCode"], 5, -1],
+         -1];
        Round[(AbsoluteTime[] - t0) * 1000, 0.1]),
       {3}];
     <|"ok"      -> True,
@@ -637,7 +645,9 @@ PersonalSite`DevOps`runStage[name_String] :=
                "stage"->name, "ms"->0,
                "ts"->DateString["ISODateTime"]|>]];
     t0     = AbsoluteTime[];
-    result = Quiet @ Check[fn[], <|"ok"->False, "err"->"exception in stage"|>];
+    result = Quiet @ Check[
+      TimeConstrained[fn[], 30, <|"ok"->False, "err"->"stage timeout (30s)"|>],
+      <|"ok"->False, "err"->"exception in stage"|>];
     ms     = Round[(AbsoluteTime[] - t0) * 1000, 0.1];
     result = <|result, "stage"->name, "ms"->ms, "ts"->DateString["ISODateTime"]|>;
     $devopsResults[name] = result;
