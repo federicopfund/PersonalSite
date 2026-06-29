@@ -1,17 +1,9 @@
+
 (* PersonalSite`DevOps`
    --------------------------------------------------------------------------
-   Pipeline DevOps como SchedulerTasks WL.
-   Arquitectura híbrida:
-     - Operaciones nativas (SyntaxQ, URLRead, docker ps): corren en el
-       kernel WolframWebEngine directamente.
-     - Operaciones de host (git, paclet build, test runner): delegadas al
-       DevOps Bridge HTTP (tools/devops_bridge.py) escuchando en
-       http://172.18.0.1:8091 desde el devcontainer.
+   Pipeline DevOps — 17 etapas en 8 niveles (L0–L7).
+   Implementacion RunProcess/URLRead nativa (container).
 
-   Arrancar el bridge (devcontainer):
-     python3 tools/devops_bridge.py &
-
-   17 etapas distribuidas en 8 niveles del DAG:
    L0: code-lint       git-status
    L1: test-run        git-diff
    L2: test-report     paclet-clean
@@ -20,199 +12,8 @@
    L5: docker-verify   git-push
    L6: smoke-test      deploy-notify
    L7: perf-check      changelog-gen
-   -------------------------------------------------------------------------- *)
 
-BeginPackage["PersonalSite`DevOps`"];
-
-codeLint::usage    = "codeLint[] SyntaxQ-check de todos los .wl en Kernel/.";
-runTests::usage    = "runTests[] ejecuta la suite de tests via bridge.";
-testReport::usage  = "testReport[] snapshot del ultimo commit + timestamp.";
-gitStatus::usage   = "gitStatus[] git status --porcelain via bridge.";
-gitDiff::usage     = "gitDiff[] git diff --stat HEAD via bridge.";
-pacletClean::usage = "pacletClean[] elimina build/*.paclet via bridge.";
-pacletBuild::usage = "pacletBuild[] llama build_paclet.py via bridge.";
-pacletVerify::usage= "pacletVerify[] verifica .paclet en build/ via bridge.";
-dockerBuild::usage = "dockerBuild[] docker build via bridge.";
-dockerVerify::usage= "dockerVerify[] docker ps profile-web-1 (nativo).";
-gitStage::usage    = "gitStage[] git add -A via bridge.";
-gitCommit::usage   = "gitCommit[] git commit auto via bridge.";
-gitPush::usage     = "gitPush[] git push origin main via bridge.";
-smokeTest::usage   = "smokeTest[] HTTP GET localhost:18000 (nativo).";
-deployNotify::usage= "deployNotify[] registra evento deploy.";
-perfCheck::usage   = "perfCheck[] latencia promedio 3 probes (nativo).";
-changelogGen::usage= "changelogGen[] git log -10 via bridge.";
-bridgeHealth::usage= "bridgeHealth[] verifica que el DevOps Bridge responde.";
-
-Begin["`Private`"];
-
-(* ── Bridge endpoint ─────────────────────────────────────────────── *)
-$bridgeBase = "http://172.18.0.1:8091";
-$appRoot    = "/app/PersonalSite";
-
-(* ImportString["JSON"] devuelve lista de Rules, no Association:
-   convertimos con Association @ ...                               *)
-parseJSON[body_String] :=
-  Module[{parsed},
-    parsed = Quiet @ Check[ImportString[body, "JSON"], $Failed];
-    Which[
-      AssociationQ[parsed],  parsed,
-      ListQ[parsed],         Association[parsed],
-      True,                  $Failed]];
-
-(* POST al bridge — falla en 5s si no responde, nunca bloquea el kernel *)
-bridge[path_String] :=
-  Module[{url, body},
-    url  = $bridgeBase <> path;
-    body = Quiet @ Check[
-      TimeConstrained[
-        URLRead[HTTPRequest[url, <|"Method" -> "POST", "Body" -> ""|>], "Body"],
-        5,       (* max 5 segundos — no bloquear el kernel pool *)
-        $Failed],
-      $Failed];
-    If[!StringQ[body],
-      Return[<|"ok" -> False, "err" -> "bridge unavailable (timeout/down)"|>]];
-    With[{p = parseJSON[body]},
-      If[AssociationQ[p], p,
-        <|"ok" -> False, "err" -> "parse error", "raw" -> StringTake[body, UpTo[200]]|>]]];
-
-(* ── bridgeHealth ────────────────────────────────────────────────── *)
-PersonalSite`DevOps`bridgeHealth[] :=
-  Module[{body},
-    body = Quiet @ Check[
-      TimeConstrained[
-        URLRead[HTTPRequest[$bridgeBase <> "/health"], "Body"],
-        5, $Failed],
-      $Failed];
-    If[!StringQ[body],
-      Return[<|"ok" -> False, "status" -> "bridge down — run: make bridge"|>]];
-    With[{p = parseJSON[body]},
-      If[AssociationQ[p],
-        <|p, "status" -> "bridge ok"|>,
-        <|"ok" -> False, "status" -> "parse error"|>]]];
-
-(* ── L0 · code-lint (nativo — SyntaxQ en /app/PersonalSite/Kernel) ── *)
-PersonalSite`DevOps`codeLint[] :=
-  Module[{kernelDir, files, bad},
-    kernelDir = FileNameJoin[{$appRoot, "Kernel"}];
-    files = If[DirectoryQ[kernelDir], FileNames["*.wl", kernelDir, Infinity], {}];
-    bad = Select[files,
-            Function[f, Quiet @ Check[!SyntaxQ[ReadString[f]], True]]];
-    <|"ok"    -> (bad === {}),
-      "total" -> Length[files],
-      "bad"   -> Length[bad],
-      "files" -> FileNameTake /@ bad|>];
-
-(* ── L0 · git-status ────────────────────────────────────────────── *)
-PersonalSite`DevOps`gitStatus[] := bridge["/git/status"];
-
-(* ── L1 · test-run ─────────────────────────────────────────────── *)
-PersonalSite`DevOps`runTests[]  := bridge["/test/run"];
-
-(* ── L1 · git-diff ──────────────────────────────────────────────── *)
-PersonalSite`DevOps`gitDiff[]   := bridge["/git/diff"];
-
-(* ── L2 · test-report ───────────────────────────────────────────── *)
-PersonalSite`DevOps`testReport[] :=
-  Module[{r},
-    r = bridge["/git/log"];
-    <|"ok"     -> TrueQ[r["ok"]],
-      "commit" -> StringTake[ToString[Lookup[r, "log", ""]], UpTo[80]],
-      "ts"     -> DateString["ISODateTime"]|>];
-
-(* ── L2 · paclet-clean ──────────────────────────────────────────── *)
-PersonalSite`DevOps`pacletClean[] := bridge["/build/clean"];
-
-(* ── L3 · paclet-build ─────────────────────────────────────────── *)
-PersonalSite`DevOps`pacletBuild[] := bridge["/build/paclet"];
-
-(* ── L3 · git-stage ─────────────────────────────────────────────── *)
-PersonalSite`DevOps`gitStage[]  := bridge["/git/stage"];
-
-(* ── L4 · paclet-verify ─────────────────────────────────────────── *)
-PersonalSite`DevOps`pacletVerify[] := bridge["/build/verify"];
-
-(* ── L4 · docker-build (via bridge — docker disponible en host) ─── *)
-PersonalSite`DevOps`dockerBuild[] := bridge["/docker/verify"];
-
-(* ── L4 · git-commit ────────────────────────────────────────────── *)
-PersonalSite`DevOps`gitCommit[] := bridge["/git/commit"];
-
-(* ── L5 · docker-verify (nativo — detecta container desde dentro) ── *)
-PersonalSite`DevOps`dockerVerify[] :=
-  Module[{r},
-    (* Llama a /docker/verify en bridge — docker CLI en el host *)
-    r = bridge["/docker/verify"];
-    If[TrueQ[r["ok"]], r,
-      (* fallback nativo: HTTP health check propio *)
-      Module[{t0, code},
-        t0   = AbsoluteTime[];
-        code = Quiet @ Check[
-          URLRead[HTTPRequest["http://localhost:18000/"], "StatusCode"], -1];
-        <|"ok" -> TrueQ[code === 200],
-          "status" -> If[TrueQ[code===200], "Up (self-check)", "Down"],
-          "latencyMs" -> Round[(AbsoluteTime[]-t0)*1000, 0.1]|>]]];
-
-(* ── L5 · git-push ──────────────────────────────────────────────── *)
-PersonalSite`DevOps`gitPush[]   := bridge["/git/push"];
-
-(* ── L6 · smoke-test (nativo — URLRead desde container) ─────────── *)
-PersonalSite`DevOps`smokeTest[] :=
-  Module[{t0, code, ms},
-    t0   = AbsoluteTime[];
-    code = Quiet @ Check[
-      URLRead[HTTPRequest["http://localhost:18000/"], "StatusCode"], -1];
-    ms   = Round[(AbsoluteTime[] - t0) * 1000, 0.1];
-    <|"ok" -> TrueQ[code === 200], "statusCode" -> code, "latencyMs" -> ms|>];
-
-(* ── L6 · deploy-notify ─────────────────────────────────────────── *)
-PersonalSite`DevOps`deployNotify[] :=
-  Module[{r},
-    r = bridge["/git/log"];
-    <|"ok"    -> True,
-      "event" -> "deploy",
-      "commit"-> StringTake[ToString[Lookup[r,"log",""]], UpTo[80]],
-      "ts"    -> DateString["ISODateTime"]|>];
-
-(* ── L7 · perf-check (nativo — 3 probes de latencia) ───────────── *)
-PersonalSite`DevOps`perfCheck[] :=
-  Module[{times},
-    times = Table[
-      Module[{t0 = AbsoluteTime[]},
-        Quiet @ URLRead[HTTPRequest["http://localhost:18000/"], "StatusCode"];
-        Round[(AbsoluteTime[] - t0) * 1000, 0.1]],
-      {3}];
-    <|"ok"      -> True,
-      "samples" -> times,
-      "avgMs"   -> Round[Mean[times], 0.1],
-      "minMs"   -> Min[times],
-      "maxMs"   -> Max[times]|>];
-
-(* ── L7 · changelog-gen ─────────────────────────────────────────── *)
-PersonalSite`DevOps`changelogGen[] :=
-  Module[{r},
-    r = bridge["/git/log"];
-    <|"ok"  -> TrueQ[r["ok"]],
-      "log" -> ToString[Lookup[r, "log", ""]],
-      "ts"  -> DateString["ISODateTime"]|>];
-
-End[];
-EndPackage[];
-
-(* ── Bloque 2: implementacion RunProcess (produccion) ──────────────────
-   17 etapas distribuidas en 8 niveles del DAG:
-
-   L0 (roots) : code-lint          git-status
-   L1          : test-run           git-diff
-   L2          : test-report        paclet-clean
-   L3          : paclet-build       git-stage
-   L4          : paclet-verify      docker-build     git-commit
-   L5          : docker-verify      git-push
-   L6          : smoke-test         deploy-notify
-   L7          : perf-check         changelog-gen
-
-   Cada funcion devuelve una Association JSON-serializable con:
-     "ok"    -> True/False
-     (campos adicionales segun la etapa)
+   Cada funcion devuelve <|"ok"->True/False, ...|> JSON-serializable.
    -------------------------------------------------------------------------- *)
 
 BeginPackage["PersonalSite`DevOps`"];
@@ -542,17 +343,27 @@ PersonalSite`DevOps`saveRun[stepNum_Integer, state_Association] :=
     $Failed];
 
 (* ── pipelineHistory[n] ───────────────────────────────────────────── *)
-(*  Retorna los ultimos n runs del Warehouse como lista de            *)
-(*  Associations {id, sha, started_at, elapsed_ms, status, step_num} *)
+(*  Retorna los ultimos n runs como lista de Associations.            *)
 PersonalSite`DevOps`pipelineHistory[n_Integer : 20] :=
-  Quiet @ Check[
-    PersonalSite`Database`execute[
-      "SELECT id, sha, started_at, elapsed_ms, status, step_num
-         FROM pipeline_runs
-        ORDER BY id DESC
-        LIMIT ?",
-      {n}],
-    {}];
+  Module[{rows},
+    rows = Quiet @ Check[
+      PersonalSite`Database`execute[
+        "SELECT id, sha, started_at, elapsed_ms, status, step_num
+           FROM pipeline_runs
+          ORDER BY id DESC
+          LIMIT ?",
+        {n}],
+      {}];
+    Map[Function[r,
+      If[ListQ[r] && Length[r] >= 6,
+        <|"id"         -> r[[1]],
+          "sha"        -> r[[2]],
+          "started_at" -> r[[3]],
+          "elapsed_ms" -> r[[4]],
+          "status"     -> r[[5]],
+          "step_num"   -> r[[6]]|>,
+        r]],
+      rows]];
 
 (* ── bridge-health (nativo — ping al DevOps Bridge HTTP) ─────────── *)
 PersonalSite`DevOps`bridgeHealth[] :=

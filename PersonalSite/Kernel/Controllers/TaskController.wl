@@ -323,21 +323,10 @@ devopsPipelineRun[req_] :=
 (* ── GET /devops/pipeline/history ───────────────────────────── *)
 (*  Retorna los ultimos 50 runs del Warehouse (SQLite pipeline_runs) *)
 devopsPipelineHistory[req_] :=
-  Module[{rawRows = Quiet @ Check[
+  Module[{rows = Quiet @ Check[
     PersonalSite`DevOps`pipelineHistory[50], {}]},
-    Module[{rows = Map[Function[r,
-      (* Database.execute devuelve {{col1,col2,...},...} — mapear a Association *)
-      If[ListQ[r] && Length[r] >= 6,
-        <|"id"         -> r[[1]],
-          "sha"        -> r[[2]],
-          "started_at" -> r[[3]],
-          "elapsed_ms" -> r[[4]],
-          "status"     -> r[[5]],
-          "step_num"   -> r[[6]]|>,
-        r]],
-      rawRows]},
     jsonResp[<|"runs" -> rows, "count" -> Length[rows],
-               "ts"  -> DateString["ISODateTime"]|>]]];
+               "ts"  -> DateString["ISODateTime"]|>]];
 
 (* ── POST /devops/trajectory/:n ─────────────────────────────── *)
 (*  Ejecuta NestList[runPipeline, state0, n] y guarda cada step.     *)
