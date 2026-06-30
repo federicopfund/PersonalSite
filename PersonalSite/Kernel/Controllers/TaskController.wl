@@ -43,6 +43,8 @@ devopsRunStage::usage    = "devopsRunStage[stage, req] ejecuta una etapa del pip
 devopsPipelineRun::usage     = "devopsPipelineRun[req] ejecuta runPipeline() via Flow.run y persiste en Warehouse.";
 devopsPipelineHistory::usage = "devopsPipelineHistory[req] retorna los ultimos 50 runs del Warehouse.";
 devopsTrajectory::usage      = "devopsTrajectory[n, req] ejecuta NestList[runPipeline, state0, n] y guarda cada step.";
+devopsTestsRun::usage        = "devopsTestsRun[req] ejecuta runTests[layer] — layer via query ?layer=... o FormRules.";
+devopsTestsRunLayer::usage   = "devopsTestsRunLayer[layer, req] ejecuta runTests[layer] para la capa dada.";
 
 Begin["`Private`"];
 
@@ -347,6 +349,34 @@ devopsTrajectory[nStr_String, req_] :=
               "steps" -> Length[traj],
               "trajectory" -> Map[KeyDrop[#, {"stageResults"}]&, traj],
               "ts"   -> DateString["ISODateTime"]|>]];
+
+(* ── POST /devops/tests/run  ────────────────────────────────────── *)
+(*  Acepta capa como:                                                      *)
+(*    - query string  ?layer=session                                        *)
+(*    - form body     layer=session                                         *)
+(*    - sin parametro → "all"                                               *)
+devopsTestsRun[req_] :=
+  Module[{qmap, layer},
+    qmap  = If[ListQ[req["Query"]], Association[req["Query"]], <||>];
+    layer = StringTrim @ Lookup[
+              Join[qmap, If[AssociationQ[req["FormRules"]], req["FormRules"], <||>]],
+              "layer", "all"];
+    devopsTestsRunLayer[layer, req]];
+
+(* ── POST /devops/tests/run/:layer ────────────────────────────── *)
+devopsTestsRunLayer[layer_String, req_] :=
+  Module[{t0, result, ms},
+    t0     = AbsoluteTime[];
+    result = Quiet @ Check[
+      TimeConstrained[
+        PersonalSite`DevOps`runTests[layer],
+        300,
+        <|"ok"->False, "layer"->layer, "err"->"test timeout (300s)",
+          "ts"->DateString["ISODateTime"]|>],
+      <|"ok"->False, "layer"->layer, "err"->"exception in runTests",
+        "ts"->DateString["ISODateTime"]|>];
+    ms = Round[(AbsoluteTime[] - t0) * 1000, 1];
+    jsonResp[<|result, "elapsedMs" -> ms|>]];
 
 End[];
 EndPackage[];

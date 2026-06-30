@@ -35,7 +35,7 @@ $binaryTypes = <|
 
 (* Sirve un archivo bajo rootParts (relativo a $Root) de forma segura. *)
 serveFile[rootParts_List, file_String] :=
-  Module[{path, ext, mime, body},
+  Module[{path, ext, mime, body, cacheCtrl},
     path = FileNameJoin[Join[{PersonalSite`$Root}, rootParts,
              {StringReplace[file, "/" -> $PathnameSeparator]}]];
     If[!FileExistsQ[path],
@@ -43,13 +43,19 @@ serveFile[rootParts_List, file_String] :=
     ext = ToLowerCase[FileExtension[path]];
     Which[
       KeyExistsQ[$textTypes, ext],
-        mime = $textTypes[ext];   body = ReadString[path],
+        mime = $textTypes[ext];   body = ReadString[path];
+        cacheCtrl = "no-cache",
       KeyExistsQ[$binaryTypes, ext],
-        mime = $binaryTypes[ext]; body = ReadByteArray[path],
+        mime = $binaryTypes[ext]; body = ReadByteArray[path];
+        cacheCtrl = "public, max-age=86400",
       True,
-        mime = "application/octet-stream"; body = ReadByteArray[path]
+        mime = "application/octet-stream"; body = ReadByteArray[path];
+        cacheCtrl = "no-cache"
     ];
-    HTTPResponse[body, <|"Headers" -> <|"Content-Type" -> mime|>|>]
+    HTTPResponse[body, <|"Headers" -> <|
+      "Content-Type"  -> mime,
+      "Cache-Control" -> cacheCtrl
+    |>|>]
   ];
 
 serveStatic[file_String] := serveFile[{"Resources", "Static"}, file];
@@ -77,6 +83,7 @@ dispatcher[] := Delayed @ URLDispatcher[{
   "/static/" ~~ file__ ~~ EndOfString :> serveStatic[file],
   "/img/"    ~~ file__ ~~ EndOfString :> serveImage[file],
   "/wa-img"  ~~ EndOfString           :> imageRedirect[HTTPRequestData[]],
+  "/blog/eval" ~~ EndOfString         :> PersonalSite`Controller`blogEval[HTTPRequestData[]],
   "/blog/"   ~~ slug__ ~~ EndOfString :> PersonalSite`Controller`blogShow[slug, HTTPRequestData[]],
   "/blog"    ~~ EndOfString           :> PersonalSite`Controller`blogIndex[HTTPRequestData[]],
   "/ask"     ~~ EndOfString           :> PersonalSite`Controller`ask[HTTPRequestData[]],
@@ -91,6 +98,8 @@ dispatcher[] := Delayed @ URLDispatcher[{
   "/devops/pipeline/run"    ~~ EndOfString :> PersonalSite`Controller`devopsPipelineRun[HTTPRequestData[]],
   "/devops/pipeline/history"~~ EndOfString :> PersonalSite`Controller`devopsPipelineHistory[HTTPRequestData[]],
   "/devops/trajectory/" ~~ n__ ~~ EndOfString :> PersonalSite`Controller`devopsTrajectory[n, HTTPRequestData[]],
+  "/devops/tests/run/"  ~~ layer__ ~~ EndOfString :> PersonalSite`Controller`devopsTestsRunLayer[layer, HTTPRequestData[]],
+  "/devops/tests/run"   ~~ EndOfString :> PersonalSite`Controller`devopsTestsRun[HTTPRequestData[]],
   "/tasks/summary"         ~~ EndOfString :> PersonalSite`Controller`tasksSummary[HTTPRequestData[]],
   "/tasks/dag"             ~~ EndOfString :> PersonalSite`Controller`tasksDag[HTTPRequestData[]],
   "/tasks/config/create"   ~~ EndOfString :> PersonalSite`Controller`tasksConfigCreate[HTTPRequestData[]],
