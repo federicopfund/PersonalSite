@@ -19,17 +19,17 @@
         <span></span><span></span><span></span>
       </button>
       <ul class="nav-links" id="nl">
-        <li><a href="/">Inicio</a></li>
-        <li><a href="/blog">Blog</a></li>
-        <li><a href="/ask">Wolfram &alpha;</a></li>
-        <li><a href="/apariencia">Apariencia</a></li>
-        <li><a href="/flow">Flow</a></li>
-        <li><a href="/perf">Perf</a></li>
-        <li><a href="/arch">Arch</a></li>
-        <li><a href="/dag">DAG</a></li>
-        <li><a href="/kernel">Kernel</a></li>
-        <li><a href="/kpi">KPI</a></li>
-        <li><a href="/contacto" class="nav-cta">Contacto</a></li>
+        <li data-rule="30"  data-step="0" data-group="root"><a href="/">Inicio</a></li>
+        <li data-rule="110" data-step="1" data-group="content"><a href="/blog">Blog</a></li>
+        <li data-rule="90"  data-step="1" data-group="content"><a href="/ask">Wolfram &alpha;</a></li>
+        <li data-rule="54"  data-step="2" data-group="ux"><a href="/apariencia">Apariencia</a></li>
+        <li data-rule="73"  data-step="2" data-group="compute"><a href="/flow">Flow</a></li>
+        <li data-rule="45"  data-step="3" data-group="compute"><a href="/perf">Perf</a></li>
+        <li data-rule="86"  data-step="3" data-group="compute"><a href="/arch">Arch</a></li>
+        <li data-rule="126" data-step="4" data-group="compute"><a href="/dag">DAG</a></li>
+        <li data-rule="150" data-step="4" data-group="compute"><a href="/kernel">Kernel</a></li>
+        <li data-rule="184" data-step="5" data-group="ops"><a href="/kpi">KPI</a></li>
+        <li data-rule="255" data-step="6" data-group="contact"><a href="/contacto" class="nav-cta">Contacto</a></li>
       </ul>
     </div>
   </nav>
@@ -114,7 +114,7 @@
     });
   </script>
   <script>
-    // Modo AUTOMATICO: rota el tema EN VIVO en el navegador, sincronizado al
+    // Modo AUTOMÁTICO: rota el tema EN VIVO en el navegador, sincronizado al
     // reloj del servidor (misma formula que la ScheduledTask del backend).
     (function () {
       var root = document.documentElement;
@@ -159,6 +159,107 @@
       poll();
       setInterval(poll, 5000);
     }());
+  </script>
+  <script>
+  // ── Ruliad Navigation — multiway computational graph ─────────────────────
+  (function(){
+    'use strict';
+
+    // Mark current branch
+    var path = window.location.pathname;
+    document.querySelectorAll('.nav-links li[data-rule]').forEach(function(li){
+      var a = li.querySelector('a');
+      if(!a) return;
+      var href = a.getAttribute('href');
+      var isCurrent = (href === path) || (href !== '/' && path.startsWith(href));
+      if(isCurrent) li.dataset.current = 'true';
+    });
+
+    // Inject 8-bit rule badge
+    function makeBadge(rule){
+      var wrap  = document.createElement('span');
+      wrap.className = 'nav-rul-badge';
+      wrap.setAttribute('aria-hidden','true');
+      var cells = document.createElement('span');
+      cells.className = 'nav-rul-cells';
+      for(var i = 7; i >= 0; i--){
+        var bit = document.createElement('span');
+        bit.className = 'nav-rul-bit ' + ((rule >> i & 1) ? 'nav-rul-bit--on' : 'nav-rul-bit--off');
+        cells.appendChild(bit);
+      }
+      var lbl = document.createElement('span');
+      lbl.className = 'nav-rul-label';
+      lbl.textContent = 'R\u2009' + rule;
+      wrap.appendChild(cells);
+      wrap.appendChild(lbl);
+      return wrap;
+    }
+
+    // Inject step depth dot
+    function makeStepDot(step){
+      var d = document.createElement('span');
+      d.className = 'nav-rul-dot';
+      d.setAttribute('aria-hidden','true');
+      d.title = 'depth\u2009' + step;
+      return d;
+    }
+
+    document.querySelectorAll('.nav-links li[data-rule]').forEach(function(li){
+      var rule = parseInt(li.dataset.rule, 10);
+      var step = parseInt(li.dataset.step || '0', 10);
+      if(!isNaN(rule)) li.appendChild(makeBadge(rule));
+      li.appendChild(makeStepDot(step));
+    });
+
+    // Rule 30 CA background canvas
+    var navbar = document.querySelector('.navbar');
+    if(navbar){
+      var cvs = document.createElement('canvas');
+      cvs.className = 'nav-ca-canvas';
+      cvs.setAttribute('aria-hidden','true');
+      navbar.insertBefore(cvs, navbar.firstChild);
+      function drawCA(){
+        var W = navbar.offsetWidth, ROWS = 16, CELL = 4;
+        if(!W) return;
+        cvs.width = W; cvs.height = ROWS * CELL;
+        var ctx = cvs.getContext('2d');
+        var COLS = Math.ceil(W / CELL);
+        var row = new Uint8Array(COLS);
+        row[Math.floor(COLS / 2)] = 1;          // single seed
+        ctx.clearRect(0, 0, W, ROWS * CELL);
+        for(var gen = 0; gen < ROWS; gen++){
+          var next = new Uint8Array(COLS);
+          for(var c = 0; c < COLS; c++){
+            var l = row[(c-1+COLS)%COLS], m = row[c], r = row[(c+1)%COLS];
+            next[c] = (30 >> ((l<<2)|(m<<1)|r)) & 1;
+          }
+          var alpha = 0.025 + gen * 0.003;
+          ctx.fillStyle = 'rgba(255,255,255,' + Math.min(alpha, 0.1) + ')';
+          for(var c2 = 0; c2 < COLS; c2++){
+            if(next[c2]) ctx.fillRect(c2*CELL, gen*CELL, CELL-1, CELL-1);
+          }
+          row = next;
+        }
+      }
+      drawCA();
+      window.addEventListener('resize', drawCA);
+    }
+
+    // Branchial distance on hover
+    var items = Array.from(document.querySelectorAll('.nav-links li[data-step]'));
+    items.forEach(function(li){
+      li.addEventListener('mouseenter', function(){
+        var hStep = parseInt(li.dataset.step || '0', 10);
+        items.forEach(function(other){
+          other.dataset.branchDist = Math.abs(parseInt(other.dataset.step||'0',10) - hStep);
+        });
+      });
+      li.addEventListener('mouseleave', function(){
+        items.forEach(function(other){ delete other.dataset.branchDist; });
+      });
+    });
+
+  })();
   </script>
 </body>
 </html>
