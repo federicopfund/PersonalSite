@@ -20,7 +20,7 @@ BeginPackage["PersonalSite`DevOps`"];
 
 (* ── API publica ─────────────────────────────────────────────────────── *)
 codeLint::usage      = "codeLint[] SyntaxQ-check de todos los .wl en Kernel/.";
-runTests::usage      = "runTests[] ejecuta la suite de tests via python tools/test_tasks.py.";
+runTests::usage      = "runTests[] | runTests[layer] ejecuta los WLT tests.\nLayers: all (default), session, flow, ux, db, models.";  
 testReport::usage    = "testReport[] snapshot del ultimo commit + timestamp.";
 gitStatus::usage     = "gitStatus[] RunProcess git status --porcelain.";
 gitDiff::usage       = "gitDiff[] RunProcess git diff --stat HEAD.";
@@ -90,13 +90,30 @@ PersonalSite`DevOps`gitStatus[] :=
       "raw"     -> StringTake[r["out"], UpTo[400]]|>];
 
 (* ── L1 · test-run ───────────────────────────────────────────────────── *)
+(*  Layers validos: "all" (default), "session", "flow", "ux", "db", "models" *)
+$testScript = FileNameJoin[{$appRoot, "Tests", "TestReport.wl"}];
+
+$validLayers = {"all", "session", "flow", "ux", "db", "models"};
+
 PersonalSite`DevOps`runTests[] :=
-  Module[{r},
-    r = run[{"python3",
-             FileNameJoin[{$root, "tools", "test_tasks.py"}]}];
-    <|"ok"   -> (r["exit"] === 0),
-      "exit" -> r["exit"],
-      "out"  -> r["out"]|>];
+  PersonalSite`DevOps`runTests["all"];
+
+PersonalSite`DevOps`runTests[layer_String] :=
+  Module[{args, r},
+    If[!MemberQ[$validLayers, layer],
+      Return[<|"ok"    -> False,
+               "layer" -> layer,
+               "err"   -> "unknown layer '" <> layer <>
+                          "' — valid: " <> StringRiffle[$validLayers, ", "]|>]];
+    args = If[layer === "all",
+      {"wolframscript", "-script", $testScript},
+      {"wolframscript", "-script", $testScript, "--", "--layer", layer}];
+    r = run[args];
+    <|"ok"    -> (r["exit"] === 0),
+      "layer" -> layer,
+      "exit"  -> r["exit"],
+      "out"   -> r["out"],
+      "err"   -> StringTake[r["err"], UpTo[300]]|>];
 
 (* ── L1 · git-diff ──────────────────────────────────────────────────── *)
 PersonalSite`DevOps`gitDiff[] :=
