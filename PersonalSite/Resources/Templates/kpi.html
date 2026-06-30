@@ -1,0 +1,402 @@
+<!DOCTYPE html>
+<html lang="es" data-theme="<*theme*>"
+      data-theme-mode="<*themeMode*>"
+      data-theme-order="<*themeOrder*>"
+      data-theme-interval="<*themeInterval*>"
+      data-theme-epoch="<*themeEpoch*>"
+      data-kpi-hour="0">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>KPI Workstation — Federico</title>
+  <link rel="stylesheet" href="/static/styles.css">
+</head>
+<body class="kpi-body">
+
+  <!-- ═══════════════════════════ HEADER ═══════════════════════════════ -->
+  <header class="kpi-header">
+    <div class="kpi-header__brand">
+      <span class="kpi-brand-icon">◈</span>
+      <span class="kpi-brand-text">KPI Workstation</span>
+      <span class="kpi-brand-sub">Kernel&nbsp;#<span id="kpi-kernel">—</span></span>
+    </div>
+
+    <div class="kpi-clock-wrap">
+      <div class="kpi-clock" id="kpi-clock">--:--:--</div>
+      <div class="kpi-date"  id="kpi-date">—</div>
+    </div>
+
+    <div class="kpi-live-badge">
+      <span class="kpi-pulse"></span>
+      <span>LIVE</span>
+      <span class="kpi-poll-dot" id="kpi-poll-dot" title="último poll"></span>
+    </div>
+  </header>
+
+  <!-- ═══════════════════════════ TOP ROW: GAUGE + KPI ════════════════ -->
+  <div class="kpi-top">
+
+    <!-- ── Gauge salud % ─────────────────────────────────────────────── -->
+    <div class="kpi-gauge-wrap">
+      <svg class="kpi-gauge-svg" viewBox="0 0 120 120" aria-label="Health gauge">
+        <circle class="kpi-gauge-track" cx="60" cy="60" r="50"/>
+        <circle class="kpi-gauge-arc"   cx="60" cy="60" r="50" id="kpi-arc"/>
+      </svg>
+      <div class="kpi-gauge-center">
+        <span class="kpi-gauge-pct"   id="kpi-health-pct">—</span>
+        <span class="kpi-gauge-label">HEALTH</span>
+      </div>
+    </div>
+
+    <!-- ── Stat cards ────────────────────────────────────────────────── -->
+    <div class="kpi-cards">
+      <div class="kpi-card" id="kc-running">
+        <span class="kpi-card__icon">⚡</span>
+        <span class="kpi-card__val" id="kv-running">—</span>
+        <span class="kpi-card__label">Activas</span>
+        <span class="kpi-card__sub">de <span id="kv-total">—</span> registradas</span>
+      </div>
+      <div class="kpi-card" id="kc-errors">
+        <span class="kpi-card__icon">⚠</span>
+        <span class="kpi-card__val" id="kv-errors">—</span>
+        <span class="kpi-card__label">Con errores</span>
+        <span class="kpi-card__sub">tareas degradadas</span>
+      </div>
+      <div class="kpi-card">
+        <span class="kpi-card__icon">↗</span>
+        <span class="kpi-card__val" id="kv-runs">—</span>
+        <span class="kpi-card__label">Runs totales</span>
+        <span class="kpi-card__sub">ejecuciones acum.</span>
+      </div>
+      <div class="kpi-card">
+        <span class="kpi-card__icon">⏱</span>
+        <span class="kpi-card__val" id="kv-avgms">— ms</span>
+        <span class="kpi-card__label">Latencia prom.</span>
+        <span class="kpi-card__sub">avg de tareas activas</span>
+      </div>
+      <div class="kpi-card">
+        <span class="kpi-card__icon">⬡</span>
+        <span class="kpi-card__val kpi-mono" id="kv-uptime">00:00:00</span>
+        <span class="kpi-card__label">Uptime sesión</span>
+        <span class="kpi-card__sub">desde apertura</span>
+      </div>
+    </div>
+  </div>
+
+  <!-- ═══════════════════════════ TIMELINE ════════════════════════════ -->
+  <section class="kpi-timeline">
+    <div class="kpi-section-head">
+      <span class="kpi-section-title">HEALTH % — rolling 3 min</span>
+      <span class="kpi-section-meta" id="kpi-sample-info">0 muestras · 3 s/tick</span>
+    </div>
+    <div class="kpi-chart-wrap">
+      <svg id="kpi-chart" class="kpi-chart" preserveAspectRatio="none"></svg>
+    </div>
+    <div class="kpi-chart-axis">
+      <span>−3 min</span><span>−2 min</span><span>−1 min</span><span>Ahora</span>
+    </div>
+  </section>
+
+  <!-- ═══════════════════════════ BOTTOM ROW ══════════════════════════ -->
+  <div class="kpi-bottom">
+
+    <!-- ── Live tasks ────────────────────────────────────────────────── -->
+    <section class="kpi-tasks">
+      <div class="kpi-section-head">
+        <span class="kpi-section-title">TAREAS EN RUNTIME</span>
+        <span class="kpi-section-meta" id="kpi-last-poll">—</span>
+      </div>
+      <div class="kpi-task-grid" id="kpi-task-grid">
+        <div class="kpi-task-skeleton">Cargando…</div>
+      </div>
+    </section>
+
+    <!-- ── Test runner ───────────────────────────────────────────────── -->
+    <section class="kpi-runner">
+      <div class="kpi-section-head">
+        <span class="kpi-section-title">TEST RUNNER</span>
+        <span class="kpi-section-meta">in-kernel · TestReport</span>
+      </div>
+
+      <div class="kpi-runner-layers">
+        <button class="kpi-layer-btn" data-layer="db"      title="Database — 22 tests">db</button>
+        <button class="kpi-layer-btn" data-layer="session" title="SessionFSM + SessionStore — 106 tests">session</button>
+        <button class="kpi-layer-btn" data-layer="flow"    title="Flow + NestScheduler — 65 tests">flow</button>
+        <button class="kpi-layer-btn" data-layer="ux"      title="UXColorRules — 65 tests">ux</button>
+        <button class="kpi-layer-btn" data-layer="models"  title="Flow + NestScheduler + Database — 87 tests">models</button>
+        <button class="kpi-layer-btn kpi-layer-btn--all" data-layer="all" title="Todos los módulos — 258 tests">all</button>
+      </div>
+
+      <div class="kpi-runner-status" id="kpi-runner-status">
+        <div class="kpi-runner-idle">Selecciona una capa para correr los tests</div>
+      </div>
+
+      <div class="kpi-runner-log" id="kpi-runner-log"></div>
+    </section>
+
+  </div>
+
+  <!-- ═══════════════════════════ FOOTER NAV ══════════════════════════ -->
+  <nav class="kpi-footer-nav">
+    <a href="/tasks">Tasks</a>
+    <a href="/dag">DAG</a>
+    <a href="/kernel">Kernel</a>
+    <a href="/devops/dag">DevOps</a>
+    <a href="/perf">Perf</a>
+    <a href="/">Inicio</a>
+  </nav>
+
+<!-- ═════════════════════════════ SCRIPTS ════════════════════════════════ -->
+<script>
+(function(){
+  'use strict';
+  const $  = id => document.getElementById(id);
+  const H  = document.documentElement;
+
+  // ── Clock & time-of-day ambient ──────────────────────────────────────────
+  const DAYS   = ['Dom','Lun','Mar','Mié','Jue','Vie','Sáb'];
+  const MONTHS = ['Ene','Feb','Mar','Abr','May','Jun','Jul','Ago','Sep','Oct','Nov','Dic'];
+  const t0page = Date.now();
+
+  function tick(){
+    const now = new Date();
+    H.dataset.kpiHour = now.getHours();
+    $('kpi-clock').textContent =
+      String(now.getHours()).padStart(2,'0') + ':' +
+      String(now.getMinutes()).padStart(2,'0') + ':' +
+      String(now.getSeconds()).padStart(2,'0');
+    $('kpi-date').textContent =
+      DAYS[now.getDay()] + ' ' + now.getDate() + ' ' +
+      MONTHS[now.getMonth()] + ' ' + now.getFullYear();
+
+    // uptime counter
+    const s  = Math.floor((Date.now() - t0page) / 1000);
+    const hh = String(Math.floor(s / 3600)).padStart(2,'0');
+    const mm = String(Math.floor((s % 3600) / 60)).padStart(2,'0');
+    const ss = String(s % 60).padStart(2,'0');
+    $('kv-uptime').textContent = hh + ':' + mm + ':' + ss;
+  }
+  tick();
+  setInterval(tick, 1000);
+
+  // ── Gauge (270° arc, SVG stroke-dashoffset) ──────────────────────────────
+  // Circumference = 2π×50 = 314.159; 75% (270°) = 235.619
+  const ARC_LEN = 235.619;
+  const arc = $('kpi-arc');
+  arc.style.strokeDasharray  = ARC_LEN + ' ' + (314.159 - ARC_LEN);
+
+  function setGauge(pct){
+    const p      = Math.max(0, Math.min(100, pct));
+    const offset = ARC_LEN * (1 - p / 100);
+    arc.style.strokeDashoffset = offset;
+    const color = p >= 80 ? 'var(--kpi-ok)' : p >= 50 ? 'var(--kpi-warn)' : 'var(--kpi-err)';
+    arc.style.stroke = color;
+    const pctEl = $('kpi-health-pct');
+    pctEl.textContent  = Math.round(p) + '%';
+    pctEl.style.color  = color;
+  }
+
+  // ── Health timeline (ring buffer 60 × 3s = 3 min) ───────────────────────
+  const MAX_H = 60;
+  let healthLog = [];
+
+  function updateChart(){
+    const svg = $('kpi-chart');
+    const W   = svg.clientWidth  || 600;
+    const Hpx = svg.clientHeight || 88;
+    if(!healthLog.length){ svg.innerHTML = ''; return; }
+
+    const pad = 6;
+    const pts = healthLog.map((v, i) => {
+      const x = (i / (MAX_H - 1)) * W;
+      const y = Hpx - pad - (v / 100) * (Hpx - pad * 2);
+      return x + ',' + y;
+    }).join(' ');
+
+    const areaPath = 'M0,' + Hpx + ' ' +
+      healthLog.map((v, i) => {
+        const x = (i / (MAX_H - 1)) * W;
+        const y = Hpx - pad - (v / 100) * (Hpx - pad * 2);
+        return 'L' + x + ',' + y;
+      }).join(' ') + ' L' + W + ',' + Hpx + ' Z';
+
+    svg.innerHTML =
+      '<defs>' +
+        '<linearGradient id="kpi-grad" x1="0" y1="0" x2="0" y2="1">' +
+          '<stop offset="0%"   stop-color="var(--kpi-glow)" stop-opacity="0.45"/>' +
+          '<stop offset="100%" stop-color="var(--kpi-glow)" stop-opacity="0.02"/>' +
+        '</linearGradient>' +
+      '</defs>' +
+      '<path d="' + areaPath + '" fill="url(#kpi-grad)"/>' +
+      '<polyline points="' + pts + '" fill="none" stroke="var(--kpi-glow)"' +
+        ' stroke-width="2" stroke-linejoin="round" stroke-linecap="round"/>';
+
+    $('kpi-sample-info').textContent =
+      healthLog.length + ' muestras · 3 s/tick';
+  }
+
+  // ── Task grid ────────────────────────────────────────────────────────────
+  const G_ICON = {
+    system:'⚙', theme:'🎨', ux:'✨', cache:'💾', flow:'⚡',
+    dev:'🛠', git:'⎇', ops:'🐳', build:'📦', test:'🧪', kernel:'⌨', user:'⬡'
+  };
+
+  function renderTaskGrid(tasks){
+    const grid = $('kpi-task-grid');
+    const entries = Object.entries(tasks);
+    if(!entries.length){
+      grid.innerHTML = '<div class="kpi-task-skeleton">Sin tareas registradas.</div>';
+      return;
+    }
+    grid.innerHTML = entries.map(function(entry){
+      const id = entry[0], t = entry[1];
+      const stCls = t.running ? 'kpi-task-card--on'  : 'kpi-task-card--off';
+      const erCls = t.errors > 0 ? 'kpi-task-card--err' : '';
+      const icon  = G_ICON[t.group] || '⬡';
+      const last  = (t.lastRun && t.lastRun !== 'Never') ? t.lastRun.slice(-8) : '—';
+      const idShort = id.length > 14 ? id.slice(0,13) + '…' : id;
+      return '<div class="kpi-task-card ' + stCls + ' ' + erCls + '" title="' + id + ': ' + t.label + '">' +
+        '<div class="kpi-task-card__head">' +
+          '<span class="kpi-task-card__led"></span>' +
+          '<span class="kpi-task-card__icon">' + icon + '</span>' +
+          '<code class="kpi-task-card__id">' + idShort + '</code>' +
+        '</div>' +
+        '<div class="kpi-task-card__stats">' +
+          '<span class="kpi-task-card__runs" title="runs">' + (t.runs||0) + '</span>' +
+          '<span class="kpi-task-card__ms">' + (t.avgMs||0).toFixed(0) + ' ms</span>' +
+          (t.errors > 0 ? '<span class="kpi-task-card__err-badge">' + t.errors + '!</span>' : '') +
+        '</div>' +
+        '<div class="kpi-task-card__last">' + last + '</div>' +
+      '</div>';
+    }).join('');
+  }
+
+  // ── Summary polling ──────────────────────────────────────────────────────
+  async function fetchSummary(){
+    const dot = $('kpi-poll-dot');
+    dot.classList.add('kpi-poll-dot--active');
+    try {
+      const r = await fetch('/tasks/summary');
+      if(!r.ok) return;
+      const d = await r.json();
+
+      const tasks   = d.tasks    || {};
+      const total   = d.taskCount || 0;
+      const running = d.running   || 0;
+      const health  = total > 0 ? Math.round(running / total * 100) : 0;
+      const totalRuns = Object.values(tasks).reduce(function(s,t){ return s+(t.runs||0); }, 0);
+      const errTasks  = Object.values(tasks).filter(function(t){ return t.errors > 0; }).length;
+      const allMs     = Object.values(tasks).map(function(t){ return t.avgMs||0; }).filter(function(v){ return v>0; });
+      const avgMs     = allMs.length ? allMs.reduce(function(a,b){return a+b;},0)/allMs.length : 0;
+
+      // Update cards
+      $('kv-running').textContent = running;
+      $('kv-total').textContent   = total;
+      $('kv-errors').textContent  = errTasks;
+      $('kv-runs').textContent    = totalRuns;
+      $('kv-avgms').textContent   = avgMs.toFixed(1) + ' ms';
+      $('kpi-kernel').textContent = '#' + (d.kernel || '?');
+      $('kpi-last-poll').textContent = 'último: ' + new Date().toTimeString().slice(0,8);
+
+      // Running card color
+      var kcr = $('kc-running');
+      kcr.classList.toggle('kpi-card--ok', running > 0);
+
+      // Errors card color
+      var kce = $('kc-errors');
+      kce.classList.toggle('kpi-card--err', errTasks > 0);
+      kce.classList.toggle('kpi-card--ok',  errTasks === 0);
+
+      // Gauge + timeline
+      setGauge(health);
+      healthLog.push(health);
+      if(healthLog.length > MAX_H) healthLog.shift();
+      updateChart();
+
+      // Task grid
+      renderTaskGrid(tasks);
+
+    } catch(e){
+      // silencio en red
+    } finally {
+      setTimeout(function(){ dot.classList.remove('kpi-poll-dot--active'); }, 500);
+    }
+  }
+
+  fetchSummary();
+  setInterval(fetchSummary, 3000);
+
+  // ── Test runner ──────────────────────────────────────────────────────────
+  var runnerBusy = false;
+
+  document.querySelectorAll('.kpi-layer-btn').forEach(function(btn){
+    btn.addEventListener('click', async function(){
+      if(runnerBusy) return;
+      runnerBusy = true;
+      document.querySelectorAll('.kpi-layer-btn').forEach(function(b){ b.disabled = true; });
+
+      var layer  = btn.dataset.layer;
+      var status = $('kpi-runner-status');
+      var log    = $('kpi-runner-log');
+
+      status.innerHTML =
+        '<div class="kpi-runner-running">' +
+          '<span class="kpi-pulse"></span>' +
+          ' Ejecutando layer <strong>' + layer + '</strong>…' +
+        '</div>';
+      log.innerHTML = '';
+
+      var t1 = Date.now();
+      try {
+        var r = await fetch('/devops/tests/run/' + layer, {method:'POST'});
+        var d = await r.json();
+        var elapsed = Date.now() - t1;
+        var ok      = d.ok && (d.totalFail||0) === 0 && (d.totalErrors||0) === 0;
+
+        var rows = Object.entries(d.suites || {}).map(function(e){
+          var name = e[0], s = e[1];
+          var cls  = s.ok ? 'kpi-suite-row--ok' : 'kpi-suite-row--fail';
+          return '<div class="kpi-suite-row ' + cls + '">' +
+            '<span class="kpi-suite-name">' + name + '</span>' +
+            '<span class="kpi-suite-pass">' + s.pass + '/' + s.total + '</span>' +
+            '<span class="kpi-suite-badge">' + (s.ok ? '✓' : '✗ ' + s.fail + ' fail') + '</span>' +
+          '</div>';
+        }).join('');
+
+        status.innerHTML =
+          '<div class="kpi-runner-result kpi-runner-result--' + (ok?'ok':'fail') + '">' +
+            (ok ? '✓ ALL PASS' : '✗ FAILURES') +
+            ' &mdash; ' + (d.totalPass||0) + '/' + (d.totalTests||0) + ' tests' +
+            ' &middot; ' + elapsed + ' ms' +
+          '</div>';
+        log.innerHTML = rows;
+
+      } catch(e) {
+        status.innerHTML =
+          '<div class="kpi-runner-result kpi-runner-result--fail">✗ Error de red</div>';
+      } finally {
+        runnerBusy = false;
+        document.querySelectorAll('.kpi-layer-btn').forEach(function(b){ b.disabled = false; });
+      }
+    });
+  });
+
+  // ── Theme rotation (ambient) ─────────────────────────────────────────────
+  (function(){
+    var mode  = H.dataset.themeMode;
+    var order = (H.dataset.themeOrder || '').split(',').filter(Boolean);
+    var iv    = parseInt(H.dataset.themeInterval) || 20;
+    var epoch = parseInt(H.dataset.themeEpoch)    || 0;
+    if(mode !== 'auto' || !order.length) return;
+    function pick(){
+      var t = Math.floor(Date.now()/1000 - epoch);
+      H.setAttribute('data-theme', order[Math.floor(t/iv) % order.length]);
+    }
+    pick();
+    setInterval(pick, 1000);
+  })();
+
+})();
+</script>
+</body>
+</html>

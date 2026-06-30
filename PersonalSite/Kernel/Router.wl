@@ -100,6 +100,7 @@ dispatcher[] := Delayed @ URLDispatcher[{
   "/devops/trajectory/" ~~ n__ ~~ EndOfString :> PersonalSite`Controller`devopsTrajectory[n, HTTPRequestData[]],
   "/devops/tests/run/"  ~~ layer__ ~~ EndOfString :> PersonalSite`Controller`devopsTestsRunLayer[layer, HTTPRequestData[]],
   "/devops/tests/run"   ~~ EndOfString :> PersonalSite`Controller`devopsTestsRun[HTTPRequestData[]],
+  "/kpi"                ~~ EndOfString :> PersonalSite`Controller`kpiPage[HTTPRequestData[]],
   "/tasks/summary"         ~~ EndOfString :> PersonalSite`Controller`tasksSummary[HTTPRequestData[]],
   "/tasks/dag"             ~~ EndOfString :> PersonalSite`Controller`tasksDag[HTTPRequestData[]],
   "/tasks/config/create"   ~~ EndOfString :> PersonalSite`Controller`tasksConfigCreate[HTTPRequestData[]],

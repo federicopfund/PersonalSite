@@ -75,7 +75,7 @@ postItem[post_Association] :=
    al cargar el modulo, para que ningun request pague la compilacion. *)
 Quiet @ Scan[template, {
   "layout", "home", "blog/index", "blog/item", "blog/post",
-  "contact", "ask", "apariencia", "flow", "perf", "nest", "tasks", "arch", "kernel", "dag"}];
+  "contact", "ask", "apariencia", "flow", "perf", "nest", "tasks", "arch", "kernel", "dag", "kpi"}];
 
 End[];
 EndPackage[];

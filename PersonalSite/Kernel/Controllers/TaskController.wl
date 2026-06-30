@@ -45,6 +45,7 @@ devopsPipelineHistory::usage = "devopsPipelineHistory[req] retorna los ultimos 5
 devopsTrajectory::usage      = "devopsTrajectory[n, req] ejecuta NestList[runPipeline, state0, n] y guarda cada step.";
 devopsTestsRun::usage        = "devopsTestsRun[req] ejecuta runTests[layer] — layer via query ?layer=... o FormRules.";
 devopsTestsRunLayer::usage   = "devopsTestsRunLayer[layer, req] ejecuta runTests[layer] para la capa dada.";
+kpiPage::usage               = "kpiPage[req] sirve la estación de trabajo KPI (health, tasks en runtime, test runner).";  
 
 Begin["`Private`"];
 
@@ -349,6 +350,16 @@ devopsTrajectory[nStr_String, req_] :=
               "steps" -> Length[traj],
               "trajectory" -> Map[KeyDrop[#, {"stageResults"}]&, traj],
               "ts"   -> DateString["ISODateTime"]|>]];
+
+(* ── GET /kpi ───────────────────────────────────────────────────────── *)
+(*  Estación de trabajo KPI: health %, tareas en runtime, test runner.  *)
+kpiPage[req_] :=
+  Module[{snap},
+    snap = Quiet @ Check[PersonalSite`TaskManager`summary[], <||>];
+    PersonalSite`View`render["kpi",
+      <|"kernelID"  -> ToString[Lookup[snap, "kernel", "?"]],
+        "taskCount" -> ToString[Lookup[snap, "taskCount", 0]],
+        "running"   -> ToString[Lookup[snap, "running",   0]]|>]];
 
 (* ── POST /devops/tests/run  ────────────────────────────────────── *)
 (*  Acepta capa como:                                                      *)
