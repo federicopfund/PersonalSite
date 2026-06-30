@@ -90,30 +90,70 @@ PersonalSite`DevOps`gitStatus[] :=
       "raw"     -> StringTake[r["out"], UpTo[400]]|>];
 
 (* ── L1 · test-run ───────────────────────────────────────────────────── *)
-(*  Layers validos: "all" (default), "session", "flow", "ux", "db", "models" *)
-$testScript = FileNameJoin[{$appRoot, "Tests", "TestReport.wl"}];
+(*  Ejecuta TestReport[file] nativamente en el kernel actual —            *)
+(*  sin spawning de subprocesos, compatible con la licencia free.         *)
+(*  Layers: "all" (default), "session", "flow", "ux", "db", "models"      *)
 
-$validLayers = {"all", "session", "flow", "ux", "db", "models"};
+$testDir = FileNameJoin[{$appRoot, "Tests"}];
+
+$testLayers = <|
+  "all"     -> {"SessionFSM", "SessionStore", "Flow",
+                "NestScheduler", "Database", "UXColorRules"},
+  "session" -> {"SessionFSM", "SessionStore"},
+  "flow"    -> {"Flow", "NestScheduler"},
+  "db"      -> {"Database"},
+  "models"  -> {"Flow", "NestScheduler", "Database"},
+  "ux"      -> {"UXColorRules"}
+|>;
 
 PersonalSite`DevOps`runTests[] :=
   PersonalSite`DevOps`runTests["all"];
 
 PersonalSite`DevOps`runTests[layer_String] :=
-  Module[{args, r},
-    If[!MemberQ[$validLayers, layer],
+  Module[{suites, results, totalPass, totalFail, totalErr, totalTests, allOk},
+    If[!KeyExistsQ[$testLayers, layer],
       Return[<|"ok"    -> False,
                "layer" -> layer,
                "err"   -> "unknown layer '" <> layer <>
-                          "' — valid: " <> StringRiffle[$validLayers, ", "]|>]];
-    args = If[layer === "all",
-      {"wolframscript", "-script", $testScript},
-      {"wolframscript", "-script", $testScript, "--", "--layer", layer}];
-    r = run[args];
-    <|"ok"    -> (r["exit"] === 0),
-      "layer" -> layer,
-      "exit"  -> r["exit"],
-      "out"   -> r["out"],
-      "err"   -> StringTake[r["err"], UpTo[300]]|>];
+                          "' — valid: " <>
+                          StringRiffle[Keys[$testLayers], ", "]|>]];
+    suites = $testLayers[layer];
+    results = Association @ Map[
+      Function[suite,
+        Module[{file, report, pass, fail, err, total},
+          file = FileNameJoin[{$testDir, suite <> ".wlt"}];
+          If[!FileExistsQ[file],
+            suite -> <|"ok"->False, "pass"->0, "fail"->0,
+                       "error"->1, "total"->0,
+                       "err"->"file not found: " <> file|>,
+            report = Quiet[TestReport[file]];
+            If[Head[report] =!= TestReportObject,
+              suite -> <|"ok"->False, "pass"->0, "fail"->0,
+                         "error"->1, "total"->0,
+                         "err"->"TestReport failed"|>,
+              pass  = report["TestsSucceededCount"] /. _Missing -> 0;
+              fail  = report["TestsFailedCount"]    /. _Missing -> 0;
+              err   = report["TestsErroredCount"]   /. _Missing -> 0;
+              total = report["TestsEvaluatedCount"] /. _Missing -> (pass+fail+err);
+              suite -> <|"ok"    -> (fail === 0 && err === 0),
+                         "pass"  -> pass,
+                         "fail"  -> fail,
+                         "error" -> err,
+                         "total" -> total|>]]]],
+      suites];
+    totalPass  = Total[Lookup[#, "pass",  0] & /@ Values[results]];
+    totalFail  = Total[Lookup[#, "fail",  0] & /@ Values[results]];
+    totalErr   = Total[Lookup[#, "error", 0] & /@ Values[results]];
+    totalTests = Total[Lookup[#, "total", 0] & /@ Values[results]];
+    allOk      = AllTrue[Values[results], Function[r, TrueQ[r["ok"]]]];
+    <|"ok"          -> allOk,
+      "layer"       -> layer,
+      "suites"      -> results,
+      "totalPass"   -> totalPass,
+      "totalFail"   -> totalFail,
+      "totalErrors" -> totalErr,
+      "totalTests"  -> totalTests,
+      "ts"          -> DateString["ISODateTime"]|>];
 
 (* ── L1 · git-diff ──────────────────────────────────────────────────── *)
 PersonalSite`DevOps`gitDiff[] :=
