@@ -439,6 +439,7 @@ kpiMetrics[req_] :=
           "heaviest"       -> heaviest,
           "efficiency"     -> Round[efficiency, .1],
           "taskCount"      -> Lookup[snap, "taskCount", 0],
+          "enabledCount"   -> Count[Values[tasks], t_ /; TrueQ[Lookup[t, "enabled", False]]],
           "running"        -> Lookup[snap, "running",   0]
         |>,
         "db"          -> <|

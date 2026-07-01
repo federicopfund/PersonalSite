@@ -54,7 +54,7 @@
         <span class="kpi-card__icon">⚡</span>
         <span class="kpi-card__val" id="kv-running">—</span>
         <span class="kpi-card__label">Activas</span>
-        <span class="kpi-card__sub">de <span id="kv-total">—</span> registradas</span>
+        <span class="kpi-card__sub">de <span id="kv-total">—</span> habilitadas · <span id="kv-ondemand">—</span> on-demand</span>
       </div>
       <div class="kpi-card" id="kc-errors">
         <span class="kpi-card__icon">⚠</span>
@@ -362,6 +362,8 @@
         .filter(function(v){ return v > 0; });
       const taskCount = cross.taskCount || Object.keys(tasks).length || 1;
       const running   = cross.running   || 0;
+      // Health series = habilitadas corriendo / habilitadas (consistente con el gauge)
+      const enabledCount = cross.enabledCount || taskCount;
 
       // Observed throughput: Δ(totalRuns)/Δt → runs per minute
       const nowT = Date.now();
@@ -380,7 +382,7 @@
         p95:        quantile(msVals, 0.95),
         throughput: obsRpm,
         efficiency: (cross.efficiency != null) ? cross.efficiency : 100,
-        health:     taskCount > 0 ? (running / taskCount) * 100 : 0
+        health:     enabledCount > 0 ? (running / enabledCount) * 100 : 0
       };
       series.push(sample);
       if(series.length > MAX_S) series.shift();
@@ -479,7 +481,14 @@
       const tasks   = d.tasks    || {};
       const total   = d.taskCount || 0;
       const running = d.running   || 0;
-      const health  = total > 0 ? Math.round(running / total * 100) : 0;
+      // Salud real = habilitadas que están corriendo / habilitadas.
+      // Las tareas enabled=false (pipeline DevOps on-demand) NO cuentan como
+      // "caídas": no deben correr en background. 100% = todo lo que debe correr, corre.
+      const enabledArr     = Object.values(tasks).filter(function(t){ return t.enabled; });
+      const enabledCount   = enabledArr.length;
+      const runningEnabled = enabledArr.filter(function(t){ return t.running; }).length;
+      const onDemand       = total - enabledCount;
+      const health  = enabledCount > 0 ? Math.round(runningEnabled / enabledCount * 100) : 0;
       const totalRuns = Object.values(tasks).reduce(function(s,t){ return s+(t.runs||0); }, 0);
       const errTasks  = Object.values(tasks).filter(function(t){ return t.errors > 0; }).length;
       const allMs     = Object.values(tasks).map(function(t){ return t.avgMs||0; }).filter(function(v){ return v>0; });
@@ -487,7 +496,8 @@
 
       // Update cards
       $('kv-running').textContent = running;
-      $('kv-total').textContent   = total;
+      $('kv-total').textContent   = enabledCount;
+      var kvod = $('kv-ondemand'); if(kvod) kvod.textContent = onDemand;
       $('kv-errors').textContent  = errTasks;
       $('kv-runs').textContent    = totalRuns;
       $('kv-avgms').textContent   = avgMs.toFixed(1) + ' ms';
