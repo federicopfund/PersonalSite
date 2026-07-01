@@ -30,6 +30,7 @@
       <button id="arch-hb-btn" class="arch-sim-btn arch-hb-btn">&#9679; Heartbeat ON</button>
       <span id="arch-sim-label" class="arch-sim-label"></span>
       <span id="arch-hb-ts" class="arch-hb-ts"></span>
+      <div id="arch-unit-badge" class="arch-unit-badge" aria-live="polite"></div>
     </div>
     <div id="arch-health-panel" class="arch-health-panel"></div>
     <div id="arch-graph"></div>
@@ -118,23 +119,38 @@
     return base;
   }
 
-  /* Secuencia de simulacion: nodo + descripcion del paso */
+  /* Secuencia de simulacion: nodo + descripcion del paso + unidad funcional */
   var SIM_STEPS = [
-    {id:'NestTrigger', desc:'HTTP POST /nest/schedule recibido'},
-    {id:'Router',      desc:'URLDispatcher: match "/nest/schedule"'},
-    {id:'Nest',        desc:'NestController.nestSchedule handler'},
-    {id:'RulesParser', desc:'Parsear rules, seeds, depth desde FormRules'},
-    {id:'RecordsBuild',desc:'buildRecords[ ] — construye árbol BFS de nodos'},
-    {id:'SpecConvert', desc:'recordsToSpec[ ] — convierte a spec de Flow'},
-    {id:'FlowL0',      desc:'Layer 0 ∥ — ejecuta seeds en paralelo'},
-    {id:'FlowL1',      desc:'Layer 1 ∥ — rule(seed) para cada rama'},
-    {id:'FlowL2',      desc:'Layer 2 ∥ — rule(L1) para cada rama'},
-    {id:'FlowLN',      desc:'Layer N ∥ — última capa, resultados finales'},
-    {id:'NestStore',   desc:'Resultados guardados en $lastResults'},
-    {id:'SchedLoop',   desc:'ScheduledTask registrado — se repite cada N s'},
-    {id:'Nest',        desc:'Re-trigger: SchedLoop → NestController (loop)'},
-    {id:'NestAPI',     desc:'GET /nest/results — JSON disponible para Power BI'},
-    {id:'Response',    desc:'HTTP 200 OK — flujo completo'}
+    {id:'NestTrigger', desc:'HTTP POST /nest/schedule recibido',
+     unit:'RT: HTTP trigger NestSchedule · form rules/seeds/depth'},
+    {id:'Router',      desc:'URLDispatcher: match "/nest/schedule"',
+     unit:'URLDispatcher WL · regex pattern → handler'},
+    {id:'Nest',        desc:'NestController.nestSchedule handler',
+     unit:'Orquestador NestScheduler · BFS ruliar'},
+    {id:'RulesParser', desc:'Parsear rules, seeds, depth desde FormRules',
+     unit:'RT: parsea rules={f1,f2,...} seeds={n1,...} depth=d'},
+    {id:'RecordsBuild',desc:'buildRecords[ ] — construye árbol BFS de nodos',
+     unit:'RT: BFS en árbol ruliar · genera lista de nodos'},
+    {id:'SpecConvert', desc:'recordsToSpec[ ] — convierte a spec de Flow',
+     unit:'RT: convierte nodos BFS a spec de Flow paralelo'},
+    {id:'FlowL0',      desc:'Layer 0 ∥ — ejecuta seeds en paralelo',
+     unit:'RT: Layer 0 · ejecuta seeds en paralelo (raíz)'},
+    {id:'FlowL1',      desc:'Layer 1 ∥ — rule(seed) para cada rama',
+     unit:'RT: Layer 1 · aplica rule a cada seed resultado'},
+    {id:'FlowL2',      desc:'Layer 2 ∥ — rule(L1) para cada rama',
+     unit:'RT: Layer 2 · composición rule∘rule(seed)'},
+    {id:'FlowLN',      desc:'Layer N ∥ — última capa, resultados finales',
+     unit:'RT: Layer N · última composición · resultados finales'},
+    {id:'NestStore',   desc:'Resultados guardados en $lastResults',
+     unit:'RT: $lastResults guardados · disponibles para /nest/results'},
+    {id:'SchedLoop',   desc:'ScheduledTask registrado — se repite cada N s',
+     unit:'RT: ScheduledTask WL · re-ejecuta NestSchedule cada N s'},
+    {id:'Nest',        desc:'Re-trigger: SchedLoop → NestController (loop)',
+     unit:'Orquestador NestScheduler · BFS ruliar'},
+    {id:'NestAPI',     desc:'GET /nest/results — JSON disponible para Power BI',
+     unit:'RT: endpoint JSON · expone $lastResults para PowerBI'},
+    {id:'Response',    desc:'HTTP 200 OK — flujo completo',
+     unit:'HTTP 200 OK · Content-Type HTML/JSON · exit'}
   ];
   var simTimer = [], simActive = false;
   var el = document.getElementById('arch-graph');
@@ -150,7 +166,10 @@
         .height(620)
         .backgroundColor('#0f0f10')
         .graphData(data)
-        .nodeLabel(function(n){ return n.label || n.id; })
+        .nodeLabel(function(n){
+          var lbl = n.label || n.id;
+          return n.unit ? lbl + '\n\u25CF ' + n.unit : lbl;
+        })
         .nodeColor(function(n){
           if(highlighted.size && !highlighted.has(n.id)) return 'rgba(80,80,80,0.2)';
           return nodeDisplayColor(n);
@@ -191,11 +210,35 @@
           Graph.cameraPosition(
             {x:node.x*1.8, y:node.y*1.8, z:node.z*1.8+80},
             node, 800);
+          /* Show unit badge on click */
+          var badge = document.getElementById('arch-unit-badge');
+          if (badge && node.unit) {
+            badge.innerHTML =
+              '<span class="arch-unit-badge__id">' + (node.label || node.id) + '</span>' +
+              '<span class="arch-unit-badge__unit">' + node.unit + '</span>';
+            badge.classList.add('arch-unit-badge--visible');
+          }
         });
 
       /* ── Simulacion NestSchedule ──────────────────────────── */
       var simBtn   = document.getElementById('arch-sim-btn');
       var simLabel = document.getElementById('arch-sim-label');
+
+      var unitBadge = document.getElementById('arch-unit-badge');
+
+      function showUnitBadge(nodeId, unit) {
+        if (!unitBadge) return;
+        var nodeData = data.nodes.find(function(n){ return n.id === nodeId; });
+        var lbl = nodeData ? (nodeData.label || nodeId) : nodeId;
+        unitBadge.innerHTML =
+          '<span class="arch-unit-badge__id">' + lbl + '</span>' +
+          '<span class="arch-unit-badge__unit">' + (unit || '') + '</span>';
+        unitBadge.classList.add('arch-unit-badge--visible');
+      }
+
+      function clearUnitBadge() {
+        if (unitBadge) unitBadge.classList.remove('arch-unit-badge--visible');
+      }
 
       function clearSim() {
         simTimer.forEach(clearTimeout); simTimer = [];
@@ -204,6 +247,7 @@
         simBtn.textContent = '\u25B6 Simular NestSchedule';
         simBtn.classList.remove('running');
         simLabel.textContent = '';
+        clearUnitBadge();
         Graph.nodeColor(Graph.nodeColor())
              .linkColor(Graph.linkColor())
              .linkDirectionalParticles(Graph.linkDirectionalParticles());
@@ -220,6 +264,7 @@
           simTimer.push(setTimeout(function() {
             highlighted.add(step.id);
             simLabel.textContent = 'Paso ' + (i+1) + '/' + SIM_STEPS.length + ': ' + step.desc;
+            showUnitBadge(step.id, step.unit);
             Graph.nodeColor(Graph.nodeColor())
                  .linkColor(Graph.linkColor())
                  .linkDirectionalParticles(Graph.linkDirectionalParticles());
@@ -558,19 +603,30 @@
 
   /* Static DAG structure (mirrors Scheduler.wl $taskSpecs) */
   var DAG_NODES = [
-    {id:'heartbeat',     group:'system', interval:30,  depth:0, cp:true},
-    {id:'cache-warm',    group:'system', interval:300, depth:1, cp:true},
-    {id:'theme-rotate',  group:'theme',  interval:10,  depth:1, cp:false},
-    {id:'cards-refresh', group:'cache',  interval:20,  depth:2, cp:true},
-    {id:'nest-refresh',  group:'flow',   interval:300, depth:2, cp:false},
-    {id:'metric-refresh',group:'cache',  interval:300, depth:3, cp:true}
+    {id:'heartbeat',         group:'system', interval:30,  depth:0, cp:true},
+    {id:'cache-warm',        group:'system', interval:300, depth:1, cp:true},
+    {id:'theme-rotate',      group:'theme',  interval:10,  depth:1, cp:false},
+    {id:'cards-refresh',     group:'cache',  interval:20,  depth:2, cp:true},
+    {id:'nest-refresh',      group:'flow',   interval:300, depth:2, cp:false},
+    {id:'metric-refresh',    group:'cache',  interval:300, depth:3, cp:true},
+    {id:'graph-data-scan',   group:'arch',   interval:60,  depth:1, cp:false},
+    {id:'graph-sim-step',    group:'arch',   interval:5,   depth:2, cp:false},
+    {id:'graph-unit-emit',   group:'arch',   interval:15,  depth:2, cp:false},
+    {id:'graph-topo-check',  group:'arch',   interval:120, depth:2, cp:false},
+    {id:'graph-health-merge',group:'arch',   interval:30,  depth:3, cp:true}
   ];
   var DAG_LINKS = [
-    {source:'heartbeat',    target:'cache-warm'},
-    {source:'heartbeat',    target:'theme-rotate'},
-    {source:'cache-warm',   target:'cards-refresh'},
-    {source:'cache-warm',   target:'nest-refresh'},
-    {source:'cards-refresh',target:'metric-refresh'}
+    {source:'heartbeat',        target:'cache-warm'},
+    {source:'heartbeat',        target:'theme-rotate'},
+    {source:'heartbeat',        target:'graph-data-scan'},
+    {source:'cache-warm',       target:'cards-refresh'},
+    {source:'cache-warm',       target:'nest-refresh'},
+    {source:'cards-refresh',    target:'metric-refresh'},
+    {source:'graph-data-scan',  target:'graph-sim-step'},
+    {source:'graph-data-scan',  target:'graph-unit-emit'},
+    {source:'graph-data-scan',  target:'graph-topo-check'},
+    {source:'graph-sim-step',   target:'graph-health-merge'},
+    {source:'graph-unit-emit',  target:'graph-health-merge'}
   ];
 
   var el = document.getElementById('arch-dag-graph');
@@ -705,7 +761,7 @@
       <span class="arch-badge">TaskManager &bull; NestScheduler &bull; DAG Jerárquico</span>
       <h2 class="arch-sched-title">Sistema de Tareas en Runtime</h2>
       <p class="arch-sched-subtitle">
-        10 tareas activas &bull; 5 niveles DAG &bull; Heartbeat raíz &bull; Propagación causal por capas
+        15 tareas activas &bull; 5 niveles DAG &bull; Heartbeat raíz &bull; sub-DAG Graph Simulation (5 tareas)
       </p>
     </div>
     <div class="arch-sched-controls">
@@ -724,6 +780,7 @@
       <span class="arch-sched-leg arch-sched-leg--cache">cache</span>
       <span class="arch-sched-leg arch-sched-leg--flow">flow</span>
       <span class="arch-sched-leg arch-sched-leg--ux">ux</span>
+      <span class="arch-sched-leg arch-sched-leg--arch">arch (graph-sim)</span>
     </div>
   </div>
 
@@ -776,21 +833,27 @@
 
   // ── Definición estática del DAG (espeja TaskConfig.wl) ─────────────────
   var TASKS = [
-    {id:'heartbeat',      label:'Heartbeat',         group:'system', interval:30,  dagOrder:0, deps:[]},
-    {id:'cache-warm',     label:'Cache warm-up',      group:'system', interval:300, dagOrder:1, deps:['heartbeat']},
-    {id:'theme-rotate',   label:'Theme rotation',     group:'theme',  interval:10,  dagOrder:1, deps:['heartbeat']},
-    {id:'contact-ux',     label:'Contact UX pulse',   group:'ux',     interval:5,   dagOrder:1, deps:['heartbeat']},
-    {id:'cards-refresh',  label:'Cards refresh (DB)', group:'cache',  interval:20,  dagOrder:2, deps:['cache-warm']},
-    {id:'nest-refresh',   label:'NestGraph {2x+1…}',  group:'flow',   interval:300, dagOrder:2, deps:['cache-warm']},
-    {id:'ux-color-eval',  label:'UX color eval',      group:'ux',     interval:15,  dagOrder:2, deps:['heartbeat','theme-rotate']},
-    {id:'metric-refresh', label:'Metric refresh',     group:'cache',  interval:300, dagOrder:3, deps:['cards-refresh']},
-    {id:'ux-color-apply', label:'UX color apply',     group:'ux',     interval:15,  dagOrder:3, deps:['ux-color-eval']},
-    {id:'ux-color-report',label:'UX audit report',    group:'ux',     interval:60,  dagOrder:4, deps:['ux-color-apply']}
+    {id:'heartbeat',         label:'Heartbeat',              group:'system', interval:30,  dagOrder:0, deps:[]},
+    {id:'cache-warm',        label:'Cache warm-up',          group:'system', interval:300, dagOrder:1, deps:['heartbeat']},
+    {id:'theme-rotate',      label:'Theme rotation',         group:'theme',  interval:10,  dagOrder:1, deps:['heartbeat']},
+    {id:'contact-ux',        label:'Contact UX pulse',       group:'ux',     interval:5,   dagOrder:1, deps:['heartbeat']},
+    {id:'graph-data-scan',   label:'Graph data scan',        group:'arch',   interval:60,  dagOrder:1, deps:['heartbeat']},
+    {id:'cards-refresh',     label:'Cards refresh (DB)',     group:'cache',  interval:20,  dagOrder:2, deps:['cache-warm']},
+    {id:'nest-refresh',      label:'NestGraph {2x+1…}',  group:'flow',   interval:300, dagOrder:2, deps:['cache-warm']},
+    {id:'ux-color-eval',     label:'UX color eval',          group:'ux',     interval:15,  dagOrder:2, deps:['heartbeat','theme-rotate']},
+    {id:'graph-sim-step',    label:'Graph sim step',         group:'arch',   interval:5,   dagOrder:2, deps:['graph-data-scan']},
+    {id:'graph-unit-emit',   label:'Graph unit-msg emit',    group:'arch',   interval:15,  dagOrder:2, deps:['graph-data-scan']},
+    {id:'graph-topo-check',  label:'Graph topo check',       group:'arch',   interval:120, dagOrder:2, deps:['graph-data-scan']},
+    {id:'metric-refresh',    label:'Metric refresh',         group:'cache',  interval:300, dagOrder:3, deps:['cards-refresh']},
+    {id:'ux-color-apply',    label:'UX color apply',         group:'ux',     interval:15,  dagOrder:3, deps:['ux-color-eval']},
+    {id:'graph-health-merge',label:'Graph health-merge',     group:'arch',   interval:30,  dagOrder:3, deps:['graph-unit-emit','graph-sim-step']},
+    {id:'ux-color-report',   label:'UX audit report',        group:'ux',     interval:60,  dagOrder:4, deps:['ux-color-apply']}
   ];
 
   var GROUP_COLOR = {
     system:'#f4a70a', theme:'#a78bfa', cache:'#22d3ee',
-    flow:'#34d399',   ux:'#fb7185',    dev:'#9ca3af'
+    flow:'#34d399',   ux:'#fb7185',    dev:'#9ca3af',
+    arch:'#00e5ff'
   };
 
   // ── Live state overlay (from /arch/tasks) ──────────────────────────────
@@ -974,11 +1037,12 @@
   var simLabel = document.getElementById('arch-sched-sim-label');
 
   var SIM_STEPS = [
-    {level:0, ids:['heartbeat'],                                  desc:'L0 · Heartbeat dispara — señal raíz'},
-    {level:1, ids:['cache-warm','theme-rotate','contact-ux'],     desc:'L1 · Dependientes directos se activan en paralelo'},
-    {level:2, ids:['cards-refresh','nest-refresh','ux-color-eval'],desc:'L2 · Segunda capa: DB refresh + NestGraph + UX eval'},
-    {level:3, ids:['metric-refresh','ux-color-apply'],             desc:'L3 · Tercera capa: métricas pesadas + aplicar tokens UX'},
-    {level:4, ids:['ux-color-report'],                             desc:'L4 · Capa hoja: auditoría de reglas de color'}
+    {level:0, ids:['heartbeat'],                                                           desc:'L0 · Heartbeat dispara — señal raíz'},
+    {level:1, ids:['cache-warm','theme-rotate','contact-ux','graph-data-scan'],            desc:'L1 · Dependientes directos se activan en paralelo'},
+    {level:2, ids:['cards-refresh','nest-refresh','ux-color-eval',
+                   'graph-sim-step','graph-unit-emit','graph-topo-check'],                 desc:'L2 · Segunda capa: DB refresh + NestGraph + UX eval + Graph sim'},
+    {level:3, ids:['metric-refresh','ux-color-apply','graph-health-merge'],                desc:'L3 · Tercera capa: métricas + tokens UX + Graph health-merge'},
+    {level:4, ids:['ux-color-report'],                                                    desc:'L4 · Capa hoja: auditoría de reglas de color'}
   ];
 
   function clearSim() {

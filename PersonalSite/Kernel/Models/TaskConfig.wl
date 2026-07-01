@@ -34,8 +34,10 @@ update::usage =
 delete::usage =
   "delete[task_id] elimina la fila. Devuelve True o $Failed.";
 
-seedDefaults::usage =
-  "seedDefaults[] inserta las 6 tareas del sistema si la tabla está vacía.";
+migrate::usage =
+  "migrate[] inserta en la DB cualquier tarea en $defaults que aún no exista. Idempotente.";
+
+
 
 Begin["`Private`"];
 
@@ -306,7 +308,45 @@ $defaults = {
   <|"task_id"->"changelog-gen", "label"->"Changelog gen (git log -10)",
     "group_name"->"git",   "interval_s"->3600, "enabled"->False,
     "deps"->{"git-push"},                       "dag_order"->7,
-    "action_code"->"Function[PersonalSite`DevOps`changelogGen[]]"|>
+    "action_code"->"Function[PersonalSite`DevOps`changelogGen[]]"|>,
+
+  (* ── Graph Simulation sub-DAG ────────────────────────────────── *)
+  (* DAG: heartbeat
+           → graph-data-scan
+               → graph-sim-step   (avanza la animación de simulación)
+               → graph-unit-emit  (emite msgs de unidad funcional)
+               → graph-topo-check (conectividad BFS desde HTTP)
+                    {graph-unit-emit, graph-sim-step}
+                    → graph-health-merge                            *)
+  <|"task_id"->"graph-data-scan",  "label"->"Graph data scan (nodos + aristas activos)",
+    "group_name"->"arch", "interval_s"->60,   "enabled"->True,
+    "deps"->{"heartbeat"},
+    "dag_order"->1,
+    "action_code"->"Function[Module[{j=PersonalSite`Controller`Private`$archJSON,n,e},n=Length[Lookup[ImportString[j,\"JSON\"],\"nodes\",{}]];e=Length[Lookup[ImportString[j,\"JSON\"],\"links\",{}]];PersonalSite`Settings`set[\"arch.graph.nodes\",ToString[n]];PersonalSite`Settings`set[\"arch.graph.edges\",ToString[e]];n>0]]"|>,
+
+  <|"task_id"->"graph-sim-step",   "label"->"Graph sim step (avanza animación NestSchedule)",
+    "group_name"->"arch", "interval_s"->5,    "enabled"->True,
+    "deps"->{"graph-data-scan"},
+    "dag_order"->2,
+    "action_code"->"Function[Module[{cur,next,total=15},cur=Quiet@Check[ToExpression[PersonalSite`Settings`get[\"arch.sim.step\",\"0\"]],0];next=Mod[cur+1,total];PersonalSite`Settings`set[\"arch.sim.step\",ToString[next]];next]]"|>,
+
+  <|"task_id"->"graph-unit-emit",  "label"->"Graph unit-msg emit (mensajes unidad funcional)",
+    "group_name"->"arch", "interval_s"->15,   "enabled"->True,
+    "deps"->{"graph-data-scan"},
+    "dag_order"->2,
+    "action_code"->"Function[Module[{ts=UnixTime[]},PersonalSite`Settings`set[\"arch.unit.ts\",ToString[ts]];PersonalSite`Settings`set[\"arch.unit.active\",\"1\"];True]]"|>,
+
+  <|"task_id"->"graph-topo-check", "label"->"Graph topo check (BFS desde HTTP → alcanzabilidad)",
+    "group_name"->"arch", "interval_s"->120,  "enabled"->True,
+    "deps"->{"graph-data-scan"},
+    "dag_order"->2,
+    "action_code"->"Function[Module[{j=PersonalSite`Controller`Private`$archJSON,links,adj,q,vis,n},links=Lookup[ImportString[j,\"JSON\"],\"links\",{}];adj=<||>;Do[With[{s=Lookup[l,\"source\",\"\"],t=Lookup[l,\"target\",\"\"]},If[StringQ[s]&&StringQ[t],adj[s]=Append[Lookup[adj,s,{}],t]]],{l,links}];q={\"HTTP\"};vis={\"HTTP\"};While[q=!={},n=First[q];q=Rest[q];Do[If[!MemberQ[vis,nb],AppendTo[vis,nb];AppendTo[q,nb]],{nb,Lookup[adj,n,{}]}]];PersonalSite`Settings`set[\"arch.topo.reachable\",ToString[Length[vis]]];Length[vis]>50]]"|>,
+
+  <|"task_id"->"graph-health-merge","label"->"Graph health-merge (health + unit msgs → snapshot)",
+    "group_name"->"arch", "interval_s"->30,   "enabled"->True,
+    "deps"->{"graph-unit-emit","graph-sim-step"},
+    "dag_order"->3,
+    "action_code"->"Function[Module[{ts=UnixTime[],step,unitTs,reachable},step=Quiet@Check[ToExpression[PersonalSite`Settings`get[\"arch.sim.step\",\"0\"]],0];unitTs=PersonalSite`Settings`get[\"arch.unit.ts\",\"0\"];reachable=PersonalSite`Settings`get[\"arch.topo.reachable\",\"0\"];PersonalSite`Settings`set[\"arch.snapshot.ts\",ToString[ts]];PersonalSite`Settings`set[\"arch.snapshot.step\",ToString[step]];PersonalSite`Settings`set[\"arch.snapshot.reachable\",reachable];True]]"|>
 };
 
 seedDefaults[] :=
@@ -318,6 +358,16 @@ seedDefaults[] :=
       Return["already seeded"]];
     create /@ $defaults;
     "seeded"
+  ];
+
+(* Inserta idempotentemente cualquier tarea en $defaults que no exista en DB *)
+migrate[] :=
+  Module[{inserted = 0},
+    Do[
+      If[byId[Lookup[spec, "task_id", ""]] === $Failed,
+        create[spec]; inserted++],
+      {spec, $defaults}];
+    "migrated: " <> ToString[inserted] <> " tasks"
   ];
 
 End[];

@@ -147,6 +147,38 @@
   font-family: $font-mono;
 }
 
+// ── Unit Functional Badge ────────────────────────────────────────
+.arch-unit-badge {
+  display: none;
+  align-items: center;
+  gap: .5rem;
+  padding: .35rem .9rem;
+  border-radius: radius(pill);
+  background: rgba(#00e5ff, .08);
+  border: 1px solid rgba(#00e5ff, .3);
+  font-family: $font-mono;
+  font-size: .72rem;
+  max-width: 520px;
+  width: 100%;
+  transition: opacity .25s;
+
+  &--visible { display: flex; }
+
+  &__id {
+    color: #00e5ff;
+    font-weight: 700;
+    white-space: nowrap;
+    flex-shrink: 0;
+  }
+
+  &__unit {
+    color: rgba(#fff, .75);
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+}
+
 // ── Health Panel ────────────────────────────────────────────────
 .arch-health-panel {
   display: flex;
@@ -556,6 +588,7 @@ $ts-theme:  #a78bfa;
 $ts-cache:  #22d3ee;
 $ts-flow:   #34d399;
 $ts-ux:     #fb7185;
+$ts-arch:   #00e5ff;
 
 .arch-sched-section {
   padding: 4rem 1.5rem 3rem;
@@ -670,7 +703,7 @@ $ts-ux:     #fb7185;
 
   @each $name, $color in ('system': $ts-system, 'theme': $ts-theme,
                            'cache': $ts-cache,   'flow': $ts-flow,
-                           'ux': $ts-ux) {
+                           'ux': $ts-ux,         'arch': $ts-arch) {
     &--#{$name} {
       background: rgba($color, .12);
       color: $color;
@@ -740,7 +773,7 @@ $ts-ux:     #fb7185;
 
   @each $name, $color in ('system': $ts-system, 'theme': $ts-theme,
                            'cache': $ts-cache,   'flow': $ts-flow,
-                           'ux': $ts-ux) {
+                           'ux': $ts-ux,         'arch': $ts-arch) {
     &--#{$name} { border-left-color: rgba($color, .6); }
     &--#{$name}:hover { border-left-color: $color; background: rgba($color, .05); }
   }
@@ -781,7 +814,7 @@ $ts-ux:     #fb7185;
 
   @each $name, $color in ('system': $ts-system, 'theme': $ts-theme,
                            'cache': $ts-cache,   'flow': $ts-flow,
-                           'ux': $ts-ux) {
+                           'ux': $ts-ux,         'arch': $ts-arch) {
     &--#{$name} { background: rgba($color, .15); color: $color; }
   }
 }
