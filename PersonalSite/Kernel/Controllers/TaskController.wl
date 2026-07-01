@@ -46,7 +46,7 @@ devopsTrajectory::usage      = "devopsTrajectory[n, req] ejecuta NestList[runPip
 devopsTestsRun::usage        = "devopsTestsRun[req] ejecuta runTests[layer] — layer via query ?layer=... o FormRules.";
 devopsTestsRunLayer::usage   = "devopsTestsRunLayer[layer, req] ejecuta runTests[layer] para la capa dada.";
 kpiPage::usage               = "kpiPage[req] sirve la estación de trabajo KPI (health, tasks en runtime, test runner).";  
-
+kpiMetrics::usage            = "kpiMetrics[req] → JSON serie temporal + analytics de cruce (p50/p90/p95, cv, efficiency, cross, DB).";
 Begin["`Private`"];
 
 (* WolframWebEngine no expone JSON bodies (Body->None).
@@ -358,7 +358,6 @@ devopsTrajectory[nStr_String, req_] :=
 (*    tasks[N].stats    → {p50,p90,p95,cv,errorRate,runRate,efficiency}  *)
 (*    cross             → {totalRuns,globalErr%,throughput,heaviest}      *)
 (*    dbSnap           → {pipelineRuns,sessions}                         *)
-kpiMetrics::usage = "kpiMetrics[req] → JSON serie temporal + analytics de cruce.";
 kpiMetrics[req_] :=
   Module[{snap, tasks, dbRows, sessionRows, crossMetrics,
           pRuns, sessCount, perTask},
@@ -380,7 +379,7 @@ kpiMetrics[req_] :=
         p90 = If[n > 0, Quantile[sorted, .90], 0.];
         p95 = If[n > 0, Quantile[sorted, .95], 0.];
         errN   = Count[hist, h_ /; !TrueQ[h["ok"]]];
-        runRate = N @ Lookup[t, "runs",   0] / Max[Lookup[t, "interval_s", 60], 1];
+        runRate = N @ Lookup[t, "runs",   0] / Max[Lookup[t, "interval", 60], 1];
         mu   = If[n > 0, Mean[msList],   0.];
         sigma= If[n > 1, StandardDeviation[msList], 0.];
         cv   = If[mu > 0, 100. * sigma / mu, 0.];
@@ -391,7 +390,7 @@ kpiMetrics[req_] :=
           "errors"   -> Lookup[t, "errors", 0],
           "lastMs"   -> N @ Lookup[t, "lastMs", 0.],
           "avgMs"    -> N @ Lookup[t, "avgMs",  0.],
-          "interval" -> Lookup[t, "interval_s", 60],
+          "interval" -> Lookup[t, "interval", 60],
           "history"  -> hist,
           "stats"    -> <|
             "p50"       -> Round[p50, .1],
@@ -421,13 +420,13 @@ kpiMetrics[req_] :=
         100. - 100. * allErrs / Max[allRuns, 1], 100.];
       totalRuns = allRuns;
 
-      (* ── DB snapshot ─────────────────────────────────────── *)
+      (* ── DB snapshot (execute devuelve filas crudas {{n}}) ───── *)
       pRuns     = Quiet @ Check[
-        PersonalSite`Database`query["SELECT COUNT(*) AS n FROM pipeline_runs", {}],
-        {<|"n" -> 0|>}];
+        PersonalSite`Database`execute["SELECT COUNT(*) FROM pipeline_runs"],
+        {{0}}];
       sessCount = Quiet @ Check[
-        PersonalSite`Database`query["SELECT COUNT(*) AS n FROM sessions WHERE expires_at > datetime('now')", {}],
-        {<|"n" -> 0|>}];
+        PersonalSite`Database`execute["SELECT COUNT(*) FROM sessions WHERE expires_at > datetime('now')"],
+        {{0}}];
 
       jsonResp[<|
         "ts"          -> DateString["ISODateTime"],
@@ -443,8 +442,8 @@ kpiMetrics[req_] :=
           "running"        -> Lookup[snap, "running",   0]
         |>,
         "db"          -> <|
-          "pipelineRuns" -> If[Length[pRuns] > 0, Lookup[pRuns[[1]], "n", 0], 0],
-          "activeSessions" -> If[Length[sessCount] > 0, Lookup[sessCount[[1]], "n", 0], 0]
+          "pipelineRuns"   -> If[MatchQ[pRuns,    {{_?NumberQ}}], pRuns[[1, 1]],    0],
+          "activeSessions" -> If[MatchQ[sessCount, {{_?NumberQ}}], sessCount[[1, 1]], 0]
         |>
       |>]]];  (* end inner Module *)
 

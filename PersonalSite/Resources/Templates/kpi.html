@@ -83,17 +83,58 @@
     </div>
   </div>
 
-  <!-- ═══════════════════════════ TIMELINE ════════════════════════════ -->
-  <section class="kpi-timeline">
+  <!-- ═══════════════════════ RUNTIME ANALYTICS ═══════════════════════ -->
+  <section class="kpi-analytics">
     <div class="kpi-section-head">
-      <span class="kpi-section-title">HEALTH % — rolling 3 min</span>
-      <span class="kpi-section-meta" id="kpi-sample-info">0 muestras · 3 s/tick</span>
+      <span class="kpi-section-title">RUNTIME ANALYTICS — serie temporal · ciencia de números</span>
+      <span class="kpi-section-meta" id="kpi-analytics-info">0 muestras · 5 s/tick</span>
     </div>
-    <div class="kpi-chart-wrap">
-      <svg id="kpi-chart" class="kpi-chart" preserveAspectRatio="none"></svg>
+
+    <!-- ── Cross-metrics strip (analytics de cruce + DB) ─────────────── -->
+    <div class="kpi-xmetrics">
+      <div class="kpi-xm">
+        <span class="kpi-xm__val" id="xm-throughput">—</span>
+        <span class="kpi-xm__lbl">Throughput <em>rpm</em></span>
+      </div>
+      <div class="kpi-xm">
+        <span class="kpi-xm__val" id="xm-err">—</span>
+        <span class="kpi-xm__lbl">Error global <em>%</em></span>
+      </div>
+      <div class="kpi-xm">
+        <span class="kpi-xm__val" id="xm-eff">—</span>
+        <span class="kpi-xm__lbl">Eficiencia <em>%</em></span>
+      </div>
+      <div class="kpi-xm">
+        <span class="kpi-xm__val kpi-xm__val--sm" id="xm-heavy">—</span>
+        <span class="kpi-xm__lbl">Tarea más pesada</span>
+      </div>
+      <div class="kpi-xm kpi-xm--db">
+        <span class="kpi-xm__val" id="xm-pruns">—</span>
+        <span class="kpi-xm__lbl">Pipeline runs <em>db</em></span>
+      </div>
+      <div class="kpi-xm kpi-xm--db">
+        <span class="kpi-xm__val" id="xm-sess">—</span>
+        <span class="kpi-xm__lbl">Sesiones activas <em>db</em></span>
+      </div>
+    </div>
+
+    <!-- ── Metric selector ───────────────────────────────────────────── -->
+    <div class="kpi-metric-tabs" id="kpi-metric-tabs">
+      <button class="kpi-metric-tab kpi-metric-tab--on" data-metric="latency">Latencia p50·p90·p95</button>
+      <button class="kpi-metric-tab" data-metric="throughput">Throughput</button>
+      <button class="kpi-metric-tab" data-metric="efficiency">Eficiencia</button>
+      <button class="kpi-metric-tab" data-metric="health">Health %</button>
+    </div>
+
+    <!-- ── Multi-series time-series chart ────────────────────────────── -->
+    <div class="kpi-chart-wrap kpi-chart-wrap--tall">
+      <svg id="kpi-ts-chart" class="kpi-chart" preserveAspectRatio="none"></svg>
+      <div class="kpi-chart-legend" id="kpi-chart-legend"></div>
+      <div class="kpi-chart-empty" id="kpi-chart-empty">Acumulando muestras…</div>
     </div>
     <div class="kpi-chart-axis">
-      <span>−3 min</span><span>−2 min</span><span>−1 min</span><span>Ahora</span>
+      <span id="kpi-ax-0">−</span><span id="kpi-ax-1"></span>
+      <span id="kpi-ax-2"></span><span>Ahora</span>
     </div>
   </section>
 
@@ -196,44 +237,199 @@
     pctEl.style.color  = color;
   }
 
-  // ── Health timeline (ring buffer 60 × 3s = 3 min) ───────────────────────
-  const MAX_H = 60;
-  let healthLog = [];
+  // ── Runtime analytics time-series (ring buffer 60 × 5s = 5 min) ─────────
+  const MAX_S = 60;
+  let series = [];          // {t, p50, p90, p95, throughput, efficiency, health}
+  let metricMode = 'latency';
 
-  function updateChart(){
-    const svg = $('kpi-chart');
-    const W   = svg.clientWidth  || 600;
-    const Hpx = svg.clientHeight || 88;
-    if(!healthLog.length){ svg.innerHTML = ''; return; }
-
-    const pad = 6;
-    const pts = healthLog.map((v, i) => {
-      const x = (i / (MAX_H - 1)) * W;
-      const y = Hpx - pad - (v / 100) * (Hpx - pad * 2);
-      return x + ',' + y;
-    }).join(' ');
-
-    const areaPath = 'M0,' + Hpx + ' ' +
-      healthLog.map((v, i) => {
-        const x = (i / (MAX_H - 1)) * W;
-        const y = Hpx - pad - (v / 100) * (Hpx - pad * 2);
-        return 'L' + x + ',' + y;
-      }).join(' ') + ' L' + W + ',' + Hpx + ' Z';
-
-    svg.innerHTML =
-      '<defs>' +
-        '<linearGradient id="kpi-grad" x1="0" y1="0" x2="0" y2="1">' +
-          '<stop offset="0%"   stop-color="var(--kpi-glow)" stop-opacity="0.45"/>' +
-          '<stop offset="100%" stop-color="var(--kpi-glow)" stop-opacity="0.02"/>' +
-        '</linearGradient>' +
-      '</defs>' +
-      '<path d="' + areaPath + '" fill="url(#kpi-grad)"/>' +
-      '<polyline points="' + pts + '" fill="none" stroke="var(--kpi-glow)"' +
-        ' stroke-width="2" stroke-linejoin="round" stroke-linecap="round"/>';
-
-    $('kpi-sample-info').textContent =
-      healthLog.length + ' muestras · 3 s/tick';
+  // Linear-interpolation quantile over a numeric array
+  function quantile(arr, q){
+    if(!arr.length) return 0;
+    const s = arr.slice().sort(function(a,b){ return a-b; });
+    const pos = (s.length - 1) * q;
+    const lo  = Math.floor(pos), hi = Math.ceil(pos);
+    if(lo === hi) return s[lo];
+    return s[lo] + (s[hi] - s[lo]) * (pos - lo);
   }
+
+  // Metric-mode chart definitions
+  const METRICS = {
+    latency: {
+      unit: 'ms', fmt: function(v){ return v.toFixed(0)+' ms'; },
+      lines: [
+        {key:'p95', color:'#ef4444', label:'p95'},
+        {key:'p90', color:'#f59e0b', label:'p90'},
+        {key:'p50', color:'var(--kpi-glow)', label:'p50', area:true}
+      ]
+    },
+    throughput: {
+      unit: 'rpm', fmt: function(v){ return v.toFixed(1)+' rpm'; },
+      lines: [{key:'throughput', color:'var(--kpi-glow)', label:'runs/min', area:true}]
+    },
+    efficiency: {
+      unit: '%', fmt: function(v){ return v.toFixed(0)+'%'; },
+      lines: [{key:'efficiency', color:'#22c55e', label:'eficiencia %', area:true}]
+    },
+    health: {
+      unit: '%', fmt: function(v){ return v.toFixed(0)+'%'; },
+      lines: [{key:'health', color:'var(--kpi-glow)', label:'health %', area:true}]
+    }
+  };
+
+  function renderTSChart(){
+    const svg   = $('kpi-ts-chart');
+    const empty = $('kpi-chart-empty');
+    const leg   = $('kpi-chart-legend');
+    const W   = svg.clientWidth  || 600;
+    const Hpx = svg.clientHeight || 150;
+    const def = METRICS[metricMode];
+
+    if(series.length < 2){
+      svg.innerHTML = '';
+      empty.style.display = 'flex';
+      leg.innerHTML = '';
+      return;
+    }
+    empty.style.display = 'none';
+
+    // Scale: find max across all active lines (min 1 to avoid /0)
+    let maxV = 1;
+    def.lines.forEach(function(ln){
+      series.forEach(function(s){ if(s[ln.key] > maxV) maxV = s[ln.key]; });
+    });
+    if(metricMode === 'efficiency' || metricMode === 'health') maxV = 100;
+    maxV *= 1.12;
+
+    const pad = 8;
+    const n   = series.length;
+    const xAt = function(i){ return (i / (MAX_S - 1)) * W; };
+    const yAt = function(v){ return Hpx - pad - (Math.min(v,maxV) / maxV) * (Hpx - pad * 2); };
+
+    let svgParts = '<defs>' +
+      '<linearGradient id="kpi-ts-grad" x1="0" y1="0" x2="0" y2="1">' +
+        '<stop offset="0%"   stop-color="var(--kpi-glow)" stop-opacity="0.35"/>' +
+        '<stop offset="100%" stop-color="var(--kpi-glow)" stop-opacity="0.02"/>' +
+      '</linearGradient></defs>';
+
+    // Grid lines (4 horizontal)
+    for(let g=1; g<=3; g++){
+      const gy = pad + (Hpx - pad*2) * g/4;
+      svgParts += '<line x1="0" y1="'+gy+'" x2="'+W+'" y2="'+gy+'" ' +
+        'stroke="rgba(255,255,255,0.05)" stroke-width="1"/>';
+    }
+
+    def.lines.forEach(function(ln){
+      const color = ln.color;
+      const pts = series.map(function(s,i){ return xAt(i)+','+yAt(s[ln.key]||0); }).join(' ');
+      if(ln.area){
+        const areaD = 'M0,'+Hpx+' ' +
+          series.map(function(s,i){ return 'L'+xAt(i)+','+yAt(s[ln.key]||0); }).join(' ') +
+          ' L'+xAt(n-1)+','+Hpx+' Z';
+        svgParts += '<path d="'+areaD+'" fill="url(#kpi-ts-grad)"/>';
+      }
+      svgParts += '<polyline points="'+pts+'" fill="none" stroke="'+color+'" ' +
+        'stroke-width="2" stroke-linejoin="round" stroke-linecap="round"/>';
+      // last-point dot
+      const last = series[n-1];
+      svgParts += '<circle cx="'+xAt(n-1)+'" cy="'+yAt(last[ln.key]||0)+'" r="3" fill="'+color+'"/>';
+    });
+
+    svg.innerHTML = svgParts;
+
+    // Legend with live values
+    const last = series[n-1];
+    leg.innerHTML = def.lines.map(function(ln){
+      return '<span class="kpi-leg-item"><i style="background:'+ln.color+'"></i>' +
+        ln.label + ' · <b>' + def.fmt(last[ln.key]||0) + '</b></span>';
+    }).join('');
+  }
+
+  // ── Metrics polling (/kpi/metrics) ────────────────────────────────────────
+  let lastRuns = null, lastRunsT = null;   // for observed throughput (Δruns/Δt)
+
+  async function fetchMetrics(){
+    try {
+      const r = await fetch('/kpi/metrics');
+      if(!r.ok) return;
+      const d = await r.json();
+      const tasks = d.tasks || {};
+      const cross = d.cross || {};
+      const db    = d.db    || {};
+
+      // Snapshot distribution of avgMs across tasks that have run
+      const msVals = Object.values(tasks)
+        .map(function(t){ return t.avgMs || 0; })
+        .filter(function(v){ return v > 0; });
+      const taskCount = cross.taskCount || Object.keys(tasks).length || 1;
+      const running   = cross.running   || 0;
+
+      // Observed throughput: Δ(totalRuns)/Δt → runs per minute
+      const nowT = Date.now();
+      const totalRuns = cross.totalRuns || 0;
+      let obsRpm = 0;
+      if(lastRuns != null && nowT > lastRunsT){
+        const dRuns = Math.max(0, totalRuns - lastRuns);
+        obsRpm = dRuns / ((nowT - lastRunsT) / 60000);
+      }
+      lastRuns = totalRuns; lastRunsT = nowT;
+
+      const sample = {
+        t:          nowT,
+        p50:        quantile(msVals, 0.50),
+        p90:        quantile(msVals, 0.90),
+        p95:        quantile(msVals, 0.95),
+        throughput: obsRpm,
+        efficiency: (cross.efficiency != null) ? cross.efficiency : 100,
+        health:     taskCount > 0 ? (running / taskCount) * 100 : 0
+      };
+      series.push(sample);
+      if(series.length > MAX_S) series.shift();
+
+      // Cross-metrics strip
+      $('xm-throughput').textContent = obsRpm.toFixed(1);
+      $('xm-err').textContent        = (cross.globalErrPct || 0).toFixed(2);
+      $('xm-eff').textContent        = Math.round(cross.efficiency != null ? cross.efficiency : 100);
+      $('xm-heavy').textContent      = cross.heaviest || '—';
+      $('xm-pruns').textContent      = (db.pipelineRuns != null ? db.pipelineRuns : '—');
+      $('xm-sess').textContent       = (db.activeSessions != null ? db.activeSessions : '—');
+
+      // Error-tone on global error
+      var xmErr = $('xm-err').parentElement;
+      xmErr.classList.toggle('kpi-xm--alert', (cross.globalErrPct || 0) > 0);
+
+      $('kpi-analytics-info').textContent = series.length + ' muestras · 5 s/tick';
+
+      // Axis time labels
+      if(series.length >= 2){
+        const span = (series[series.length-1].t - series[0].t) / 1000; // seconds
+        const fmtAgo = function(sec){
+          if(sec < 60) return '−'+Math.round(sec)+'s';
+          return '−'+(sec/60).toFixed(1)+'m';
+        };
+        $('kpi-ax-0').textContent = fmtAgo(span);
+        $('kpi-ax-1').textContent = fmtAgo(span*2/3);
+        $('kpi-ax-2').textContent = fmtAgo(span/3);
+      }
+
+      renderTSChart();
+    } catch(e){ /* silencio en red */ }
+  }
+
+  // Metric-mode tabs
+  document.querySelectorAll('.kpi-metric-tab').forEach(function(tab){
+    tab.addEventListener('click', function(){
+      document.querySelectorAll('.kpi-metric-tab').forEach(function(b){
+        b.classList.remove('kpi-metric-tab--on');
+      });
+      tab.classList.add('kpi-metric-tab--on');
+      metricMode = tab.dataset.metric;
+      renderTSChart();
+    });
+  });
+
+  fetchMetrics();
+  setInterval(fetchMetrics, 5000);
+  window.addEventListener('resize', renderTSChart);
 
   // ── Task grid ────────────────────────────────────────────────────────────
   const G_ICON = {
@@ -307,11 +503,8 @@
       kce.classList.toggle('kpi-card--err', errTasks > 0);
       kce.classList.toggle('kpi-card--ok',  errTasks === 0);
 
-      // Gauge + timeline
+      // Gauge
       setGauge(health);
-      healthLog.push(health);
-      if(healthLog.length > MAX_H) healthLog.shift();
-      updateChart();
 
       // Task grid
       renderTaskGrid(tasks);

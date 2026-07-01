@@ -349,6 +349,135 @@
   padding: 0 2px;
 }
 
+// ── Runtime analytics (serie temporal + métricas de cruce) ─────────────────
+.kpi-analytics {
+  padding: .5rem 1.5rem 1rem;
+}
+
+.kpi-xmetrics {
+  display: grid;
+  grid-template-columns: repeat(6, 1fr);
+  gap: .5rem;
+  margin-bottom: .75rem;
+
+  @media (max-width: 720px) {
+    grid-template-columns: repeat(3, 1fr);
+  }
+}
+
+.kpi-xm {
+  display: flex;
+  flex-direction: column;
+  gap: .1rem;
+  padding: .55rem .6rem;
+  background: var(--kpi-surf);
+  border: 1px solid var(--kpi-border);
+  border-radius: var(--kpi-radius);
+  transition: border-color .3s, background .3s;
+
+  &--db { border-color: color-mix(in srgb, var(--kpi-glow) 28%, transparent); }
+
+  &--alert {
+    border-color: color-mix(in srgb, var(--kpi-err) 55%, transparent);
+    background: color-mix(in srgb, var(--kpi-err) 8%, var(--kpi-surf));
+  }
+}
+
+.kpi-xm__val {
+  font-family: var(--kpi-mono);
+  font-size: 1.25rem;
+  font-weight: 700;
+  line-height: 1.1;
+  color: var(--kpi-text);
+
+  &--sm { font-size: .8rem; word-break: break-all; }
+}
+
+.kpi-xm__lbl {
+  font-size: .58rem;
+  letter-spacing: .06em;
+  text-transform: uppercase;
+  color: var(--kpi-muted);
+
+  em {
+    font-style: normal;
+    opacity: .6;
+    color: var(--kpi-glow);
+  }
+}
+
+// ── Metric selector tabs ───────────────────────────────────────────────────
+.kpi-metric-tabs {
+  display: flex;
+  flex-wrap: wrap;
+  gap: .4rem;
+  margin-bottom: .6rem;
+}
+
+.kpi-metric-tab {
+  font-family: var(--kpi-mono);
+  font-size: .64rem;
+  letter-spacing: .04em;
+  padding: .35rem .7rem;
+  border-radius: 999px;
+  border: 1px solid var(--kpi-border);
+  background: var(--kpi-surf);
+  color: var(--kpi-muted);
+  cursor: pointer;
+  transition: all .2s;
+
+  &:hover { color: var(--kpi-text); border-color: var(--kpi-g20); }
+
+  &--on {
+    color: #fff;
+    background: color-mix(in srgb, var(--kpi-glow) 22%, transparent);
+    border-color: var(--kpi-glow);
+    box-shadow: 0 0 12px color-mix(in srgb, var(--kpi-glow) 35%, transparent);
+  }
+}
+
+// ── Tall chart + legend + empty state ──────────────────────────────────────
+.kpi-chart-wrap--tall { height: 168px; }
+
+.kpi-chart-legend {
+  position: absolute;
+  top: .45rem;
+  right: .6rem;
+  display: flex;
+  flex-wrap: wrap;
+  gap: .75rem;
+  pointer-events: none;
+}
+
+.kpi-leg-item {
+  display: inline-flex;
+  align-items: center;
+  gap: .3rem;
+  font-family: var(--kpi-mono);
+  font-size: .6rem;
+  color: var(--kpi-muted);
+
+  i {
+    width: 10px;
+    height: 3px;
+    border-radius: 2px;
+    display: inline-block;
+  }
+  b { color: var(--kpi-text); font-weight: 700; }
+}
+
+.kpi-chart-empty {
+  position: absolute;
+  inset: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-family: var(--kpi-mono);
+  font-size: .68rem;
+  color: var(--kpi-muted);
+  opacity: .6;
+}
+
 // ── Bottom: tasks + runner ────────────────────────────────────────────────
 .kpi-bottom {
   display: grid;
