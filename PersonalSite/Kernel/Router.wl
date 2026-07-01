@@ -43,7 +43,9 @@ serveFile[rootParts_List, file_String] :=
     ext = ToLowerCase[FileExtension[path]];
     Which[
       KeyExistsQ[$textTypes, ext],
-        mime = $textTypes[ext];   body = ReadString[path];
+        (* Bytes crudos: el charset=utf-8 ya va en el mime; evita que la
+           lectura (ISO8859-1 por defecto) y el re-encode dupliquen UTF-8. *)
+        mime = $textTypes[ext];   body = ReadByteArray[path];
         cacheCtrl = "no-cache",
       KeyExistsQ[$binaryTypes, ext],
         mime = $binaryTypes[ext]; body = ReadByteArray[path];

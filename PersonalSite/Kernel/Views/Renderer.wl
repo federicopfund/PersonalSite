@@ -29,9 +29,10 @@ Begin["`Private`"];
    siguientes reutilizan el StringTemplate ya compilado (sin I/O ni recompilar). *)
 template[name_String] :=
   template[name] = StringTemplate[
-    ReadString[FileNameJoin[{
-      PersonalSite`$Root, "Resources", "Templates", name <> ".html"}],
-      CharacterEncoding -> "UTF-8"],
+    ByteArrayToString[
+      ReadByteArray[FileNameJoin[{
+        PersonalSite`$Root, "Resources", "Templates", name <> ".html"}]],
+      "UTF-8"],
     Delimiters -> {"<*", "*>"}];
 
 escape[s_String] :=
