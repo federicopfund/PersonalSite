@@ -161,103 +161,271 @@
     }());
   </script>
   <script>
-  // ── Ruliad Navigation — multiway computational graph ─────────────────────
-  (function(){
+  // ══════════════════════════════════════════════════════════════════════════
+  //  ENTANGLEMENT RULE  —  Ruliad nav UX algorithm
+  //
+  //  Each nav node carries a Wolfram rule number (R30–R255) and an
+  //  evolutionary step depth (0–6).  A live rAF loop computes, for every
+  //  node j, an entanglement coefficient:
+  //
+  //    Ej = 0.40 · field(mouse, xj, σ=180px)   ← spatial Gaussian
+  //       + 0.35 · ruleKernel(Ra, Rj)           ← Hamming rule similarity
+  //       + 0.25 · histWeight(PATH → hrefj)     ← Markov behavioral memory
+  //    (= 1.0 when j is the directly hovered node)
+  //
+  //  Ej → CSS var(--ent) → drives opacity, dot glow, arc arc height.
+  //  CA canvas evolves using the hovered rule, seeded at mouse position.
+  //  Edge arcs connect pairs with high entanglement × rule kernel product.
+  // ══════════════════════════════════════════════════════════════════════════
+  (function () {
     'use strict';
 
-    // Mark current branch
-    var path = window.location.pathname;
-    document.querySelectorAll('.nav-links li[data-rule]').forEach(function(li){
+    // ── 1. Behavioral memory (sessionStorage Markov chain) ─────────────────
+    var MEM_KEY = 'nav_ent_v1';
+    var mem;
+    try { mem = JSON.parse(sessionStorage.getItem(MEM_KEY)) || { v: {}, t: {} }; }
+    catch (e) { mem = { v: {}, t: {} }; }
+
+    var PATH = location.pathname;
+    mem.v[PATH] = (mem.v[PATH] || 0) + 1;
+    try {
+      var ref = new URL(document.referrer);
+      if (ref.origin === location.origin) {
+        var rp = ref.pathname;
+        mem.t[rp] = mem.t[rp] || {};
+        mem.t[rp][PATH] = (mem.t[rp][PATH] || 0) + 1;
+      }
+    } catch (e) {}
+    try { sessionStorage.setItem(MEM_KEY, JSON.stringify(mem)); } catch (e) {}
+
+    // ── 2. DOM index ────────────────────────────────────────────────────────
+    var navbar = document.querySelector('.navbar');
+    if (!navbar) return;
+
+    var items = Array.from(document.querySelectorAll('.nav-links li[data-rule]'));
+    var nodes = items.map(function (li) {
       var a = li.querySelector('a');
-      if(!a) return;
-      var href = a.getAttribute('href');
-      var isCurrent = (href === path) || (href !== '/' && path.startsWith(href));
-      if(isCurrent) li.dataset.current = 'true';
+      return {
+        el:   li,
+        rule: +li.dataset.rule,
+        step: +(li.dataset.step || 0),
+        href: a ? a.getAttribute('href') : '',
+        cx:   0,     // viewport X center (updated by measure())
+        ent:  0      // current entanglement coefficient (EMA-smoothed)
+      };
     });
 
-    // Inject 8-bit rule badge
-    function makeBadge(rule){
-      var wrap  = document.createElement('span');
-      wrap.className = 'nav-rul-badge';
-      wrap.setAttribute('aria-hidden','true');
-      var cells = document.createElement('span');
-      cells.className = 'nav-rul-cells';
-      for(var i = 7; i >= 0; i--){
-        var bit = document.createElement('span');
-        bit.className = 'nav-rul-bit ' + ((rule >> i & 1) ? 'nav-rul-bit--on' : 'nav-rul-bit--off');
-        cells.appendChild(bit);
+    // ── 3. Mark current branch ─────────────────────────────────────────────
+    nodes.forEach(function (n) {
+      if (n.href === PATH || (n.href !== '/' && PATH.startsWith(n.href)))
+        n.el.dataset.current = 'true';
+    });
+
+    // ── 4. Inject rule badges (8-bit pattern) + step dots ──────────────────
+    function makeBadge(n) {
+      var w = document.createElement('span');
+      w.className = 'nav-rul-badge'; w.setAttribute('aria-hidden', 'true');
+      var cells = document.createElement('span'); cells.className = 'nav-rul-cells';
+      for (var i = 7; i >= 0; i--) {
+        var b = document.createElement('span');
+        b.className = 'nav-rul-bit ' + ((n.rule >> i & 1) ? 'nav-rul-bit--on' : 'nav-rul-bit--off');
+        cells.appendChild(b);
       }
       var lbl = document.createElement('span');
       lbl.className = 'nav-rul-label';
-      lbl.textContent = 'R\u2009' + rule;
-      wrap.appendChild(cells);
-      wrap.appendChild(lbl);
-      return wrap;
+      lbl.textContent = 'R\u2009' + n.rule;
+      w.appendChild(cells); w.appendChild(lbl);
+      n.badge     = w;
+      n.badgeBits = Array.from(cells.children);
+      n.badgeLbl  = lbl;
+      return w;
     }
 
-    // Inject step depth dot
-    function makeStepDot(step){
-      var d = document.createElement('span');
-      d.className = 'nav-rul-dot';
-      d.setAttribute('aria-hidden','true');
-      d.title = 'depth\u2009' + step;
-      return d;
-    }
-
-    document.querySelectorAll('.nav-links li[data-rule]').forEach(function(li){
-      var rule = parseInt(li.dataset.rule, 10);
-      var step = parseInt(li.dataset.step || '0', 10);
-      if(!isNaN(rule)) li.appendChild(makeBadge(rule));
-      li.appendChild(makeStepDot(step));
+    nodes.forEach(function (n) {
+      n.el.appendChild(makeBadge(n));
+      var dot = document.createElement('span');
+      dot.className = 'nav-rul-dot'; dot.setAttribute('aria-hidden', 'true');
+      dot.title = 'depth\u2009' + n.step;
+      n.el.appendChild(dot);
+      // Enable entanglement CSS mode
+      n.el.setAttribute('data-ent', '');
+      n.el.style.setProperty('--ent', '0');
     });
 
-    // Rule 30 CA background canvas
-    var navbar = document.querySelector('.navbar');
-    if(navbar){
-      var cvs = document.createElement('canvas');
-      cvs.className = 'nav-ca-canvas';
-      cvs.setAttribute('aria-hidden','true');
-      navbar.insertBefore(cvs, navbar.firstChild);
-      function drawCA(){
-        var W = navbar.offsetWidth, ROWS = 16, CELL = 4;
-        if(!W) return;
-        cvs.width = W; cvs.height = ROWS * CELL;
-        var ctx = cvs.getContext('2d');
-        var COLS = Math.ceil(W / CELL);
-        var row = new Uint8Array(COLS);
-        row[Math.floor(COLS / 2)] = 1;          // single seed
-        ctx.clearRect(0, 0, W, ROWS * CELL);
-        for(var gen = 0; gen < ROWS; gen++){
-          var next = new Uint8Array(COLS);
-          for(var c = 0; c < COLS; c++){
-            var l = row[(c-1+COLS)%COLS], m = row[c], r = row[(c+1)%COLS];
-            next[c] = (30 >> ((l<<2)|(m<<1)|r)) & 1;
-          }
-          var alpha = 0.025 + gen * 0.003;
-          ctx.fillStyle = 'rgba(255,255,255,' + Math.min(alpha, 0.1) + ')';
-          for(var c2 = 0; c2 < COLS; c2++){
-            if(next[c2]) ctx.fillRect(c2*CELL, gen*CELL, CELL-1, CELL-1);
-          }
-          row = next;
+    // ── 5. Canvases ─────────────────────────────────────────────────────────
+    // (a) CA canvas — reuse if already present in DOM
+    var caCvs = navbar.querySelector('.nav-ca-canvas');
+    if (!caCvs) {
+      caCvs = document.createElement('canvas');
+      caCvs.className = 'nav-ca-canvas'; caCvs.setAttribute('aria-hidden', 'true');
+      navbar.insertBefore(caCvs, navbar.firstChild);
+    }
+    var caCtx = caCvs.getContext('2d');
+
+    // (b) Edge canvas — entanglement arc lines
+    var edgeCvs = document.createElement('canvas');
+    edgeCvs.className = 'nav-ent-canvas'; edgeCvs.setAttribute('aria-hidden', 'true');
+    navbar.insertBefore(edgeCvs, navbar.querySelector('.nav-container'));
+    var edgeCtx = edgeCvs.getContext('2d');
+
+    // ── 6. Math helpers ─────────────────────────────────────────────────────
+    function popcount8(x) {
+      x &= 0xFF; x = (x & 0x55) + ((x >> 1) & 0x55); x = (x & 0x33) + ((x >> 2) & 0x33);
+      return (x + (x >> 4)) & 0x0F;
+    }
+    // Hamming similarity: 1 when identical, 0 when complement
+    function ruleKernel(a, b) { return 1 - popcount8(a ^ b) / 8; }
+    // Gaussian spatial field
+    function gauss(dx, sig)   { return Math.exp(-(dx * dx) / (2 * sig * sig)); }
+    // Markov weight: how often user navigated from current page to toHref
+    function histWeight(toHref) {
+      var row = mem.t[PATH]; if (!row) return 0;
+      var total = 0;
+      Object.keys(row).forEach(function (k) { total += row[k]; });
+      return total ? (row[toHref] || 0) / total : 0;
+    }
+
+    // ── 7. Mouse / hover state ──────────────────────────────────────────────
+    var MX = -9999, speed = 0, prevMX = -9999;
+    var hoveredIdx = -1, prevHoveredIdx = -2;
+    var caRule = 30;
+    var navbarRect = navbar.getBoundingClientRect();
+
+    navbar.addEventListener('mousemove', function (e) {
+      prevMX = MX; MX = e.clientX;
+      speed = speed * 0.65 + Math.abs(MX - prevMX) * 0.35;
+    });
+    navbar.addEventListener('mouseleave', function () {
+      MX = -9999; speed = 0; hoveredIdx = -1; caRule = 30;
+    });
+    items.forEach(function (li, i) {
+      li.addEventListener('mouseenter', function () { hoveredIdx = i; caRule = nodes[i].rule; });
+      li.addEventListener('mouseleave',  function () { if (hoveredIdx === i) hoveredIdx = -1; });
+    });
+
+    // ── 8. Measure node viewport centers (cheap, called on resize + measure) ─
+    function measure() {
+      navbarRect = navbar.getBoundingClientRect();
+      nodes.forEach(function (n) {
+        var r = n.el.getBoundingClientRect();
+        n.cx = r.left + r.width * 0.5;
+      });
+    }
+    measure();
+    window.addEventListener('resize', measure);
+
+    // ── 9. Entanglement coefficients (runs every rAF) ───────────────────────
+    var SIGMA = 180; // px — spatial field half-width
+    function computeEntanglement() {
+      var refRule = hoveredIdx >= 0 ? nodes[hoveredIdx].rule : caRule;
+      nodes.forEach(function (n, i) {
+        var field  = MX > -100 ? gauss(n.cx - MX, SIGMA) : 0;
+        var interf = ruleKernel(refRule, n.rule);
+        var hist   = histWeight(n.href);
+        var raw    = i === hoveredIdx
+          ? 1.0
+          : Math.max(0, Math.min(1, 0.40 * field + 0.35 * interf + 0.25 * hist));
+        // Asymmetric EMA: snap up fast, decay slowly
+        var alpha  = raw > n.ent ? 0.30 : 0.10;
+        n.ent = n.ent * (1 - alpha) + raw * alpha;
+        n.el.style.setProperty('--ent', n.ent.toFixed(3));
+      });
+    }
+
+    // ── 10. Live badge update — show XOR interference on hover ─────────────
+    function setBadgeBits(n, dispRule, label) {
+      for (var i = 0; i < 8; i++) {
+        var on = (dispRule >> (7 - i)) & 1;
+        n.badgeBits[i].className = 'nav-rul-bit ' + (on ? 'nav-rul-bit--on' : 'nav-rul-bit--off');
+      }
+      if (label !== undefined) n.badgeLbl.textContent = label;
+    }
+    // Current-page node (for XOR computation)
+    var currentNode = null;
+    nodes.forEach(function (n) {
+      if (n.href === PATH || (n.href !== '/' && PATH.startsWith(n.href))) currentNode = n;
+    });
+
+    // ── 11. CA canvas — evolves with hovered rule, seeded at mouse X ────────
+    function drawCA() {
+      var W = navbar.offsetWidth, ROWS = 14, CELL = 4;
+      if (!W) return;
+      if (caCvs.width !== W) { caCvs.width = W; caCvs.height = ROWS * CELL; }
+      var COLS = Math.ceil(W / CELL);
+      var row  = new Uint8Array(COLS);
+      var localX = MX - navbarRect.left;
+      var seedX  = MX > -100
+        ? Math.max(0, Math.min(COLS - 1, Math.floor(localX / CELL)))
+        : Math.floor(COLS / 2);
+      row[seedX] = 1;
+      caCtx.clearRect(0, 0, W, ROWS * CELL);
+      var rule = caRule;
+      for (var gen = 0; gen < ROWS; gen++) {
+        var next = new Uint8Array(COLS);
+        for (var c = 0; c < COLS; c++) {
+          var l = row[(c - 1 + COLS) % COLS], m = row[c], r = row[(c + 1) % COLS];
+          next[c] = (rule >> ((l << 2) | (m << 1) | r)) & 1;
+        }
+        var alpha = 0.012 + gen * 0.004 + speed * 0.0006;
+        caCtx.fillStyle = 'rgba(255,255,255,' + Math.min(alpha, 0.11).toFixed(3) + ')';
+        for (var c2 = 0; c2 < COLS; c2++) {
+          if (next[c2]) caCtx.fillRect(c2 * CELL, gen * CELL, CELL - 1, CELL - 1);
+        }
+        row = next;
+      }
+    }
+
+    // ── 12. Edge arc canvas — arcs between entangled node pairs ────────────
+    function drawEdges() {
+      var W = navbar.offsetWidth, H = navbar.offsetHeight;
+      if (!W || !H) return;
+      if (edgeCvs.width !== W || edgeCvs.height !== H) { edgeCvs.width = W; edgeCvs.height = H; }
+      edgeCtx.clearRect(0, 0, W, H);
+      var H2 = H * 0.5;
+      for (var i = 0; i < nodes.length; i++) {
+        var a = nodes[i]; if (a.ent < 0.12) continue;
+        for (var j = i + 1; j < nodes.length; j++) {
+          var b = nodes[j]; if (b.ent < 0.12) continue;
+          var strength = Math.min(a.ent, b.ent) * ruleKernel(a.rule, b.rule);
+          if (strength < 0.07) continue;
+          var ax  = a.cx - navbarRect.left;
+          var bx  = b.cx - navbarRect.left;
+          var cpY = H2 - H * 0.55 * strength;   // arc rises with strength
+          edgeCtx.beginPath();
+          edgeCtx.moveTo(ax, H2);
+          edgeCtx.quadraticCurveTo((ax + bx) * 0.5, cpY, bx, H2);
+          edgeCtx.strokeStyle = 'rgba(255,255,255,' + (strength * 0.22).toFixed(3) + ')';
+          edgeCtx.lineWidth   = Math.min(1.2, strength * 1.8);
+          edgeCtx.stroke();
         }
       }
-      drawCA();
-      window.addEventListener('resize', drawCA);
     }
 
-    // Branchial distance on hover
-    var items = Array.from(document.querySelectorAll('.nav-links li[data-step]'));
-    items.forEach(function(li){
-      li.addEventListener('mouseenter', function(){
-        var hStep = parseInt(li.dataset.step || '0', 10);
-        items.forEach(function(other){
-          other.dataset.branchDist = Math.abs(parseInt(other.dataset.step||'0',10) - hStep);
-        });
-      });
-      li.addEventListener('mouseleave', function(){
-        items.forEach(function(other){ delete other.dataset.branchDist; });
-      });
-    });
+    // ── 13. rAF loop ────────────────────────────────────────────────────────
+    function tick() {
+      computeEntanglement();
+      drawCA();
+      drawEdges();
+
+      // Badge live update only when hovered node changes
+      if (hoveredIdx !== prevHoveredIdx) {
+        // Restore previous
+        if (prevHoveredIdx >= 0) {
+          var pn = nodes[prevHoveredIdx];
+          setBadgeBits(pn, pn.rule, 'R\u2009' + pn.rule);
+        }
+        // Activate new: show XOR interference with current page
+        if (hoveredIdx >= 0) {
+          var hn  = nodes[hoveredIdx];
+          var xor = currentNode ? hn.rule ^ currentNode.rule : hn.rule;
+          setBadgeBits(hn, xor, 'R\u2009' + hn.rule + '\u2009\u2295\u2009' + (currentNode ? currentNode.rule : '?'));
+        }
+        prevHoveredIdx = hoveredIdx;
+      }
+
+      requestAnimationFrame(tick);
+    }
+    requestAnimationFrame(tick);
 
   })();
   </script>
