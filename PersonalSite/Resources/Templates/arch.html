@@ -688,3 +688,441 @@
   window.addEventListener('resize', function(){ renderDAGCanvas(DAG_NODES, DAG_LINKS); });
 })();
 </script>
+
+<!-- ═══════════════════════════════════════════════════════════════════════
+     SECCIÓN: TaskScheduler Runtime — DAG jerárquico interactivo
+     Muestra las 10 tareas activas en 5 capas DAG + estado live del runtime
+     ═══════════════════════════════════════════════════════════════════════ -->
+<section id="arch-sched-section" class="arch-sched-section">
+  <div class="arch-sched-header">
+    <div class="arch-sched-title-block">
+      <span class="arch-badge">TaskManager &bull; NestScheduler &bull; DAG Jerárquico</span>
+      <h2 class="arch-sched-title">Sistema de Tareas en Runtime</h2>
+      <p class="arch-sched-subtitle">
+        10 tareas activas &bull; 5 niveles DAG &bull; Heartbeat raíz &bull; Propagación causal por capas
+      </p>
+    </div>
+    <div class="arch-sched-controls">
+      <span id="arch-sched-stats" class="arch-sched-stats">cargando…</span>
+      <button id="arch-sched-sim-btn" class="arch-sched-sim-btn">&#9654; Simular ciclo</button>
+      <span id="arch-sched-ts"  class="arch-sched-ts"></span>
+    </div>
+  </div>
+
+  <!-- Layered DAG canvas -->
+  <div class="arch-sched-dag-wrap">
+    <canvas id="arch-sched-canvas" class="arch-sched-canvas"></canvas>
+    <div class="arch-sched-dag-legend">
+      <span class="arch-sched-leg arch-sched-leg--system">system</span>
+      <span class="arch-sched-leg arch-sched-leg--theme">theme</span>
+      <span class="arch-sched-leg arch-sched-leg--cache">cache</span>
+      <span class="arch-sched-leg arch-sched-leg--flow">flow</span>
+      <span class="arch-sched-leg arch-sched-leg--ux">ux</span>
+    </div>
+  </div>
+
+  <!-- Simulation step label -->
+  <div id="arch-sched-sim-label" class="arch-sched-sim-label"></div>
+
+  <!-- Live task cards grid -->
+  <div id="arch-sched-cards" class="arch-sched-cards"></div>
+
+  <!-- NestScheduler tree callout -->
+  <div class="arch-sched-nest-callout">
+    <div class="arch-sched-nest-header">
+      <span class="arch-sched-nest-badge">NestScheduler</span>
+      <span class="arch-sched-nest-title">Iteración funcional jerárquica — tarea <code>nest-refresh</code></span>
+    </div>
+    <div class="arch-sched-nest-body">
+      <div class="arch-sched-nest-col">
+        <div class="arch-sched-nest-label">Reglas aplicadas</div>
+        <div class="arch-sched-nest-rules">
+          <span class="arch-sched-nest-rule">f₁(x) = 2x + 1</span>
+          <span class="arch-sched-nest-rule">f₂(x) = x + 14</span>
+          <span class="arch-sched-nest-rule">f₃(x) = x − 18</span>
+        </div>
+      </div>
+      <div class="arch-sched-nest-col">
+        <div class="arch-sched-nest-label">Árbol desde semilla {1}, profundidad 3</div>
+        <div class="arch-sched-nest-tree" id="arch-sched-nest-tree">
+          <!-- Generado por JS -->
+        </div>
+      </div>
+      <div class="arch-sched-nest-col">
+        <div class="arch-sched-nest-label">Complejidad BFS</div>
+        <div class="arch-sched-nest-formula">
+          |T<sub>d</sub>| = &sum;<sub>k=0</sub><sup>d</sup> m<sup>k</sup> = (m<sup>d+1</sup>−1)/(m−1)
+        </div>
+        <div class="arch-sched-nest-formula" style="font-size:.75rem;margin-top:.4rem;opacity:.6">
+          m=3, d=3 &rarr; |T| = (81−1)/2 = <strong>40 nodos</strong>
+        </div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<script>
+// ══════════════════════════════════════════════════════════════════════════
+//  TaskScheduler Runtime — DAG jerárquico interactivo
+// ══════════════════════════════════════════════════════════════════════════
+(function () {
+  'use strict';
+
+  // ── Definición estática del DAG (espeja TaskConfig.wl) ─────────────────
+  var TASKS = [
+    {id:'heartbeat',      label:'Heartbeat',         group:'system', interval:30,  dagOrder:0, deps:[]},
+    {id:'cache-warm',     label:'Cache warm-up',      group:'system', interval:300, dagOrder:1, deps:['heartbeat']},
+    {id:'theme-rotate',   label:'Theme rotation',     group:'theme',  interval:10,  dagOrder:1, deps:['heartbeat']},
+    {id:'contact-ux',     label:'Contact UX pulse',   group:'ux',     interval:5,   dagOrder:1, deps:['heartbeat']},
+    {id:'cards-refresh',  label:'Cards refresh (DB)', group:'cache',  interval:20,  dagOrder:2, deps:['cache-warm']},
+    {id:'nest-refresh',   label:'NestGraph {2x+1…}',  group:'flow',   interval:300, dagOrder:2, deps:['cache-warm']},
+    {id:'ux-color-eval',  label:'UX color eval',      group:'ux',     interval:15,  dagOrder:2, deps:['heartbeat','theme-rotate']},
+    {id:'metric-refresh', label:'Metric refresh',     group:'cache',  interval:300, dagOrder:3, deps:['cards-refresh']},
+    {id:'ux-color-apply', label:'UX color apply',     group:'ux',     interval:15,  dagOrder:3, deps:['ux-color-eval']},
+    {id:'ux-color-report',label:'UX audit report',    group:'ux',     interval:60,  dagOrder:4, deps:['ux-color-apply']}
+  ];
+
+  var GROUP_COLOR = {
+    system:'#f4a70a', theme:'#a78bfa', cache:'#22d3ee',
+    flow:'#34d399',   ux:'#fb7185',    dev:'#9ca3af'
+  };
+
+  // ── Live state overlay (from /arch/tasks) ──────────────────────────────
+  var liveMap = {};   // id → {runs, errors, lastMs, avgMs, running}
+  var activeSet = new Set();   // ids glowing during simulation
+
+  // ── Canvas setup ───────────────────────────────────────────────────────
+  var cvs    = document.getElementById('arch-sched-canvas');
+  var ctx    = cvs ? cvs.getContext('2d') : null;
+  var layout = {};   // id → {x, y, w, h}
+  var CARD_W = 130, CARD_H = 52, COL_GAP = 60, ROW_GAP = 18;
+  var MAX_LEVEL = 4;
+
+  // ── Particle animation state ────────────────────────────────────────────
+  var particles = [];   // {x0,y0,x1,y1,t,color}
+
+  function buildLayout() {
+    if (!cvs) return;
+    // Group tasks by level
+    var levels = [];
+    for (var l = 0; l <= MAX_LEVEL; l++) {
+      levels.push(TASKS.filter(function(t){ return t.dagOrder === l; }));
+    }
+    var colW   = CARD_W + COL_GAP;
+    var totalW = (MAX_LEVEL + 1) * colW - COL_GAP;
+    var maxRows = Math.max.apply(null, levels.map(function(l){ return l.length; }));
+    var totalH  = maxRows * (CARD_H + ROW_GAP) + 60;
+    cvs.width  = Math.max(cvs.parentElement.offsetWidth - 2, totalW + 40);
+    cvs.height = totalH + 40;
+
+    for (var col = 0; col <= MAX_LEVEL; col++) {
+      var tasks = levels[col];
+      var colH  = tasks.length * (CARD_H + ROW_GAP) - ROW_GAP;
+      var startY = (cvs.height - colH) / 2;
+      var cx     = col * colW + 20;
+      tasks.forEach(function(t, row) {
+        var y = startY + row * (CARD_H + ROW_GAP);
+        layout[t.id] = {x: cx, y: y, w: CARD_W, h: CARD_H,
+                        cx: cx + CARD_W/2, cy: y + CARD_H/2};
+      });
+    }
+  }
+
+  function drawDAG() {
+    if (!ctx || !cvs) return;
+    ctx.clearRect(0, 0, cvs.width, cvs.height);
+
+    // Draw column level labels
+    for (var col = 0; col <= MAX_LEVEL; col++) {
+      var lx = col * (CARD_W + COL_GAP) + CARD_W/2 + 20;
+      ctx.fillStyle = 'rgba(255,255,255,.18)';
+      ctx.font = 'bold 9px monospace';
+      ctx.textAlign = 'center';
+      ctx.fillText('L' + col, lx, 14);
+    }
+
+    // Draw edges first (behind cards)
+    TASKS.forEach(function(t) {
+      var to = layout[t.id]; if (!to) return;
+      t.deps.forEach(function(depId) {
+        var from = layout[depId]; if (!from) return;
+        var active = activeSet.has(depId) && activeSet.has(t.id);
+        var color  = GROUP_COLOR[t.group] || '#888';
+        var alpha  = active ? 0.75 : 0.18;
+        ctx.beginPath();
+        var x0 = from.x + from.w, y0 = from.cy;
+        var x1 = to.x,            y1 = to.cy;
+        var cpx = (x0 + x1) / 2;
+        ctx.moveTo(x0, y0);
+        ctx.bezierCurveTo(cpx, y0, cpx, y1, x1, y1);
+        ctx.strokeStyle = active ? color : 'rgba(180,190,220,' + alpha + ')';
+        ctx.lineWidth = active ? 2 : 1;
+        ctx.stroke();
+        // Arrowhead
+        if (active) {
+          var dx = x1 - cpx, dy = y1 - y1;
+          ctx.beginPath();
+          ctx.moveTo(x1, y1);
+          ctx.lineTo(x1 - 7, y1 - 4);
+          ctx.lineTo(x1 - 7, y1 + 4);
+          ctx.closePath();
+          ctx.fillStyle = color;
+          ctx.fill();
+        }
+      });
+    });
+
+    // Draw task cards
+    TASKS.forEach(function(t) {
+      var p = layout[t.id]; if (!p) return;
+      var color   = GROUP_COLOR[t.group] || '#888';
+      var live    = liveMap[t.id] || {};
+      var isActive = activeSet.has(t.id);
+      var running  = !!live.running;
+
+      // Card background
+      ctx.beginPath();
+      roundRect(ctx, p.x, p.y, p.w, p.h, 8);
+      ctx.fillStyle = isActive
+        ? color + '33'
+        : (running ? 'rgba(255,255,255,.06)' : 'rgba(255,255,255,.03)');
+      ctx.fill();
+
+      // Card border
+      ctx.beginPath();
+      roundRect(ctx, p.x, p.y, p.w, p.h, 8);
+      ctx.strokeStyle = isActive ? color : (running ? color + '88' : 'rgba(255,255,255,.1)');
+      ctx.lineWidth = isActive ? 2 : 1;
+      ctx.stroke();
+
+      // Left accent strip
+      ctx.beginPath();
+      roundRect(ctx, p.x, p.y + 6, 3, p.h - 12, 2);
+      ctx.fillStyle = color;
+      ctx.fill();
+
+      // Label
+      ctx.fillStyle = isActive ? '#fff' : 'rgba(230,235,255,.85)';
+      ctx.font = 'bold 9px system-ui, sans-serif';
+      ctx.textAlign = 'left';
+      ctx.fillText(truncate(t.label, 16), p.x + 10, p.y + 17);
+
+      // Group + interval badge
+      ctx.fillStyle = color + 'cc';
+      ctx.font = '8px monospace';
+      ctx.fillText(t.group + ' · Δ' + t.interval + 's', p.x + 10, p.y + 30);
+
+      // Live metrics
+      if (live.runs !== undefined) {
+        ctx.fillStyle = 'rgba(200,210,230,.55)';
+        ctx.font = '7.5px monospace';
+        ctx.fillText('runs:' + live.runs + '  ' +
+                     (live.avgMs ? Math.round(live.avgMs) + 'ms' : ''), p.x + 10, p.y + 43);
+      }
+
+      // Running LED
+      if (running || isActive) {
+        ctx.beginPath();
+        ctx.arc(p.x + p.w - 9, p.y + 9, 4, 0, 2 * Math.PI);
+        ctx.fillStyle = isActive ? color : '#00ff88';
+        if (isActive) ctx.shadowColor = color, ctx.shadowBlur = 8;
+        ctx.fill();
+        ctx.shadowBlur = 0;
+      }
+    });
+
+    // Draw particles
+    var alive = [];
+    particles.forEach(function(pr) {
+      pr.t += 0.025;
+      if (pr.t > 1) return;
+      var x = pr.x0 + (pr.x1 - pr.x0) * ease(pr.t);
+      var y = pr.y0 + (pr.y1 - pr.y0) * ease(pr.t);
+      ctx.beginPath();
+      ctx.arc(x, y, 4, 0, 2 * Math.PI);
+      ctx.fillStyle = pr.color;
+      ctx.shadowColor = pr.color; ctx.shadowBlur = 10;
+      ctx.fill();
+      ctx.shadowBlur = 0;
+      alive.push(pr);
+    });
+    particles = alive;
+  }
+
+  function ease(t) { return t < 0.5 ? 2*t*t : -1+(4-2*t)*t; }
+  function truncate(s, n) { return s.length > n ? s.slice(0, n-1) + '…' : s; }
+  function roundRect(c, x, y, w, h, r) {
+    c.moveTo(x+r, y); c.lineTo(x+w-r, y); c.quadraticCurveTo(x+w, y, x+w, y+r);
+    c.lineTo(x+w, y+h-r); c.quadraticCurveTo(x+w, y+h, x+w-r, y+h);
+    c.lineTo(x+r, y+h); c.quadraticCurveTo(x, y+h, x, y+h-r);
+    c.lineTo(x, y+r); c.quadraticCurveTo(x, y, x+r, y);
+  }
+
+  // ── rAF loop ────────────────────────────────────────────────────────────
+  var rafId;
+  function tick() { drawDAG(); rafId = requestAnimationFrame(tick); }
+
+  // ── Simulation ──────────────────────────────────────────────────────────
+  var simTimers = [], simActive = false;
+  var simBtn   = document.getElementById('arch-sched-sim-btn');
+  var simLabel = document.getElementById('arch-sched-sim-label');
+
+  var SIM_STEPS = [
+    {level:0, ids:['heartbeat'],                                  desc:'L0 · Heartbeat dispara — señal raíz'},
+    {level:1, ids:['cache-warm','theme-rotate','contact-ux'],     desc:'L1 · Dependientes directos se activan en paralelo'},
+    {level:2, ids:['cards-refresh','nest-refresh','ux-color-eval'],desc:'L2 · Segunda capa: DB refresh + NestGraph + UX eval'},
+    {level:3, ids:['metric-refresh','ux-color-apply'],             desc:'L3 · Tercera capa: métricas pesadas + aplicar tokens UX'},
+    {level:4, ids:['ux-color-report'],                             desc:'L4 · Capa hoja: auditoría de reglas de color'}
+  ];
+
+  function clearSim() {
+    simTimers.forEach(clearTimeout); simTimers = [];
+    activeSet.clear(); simActive = false;
+    if (simBtn) { simBtn.textContent = '▶ Simular ciclo'; simBtn.classList.remove('running'); }
+    if (simLabel) simLabel.textContent = '';
+  }
+
+  if (simBtn) simBtn.addEventListener('click', function() {
+    if (simActive) { clearSim(); return; }
+    simActive = true;
+    simBtn.textContent = '◼ Detener'; simBtn.classList.add('running');
+
+    SIM_STEPS.forEach(function(step, i) {
+      var delay = i * 900;
+      simTimers.push(setTimeout(function() {
+        // Remove previous level, add current
+        if (i > 0) SIM_STEPS[i-1].ids.forEach(function(id){ activeSet.delete(id); });
+        step.ids.forEach(function(id){ activeSet.add(id); });
+        if (simLabel) simLabel.textContent = 'Paso ' + (i+1) + '/' + SIM_STEPS.length + ' — ' + step.desc;
+
+        // Spawn particles along edges for newly activated tasks
+        step.ids.forEach(function(id) {
+          var task = TASKS.find(function(t){ return t.id === id; });
+          if (!task) return;
+          task.deps.forEach(function(depId) {
+            var from = layout[depId], to = layout[id]; if (!from || !to) return;
+            particles.push({
+              x0: from.x + from.w, y0: from.cy,
+              x1: to.x,            y1: to.cy,
+              t:  0, color: GROUP_COLOR[task.group] || '#fff'
+            });
+          });
+        });
+
+        if (i === SIM_STEPS.length - 1) {
+          simTimers.push(setTimeout(clearSim, 2200));
+        }
+      }, delay));
+    });
+  });
+
+  // ── Task cards HTML ─────────────────────────────────────────────────────
+  function renderCards(tasks) {
+    var container = document.getElementById('arch-sched-cards');
+    if (!container) return;
+    // Group by dagOrder
+    var byLevel = {};
+    tasks.forEach(function(t) {
+      var l = t.dagOrder !== undefined ? t.dagOrder : 0;
+      byLevel[l] = byLevel[l] || [];
+      byLevel[l].push(t);
+    });
+    var html = '';
+    Object.keys(byLevel).sort().forEach(function(lvl) {
+      html += '<div class="arch-sched-card-group">';
+      html += '<div class="arch-sched-card-group-label">Nivel ' + lvl + '</div>';
+      byLevel[lvl].forEach(function(t) {
+        var color = GROUP_COLOR[t.group] || '#888';
+        var runClass = t.running ? ' arch-sched-card--running' : '';
+        var errClass = t.errors > 0 ? ' arch-sched-card--error' : '';
+        var pct = t.avgMs > 0 ? Math.min(100, Math.round(t.avgMs / 5)) : 0;
+        var histBars = (t.history || []).slice(-8).map(function(h) {
+          var ok  = h.ok !== false;
+          var ms  = h.ms || 0;
+          var ht  = Math.max(4, Math.min(28, Math.round(ms / 20)));
+          return '<span class="arch-sched-hist-bar' + (ok?'':' arch-sched-hist-bar--err') + '" style="height:' + ht + 'px" title="' + Math.round(ms) + 'ms"></span>';
+        }).join('');
+        html += '<div class="arch-sched-card arch-sched-card--' + t.group + runClass + errClass + '">';
+        html += '<div class="arch-sched-card-top">';
+        html += '<span class="arch-sched-card-led" style="background:' + (t.running ? '#00ff88' : color + '55') + ';box-shadow:' + (t.running ? '0 0 6px #00ff88' : 'none') + '"></span>';
+        html += '<span class="arch-sched-card-label">' + escHtml(t.label) + '</span>';
+        html += '<span class="arch-sched-card-badge arch-sched-card-badge--' + t.group + '">' + escHtml(t.group) + '</span>';
+        html += '</div>';
+        html += '<div class="arch-sched-card-meta">';
+        html += '<span class="arch-sched-card-meta-item">\u0394' + t.interval + 's</span>';
+        html += '<span class="arch-sched-card-meta-item">runs: <strong>' + t.runs + '</strong></span>';
+        html += '<span class="arch-sched-card-meta-item">';
+        if (t.errors > 0) html += '<span class="arch-sched-card-err">&#9888; ' + t.errors + '</span>';
+        else html += 'avg: ' + (t.avgMs ? Math.round(t.avgMs) + 'ms' : '—');
+        html += '</span>';
+        html += '</div>';
+        if (t.history && t.history.length > 0) {
+          html += '<div class="arch-sched-hist">' + histBars + '</div>';
+        }
+        html += '</div>';  // card
+      });
+      html += '</div>'; // group
+    });
+    container.innerHTML = html;
+  }
+
+  function escHtml(s) { return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;'); }
+
+  // ── NestScheduler tree ──────────────────────────────────────────────────
+  function buildNestTree() {
+    var rules = [function(x){return 2*x+1;}, function(x){return x+14;}, function(x){return x-18;}];
+    var el = document.getElementById('arch-sched-nest-tree');
+    if (!el) return;
+    function makeNode(val, depth) {
+      var div = document.createElement('div');
+      div.className = 'arch-sched-nest-node arch-sched-nest-node--d' + depth;
+      div.textContent = val;
+      if (depth < 3) {
+        var children = document.createElement('div');
+        children.className = 'arch-sched-nest-children';
+        rules.forEach(function(r) { children.appendChild(makeNode(r(val), depth+1)); });
+        div.appendChild(children);
+      }
+      return div;
+    }
+    el.appendChild(makeNode(1, 0));
+  }
+  buildNestTree();
+
+  // ── Data polling ────────────────────────────────────────────────────────
+  function fetchTasks() {
+    fetch('/arch/tasks')
+      .then(function(r){ return r.json(); })
+      .then(function(data) {
+        (data.tasks || []).forEach(function(t) { liveMap[t.id] = t; });
+        // Stats summary
+        var tasks = data.tasks || [];
+        var running = tasks.filter(function(t){ return t.running; }).length;
+        var errors  = tasks.reduce(function(s,t){ return s + (t.errors||0); }, 0);
+        var totalRuns = tasks.reduce(function(s,t){ return s + (t.runs||0); }, 0);
+        var el = document.getElementById('arch-sched-stats');
+        if (el) el.textContent = tasks.length + ' tareas · ' + running + ' activas · ' + totalRuns + ' runs · ' + errors + ' errores';
+        var ts = document.getElementById('arch-sched-ts');
+        if (ts && data.ts) ts.textContent = new Date(data.ts*1000).toLocaleTimeString();
+        renderCards(tasks);
+        // Merge static task data with live runtime
+        TASKS.forEach(function(t) {
+          var live = liveMap[t.id];
+          if (live) { t.runs = live.runs; t.avgMs = live.avgMs; t.running = live.running; }
+        });
+      })
+      .catch(function(){});
+  }
+
+  // ── Init ────────────────────────────────────────────────────────────────
+  function init() {
+    buildLayout();
+    tick();
+    fetchTasks();
+    setInterval(fetchTasks, 4000);
+  }
+
+  window.addEventListener('load', init);
+  window.addEventListener('resize', function() { buildLayout(); });
+})();
+</script>

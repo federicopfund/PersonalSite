@@ -541,3 +541,415 @@
 .dag-topo-arr {
   color: rgba(#fff, .25);
 }
+
+// ══════════════════════════════════════════════════════════════════════════
+//  TaskScheduler Runtime Section
+// ══════════════════════════════════════════════════════════════════════════
+
+$ts-system: #f4a70a;
+$ts-theme:  #a78bfa;
+$ts-cache:  #22d3ee;
+$ts-flow:   #34d399;
+$ts-ux:     #fb7185;
+
+.arch-sched-section {
+  padding: 4rem 1.5rem 3rem;
+  background: linear-gradient(180deg, rgba(#000, .0) 0%, rgba(#000, .35) 100%);
+  border-top: 1px solid rgba(#fff, .06);
+}
+
+.arch-sched-header {
+  @include container;
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 1.5rem;
+  flex-wrap: wrap;
+  margin-bottom: 2rem;
+}
+
+.arch-sched-title-block {
+  display: flex;
+  flex-direction: column;
+  gap: .4rem;
+}
+
+.arch-sched-title {
+  font-size: clamp(1.5rem, 3vw, 2.2rem);
+  font-weight: 800;
+  letter-spacing: -.03em;
+  color: var(--header-text);
+  margin: 0;
+}
+
+.arch-sched-subtitle {
+  color: var(--header-muted);
+  font-size: .9rem;
+  margin: 0;
+}
+
+.arch-sched-controls {
+  display: flex;
+  align-items: center;
+  gap: 1rem;
+  flex-wrap: wrap;
+}
+
+.arch-sched-stats {
+  font-size: .75rem;
+  font-family: $font-mono;
+  color: rgba(#fff, .45);
+}
+
+.arch-sched-ts {
+  font-size: .7rem;
+  font-family: $font-mono;
+  color: rgba(#fff, .3);
+}
+
+.arch-sched-sim-btn {
+  padding: .4rem 1rem;
+  border: 1px solid rgba($ts-system, .4);
+  background: rgba($ts-system, .08);
+  color: $ts-system;
+  border-radius: radius(sm);
+  font-size: .8rem;
+  font-weight: 700;
+  cursor: pointer;
+  transition: background .18s, border-color .18s, box-shadow .18s;
+
+  &:hover {
+    background: rgba($ts-system, .18);
+    border-color: $ts-system;
+    box-shadow: 0 0 12px rgba($ts-system, .25);
+  }
+
+  &.running {
+    background: rgba(#ff4444, .12);
+    border-color: rgba(#ff4444, .5);
+    color: #ff7777;
+  }
+}
+
+// ── DAG Canvas ────────────────────────────────────────────────────────────
+.arch-sched-dag-wrap {
+  @include container;
+  position: relative;
+  margin-bottom: 1rem;
+  border: 1px solid rgba(#fff, .07);
+  border-radius: radius(md);
+  background: rgba(#000, .3);
+  overflow-x: auto;
+}
+
+.arch-sched-canvas {
+  display: block;
+  min-height: 200px;
+}
+
+.arch-sched-dag-legend {
+  position: absolute;
+  top: .6rem;
+  right: .8rem;
+  display: flex;
+  gap: .4rem;
+  flex-wrap: wrap;
+}
+
+.arch-sched-leg {
+  font-size: .6rem;
+  font-weight: 700;
+  padding: .1rem .4rem;
+  border-radius: 3px;
+  font-family: $font-mono;
+
+  @each $name, $color in ('system': $ts-system, 'theme': $ts-theme,
+                           'cache': $ts-cache,   'flow': $ts-flow,
+                           'ux': $ts-ux) {
+    &--#{$name} {
+      background: rgba($color, .12);
+      color: $color;
+      border: 1px solid rgba($color, .3);
+    }
+  }
+}
+
+// ── Simulation label ──────────────────────────────────────────────────────
+.arch-sched-sim-label {
+  @include container;
+  min-height: 1.4rem;
+  font-size: .78rem;
+  font-family: $font-mono;
+  color: rgba($ts-system, .85);
+  margin-bottom: 1.5rem;
+  transition: opacity .3s;
+}
+
+// ── Task cards grid ───────────────────────────────────────────────────────
+.arch-sched-cards {
+  @include container;
+  display: flex;
+  flex-direction: column;
+  gap: 1.25rem;
+  margin-bottom: 2.5rem;
+}
+
+.arch-sched-card-group {
+  display: flex;
+  align-items: flex-start;
+  gap: 1rem;
+  flex-wrap: wrap;
+}
+
+.arch-sched-card-group-label {
+  width: 3.5rem;
+  flex-shrink: 0;
+  font-size: .65rem;
+  font-weight: 700;
+  font-family: $font-mono;
+  color: rgba(#fff, .3);
+  padding-top: .6rem;
+  text-align: right;
+}
+
+.arch-sched-card {
+  width: 200px;
+  flex-shrink: 0;
+  border: 1px solid rgba(#fff, .09);
+  border-left: 3px solid rgba(#fff, .15);
+  border-radius: radius(sm);
+  background: rgba(#fff, .03);
+  padding: .6rem .75rem .5rem;
+  transition: border-color .2s, background .2s, box-shadow .2s;
+
+  &--running {
+    background: rgba(#00ff88, .04);
+    border-left-color: #00ff88;
+    box-shadow: 0 0 10px rgba(#00ff88, .06);
+  }
+
+  &--error {
+    border-left-color: #ff4444;
+    background: rgba(#ff4444, .04);
+  }
+
+  @each $name, $color in ('system': $ts-system, 'theme': $ts-theme,
+                           'cache': $ts-cache,   'flow': $ts-flow,
+                           'ux': $ts-ux) {
+    &--#{$name} { border-left-color: rgba($color, .6); }
+    &--#{$name}:hover { border-left-color: $color; background: rgba($color, .05); }
+  }
+}
+
+.arch-sched-card-top {
+  display: flex;
+  align-items: center;
+  gap: .4rem;
+  margin-bottom: .3rem;
+}
+
+.arch-sched-card-led {
+  width: 7px;
+  height: 7px;
+  border-radius: 50%;
+  flex-shrink: 0;
+  transition: background .3s, box-shadow .3s;
+}
+
+.arch-sched-card-label {
+  font-size: .78rem;
+  font-weight: 700;
+  color: rgba(#fff, .85);
+  flex: 1;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.arch-sched-card-badge {
+  font-size: .57rem;
+  font-weight: 700;
+  font-family: $font-mono;
+  padding: .08rem .35rem;
+  border-radius: 3px;
+  flex-shrink: 0;
+
+  @each $name, $color in ('system': $ts-system, 'theme': $ts-theme,
+                           'cache': $ts-cache,   'flow': $ts-flow,
+                           'ux': $ts-ux) {
+    &--#{$name} { background: rgba($color, .15); color: $color; }
+  }
+}
+
+.arch-sched-card-meta {
+  display: flex;
+  gap: .5rem;
+  flex-wrap: wrap;
+}
+
+.arch-sched-card-meta-item {
+  font-size: .68rem;
+  font-family: $font-mono;
+  color: rgba(#fff, .4);
+
+  strong { color: rgba(#fff, .65); }
+}
+
+.arch-sched-card-err {
+  color: #ff7777;
+  font-size: .68rem;
+}
+
+// ── History sparkbars ─────────────────────────────────────────────────────
+.arch-sched-hist {
+  display: flex;
+  align-items: flex-end;
+  gap: 2px;
+  margin-top: .35rem;
+  height: 28px;
+}
+
+.arch-sched-hist-bar {
+  flex: 1;
+  min-height: 4px;
+  background: rgba(#fff, .18);
+  border-radius: 1px;
+  transition: background .2s;
+
+  &--err { background: rgba(#ff4444, .5); }
+}
+
+// ── NestScheduler tree callout ────────────────────────────────────────────
+.arch-sched-nest-callout {
+  @include container;
+  border: 1px solid rgba($ts-flow, .2);
+  border-radius: radius(md);
+  background: rgba($ts-flow, .04);
+  overflow: hidden;
+  margin-bottom: 1rem;
+}
+
+.arch-sched-nest-header {
+  display: flex;
+  align-items: center;
+  gap: .75rem;
+  padding: .65rem 1rem;
+  border-bottom: 1px solid rgba($ts-flow, .12);
+  background: rgba($ts-flow, .06);
+}
+
+.arch-sched-nest-badge {
+  font-size: .65rem;
+  font-weight: 700;
+  font-family: $font-mono;
+  padding: .1rem .5rem;
+  background: rgba($ts-flow, .18);
+  color: $ts-flow;
+  border-radius: 3px;
+}
+
+.arch-sched-nest-title {
+  font-size: .85rem;
+  color: rgba(#fff, .75);
+
+  code {
+    font-family: $font-mono;
+    font-size: .8em;
+    background: rgba(#fff, .08);
+    padding: .1em .4em;
+    border-radius: 3px;
+  }
+}
+
+.arch-sched-nest-body {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+  gap: 1.5rem;
+  padding: 1.25rem 1.5rem;
+}
+
+.arch-sched-nest-label {
+  font-size: .68rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: .06em;
+  color: rgba(#fff, .35);
+  margin-bottom: .6rem;
+}
+
+.arch-sched-nest-rules {
+  display: flex;
+  flex-direction: column;
+  gap: .35rem;
+}
+
+.arch-sched-nest-rule {
+  font-size: .8rem;
+  font-family: $font-mono;
+  color: $ts-flow;
+  padding: .25rem .6rem;
+  background: rgba($ts-flow, .1);
+  border-radius: 4px;
+  border-left: 2px solid rgba($ts-flow, .4);
+}
+
+.arch-sched-nest-formula {
+  font-size: .8rem;
+  font-family: $font-mono;
+  color: rgba(#fff, .65);
+  line-height: 1.6;
+  strong { color: $ts-flow; }
+}
+
+// ── NestGraph mini tree ───────────────────────────────────────────────────
+.arch-sched-nest-tree {
+  font-size: .7rem;
+  font-family: $font-mono;
+  overflow-x: auto;
+}
+
+.arch-sched-nest-node {
+  display: inline-flex;
+  flex-direction: column;
+  align-items: center;
+  gap: .2rem;
+  position: relative;
+
+  &--d0 {
+    padding: .25rem .6rem;
+    background: rgba($ts-flow, .25);
+    color: $ts-flow;
+    border-radius: 4px;
+    font-weight: 700;
+    font-size: .9rem;
+  }
+
+  &--d1 {
+    padding: .18rem .45rem;
+    background: rgba($ts-flow, .14);
+    color: rgba($ts-flow, .85);
+    border-radius: 3px;
+  }
+
+  &--d2 {
+    padding: .12rem .35rem;
+    background: rgba($ts-flow, .08);
+    color: rgba($ts-flow, .65);
+    border-radius: 3px;
+    font-size: .65rem;
+  }
+
+  &--d3 {
+    padding: .08rem .28rem;
+    background: rgba($ts-flow, .04);
+    color: rgba($ts-flow, .45);
+    border-radius: 3px;
+    font-size: .6rem;
+  }
+}
+
+.arch-sched-nest-children {
+  display: flex;
+  gap: .3rem;
+  margin-top: .25rem;
+}

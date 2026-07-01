@@ -13,6 +13,7 @@ archData::usage = "archData[req] sirve los datos JSON del grafo.";
 archHealth::usage = "archHealth[req] sirve el estado de salud en tiempo real.";
 archMath::usage   = "archMath[req] sirve el arbol NestGraph como JSON para visualizacion matematica.";
 archDag::usage    = "archDag[req] sirve el DAG de dependencias de tareas como JSON.";
+archTasks::usage  = "archTasks[req] sirve el estado live de todas las tareas del scheduler (TaskConfig + TaskManager state).";
 
 Begin["`Private`"];
 
@@ -359,6 +360,41 @@ archDag[req_] :=
     HTTPResponse[
       Developer`WriteRawJSONString[result],
       <|"Content-Type" -> "application/json"|>
+    ]
+  ];
+
+(* GET /arch/tasks  →  estado live TaskScheduler (config + runtime state) *)
+archTasks[req_] :=
+  Module[{taskSnap, configs, ts, tasks},
+    ts       = UnixTime[];
+    taskSnap = Quiet @ Check[PersonalSite`TaskManager`allTasks[], <||>];
+    configs  = Quiet @ Check[PersonalSite`TaskConfig`all[], {}];
+    tasks = Map[Function[cfg,
+      Module[{id, state, hist},
+        id    = Lookup[cfg, "task_id", ""];
+        state = Lookup[taskSnap, id, <||>];
+        hist  = Quiet @ Check[PersonalSite`TaskManager`history[id], {}];
+        <|"id"       -> id,
+          "label"    -> Lookup[cfg, "label", id],
+          "group"    -> Lookup[cfg, "group_name", "system"],
+          "interval" -> Lookup[cfg, "interval_s", 60],
+          "dagOrder" -> Lookup[cfg, "dag_order", 0],
+          "deps"     -> Lookup[cfg, "deps", {}],
+          "enabled"  -> TrueQ[Lookup[cfg, "enabled", False]],
+          "running"  -> TrueQ[Lookup[state, "running", False]],
+          "runs"     -> (Lookup[state, "runs",   0] /. _Missing -> 0),
+          "errors"   -> (Lookup[state, "errors", 0] /. _Missing -> 0),
+          "lastMs"   -> (Lookup[state, "lastMs", 0] /. _Missing -> 0),
+          "avgMs"    -> (Lookup[state, "avgMs",  0] /. _Missing -> 0),
+          "history"  -> Take[hist /. _Missing -> {}, UpTo[8]]
+        |>
+      ]], configs];
+    Quiet @ Check[
+      HTTPResponse[
+        Developer`WriteRawJSONString[<|"ts" -> ts, "tasks" -> tasks|>],
+        <|"Headers" -> <|"Content-Type" -> "application/json; charset=utf-8",
+                         "Cache-Control" -> "no-store"|>|>],
+      HTTPResponse["{}", <|"Headers" -> <|"Content-Type" -> "application/json"|>|>]
     ]
   ];
 

@@ -131,6 +131,7 @@ dispatcher[] := Delayed @ URLDispatcher[{
   "/arch/health"     ~~ EndOfString :> PersonalSite`Controller`archHealth[HTTPRequestData[]],
   "/arch/math"       ~~ EndOfString :> PersonalSite`Controller`archMath[HTTPRequestData[]],
   "/arch/dag"        ~~ EndOfString :> PersonalSite`Controller`archDag[HTTPRequestData[]],
+  "/arch/tasks"      ~~ EndOfString :> PersonalSite`Controller`archTasks[HTTPRequestData[]],
   "/arch"            ~~ EndOfString :> PersonalSite`Controller`arch[HTTPRequestData[]],
   "/kernel/style/rules"  ~~ EndOfString :> PersonalSite`Controller`kernelStyleRules[HTTPRequestData[]],
   "/kernel/style/rule"   ~~ EndOfString :> PersonalSite`Controller`kernelStyleAddRule[HTTPRequestData[]],
