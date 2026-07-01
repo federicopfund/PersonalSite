@@ -159,6 +159,16 @@
   font-family: $font-mono;
 }
 
+.arch-task-fire {
+  font-size: .72rem;
+  font-family: $font-mono;
+  font-weight: 700;
+  color: #00e5ff;
+  min-width: 160px;
+  transition: opacity .3s;
+  &:empty { opacity: 0; }
+}
+
 // ── Unit Functional Badge ────────────────────────────────────────
 .arch-unit-badge {
   display: none;

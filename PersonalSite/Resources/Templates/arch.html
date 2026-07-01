@@ -28,8 +28,9 @@
     <div id="arch-sim-bar">
       <button id="arch-sim-btn" class="arch-sim-btn">&#9654; Simular NestSchedule</button>
       <button id="arch-hb-btn" class="arch-sim-btn arch-hb-btn">&#9679; Heartbeat ON</button>
-      <button id="arch-lbl-btn" class="arch-sim-btn arch-lbl-btn">&#9634; Labels OFF</button>
+      <button id="arch-lbl-btn" class="arch-sim-btn arch-lbl-btn arch-lbl-btn--on">&#9635; Labels ON</button>
       <span id="arch-sim-label" class="arch-sim-label"></span>
+      <span id="arch-task-fire" class="arch-task-fire"></span>
       <span id="arch-hb-ts" class="arch-hb-ts"></span>
       <div id="arch-unit-badge" class="arch-unit-badge" aria-live="polite"></div>
     </div>
@@ -160,10 +161,75 @@
      unit:'HTTP 200 OK · Content-Type HTML/JSON · exit'}
   ];
   var simTimer = [], simActive = false;
-  var labelsOn  = false;   /* floating SpriteText labels toggle */
+  var labelsOn  = true;    /* SpriteText labels — on by default */
   var el = document.getElementById('arch-graph');
   el.style.height = '620px';
   var Graph;   /* declared here so the labels toggle closure can reach it */
+
+  /* ── Scheduler task → graph-edge flow map ────────────────────────────── */
+  /* Maps each active task to the set of directed edges it "fires" through  */
+  var TASK_FLOWS = {
+    'heartbeat':          [{s:'Scheduler',   t:'TaskMgr'}],
+    'cache-warm':         [{s:'Assets',      t:'Cache'},    {s:'Cache',    t:'Database'}],
+    'theme-rotate':       [{s:'Theme',       t:'ThemeM'},   {s:'ThemeM',   t:'SettingsM'}],
+    'contact-ux':         [{s:'Router',      t:'Contacto'}],
+    'cards-refresh':      [{s:'Assets',      t:'Database'}],
+    'nest-refresh':       [{s:'Nest',        t:'NestSched'},{s:'NestSched', t:'FlowModel'}],
+    'metric-refresh':     [{s:'Assets',      t:'Database'}, {s:'Assets',   t:'Cache'}],
+    'ux-color-eval':      [{s:'UXColorM',    t:'SettingsM'},{s:'UXColorM', t:'ThemeM'}],
+    'ux-color-apply':     [{s:'UXColorM',    t:'SettingsM'}],
+    'ux-color-report':    [{s:'UXColorM',    t:'SettingsM'}],
+    'graph-data-scan':    [{s:'ArchCtrl',    t:'Cache'},    {s:'ArchCtrl', t:'Database'}],
+    'graph-sim-step':     [{s:'ArchCtrl',    t:'TaskMgr'}],
+    'graph-unit-emit':    [{s:'ArchCtrl',    t:'FrontEndM'}],
+    'graph-topo-check':   [{s:'ArchCtrl',    t:'Database'}],
+    'graph-health-merge': [{s:'ArchCtrl',    t:'Cache'},    {s:'ArchCtrl', t:'SettingsM'}]
+  };
+  /* Active task specs (id, interval_s) — enabled tasks that have a flow */
+  var SCHED_TASKS = [
+    {id:'heartbeat',         iv:30},
+    {id:'cache-warm',        iv:300},
+    {id:'theme-rotate',      iv:10},
+    {id:'contact-ux',        iv:5},
+    {id:'cards-refresh',     iv:20},
+    {id:'nest-refresh',      iv:300},
+    {id:'metric-refresh',    iv:300},
+    {id:'ux-color-eval',     iv:15},
+    {id:'ux-color-apply',    iv:15},
+    {id:'ux-color-report',   iv:60},
+    {id:'graph-data-scan',   iv:60},
+    {id:'graph-sim-step',    iv:5},
+    {id:'graph-unit-emit',   iv:15},
+    {id:'graph-topo-check',  iv:120},
+    {id:'graph-health-merge',iv:30}
+  ];
+  /* hotLinks: key "src->tgt" → timer-id (auto-clears after 2.8s) */
+  var hotLinks      = new Map();
+  var taskFireEl    = document.getElementById('arch-task-fire');
+  var taskFireTimer = null;
+
+  function fireTask(taskId) {
+    var flows = TASK_FLOWS[taskId];
+    if (!flows || !Graph) return;
+    flows.forEach(function(f) {
+      var key = f.s + '->' + f.t;
+      if (hotLinks.has(key)) clearTimeout(hotLinks.get(key));
+      var tid = setTimeout(function() {
+        hotLinks.delete(key);
+        Graph.linkDirectionalParticles(Graph.linkDirectionalParticles());
+      }, 2800);
+      hotLinks.set(key, tid);
+    });
+    /* Show which task fired */
+    if (taskFireEl) {
+      taskFireEl.textContent = '\u26A1 ' + taskId;
+      if (taskFireTimer) clearTimeout(taskFireTimer);
+      taskFireTimer = setTimeout(function() {
+        taskFireEl.textContent = '';
+      }, 2200);
+    }
+    Graph.linkDirectionalParticles(Graph.linkDirectionalParticles());
+  }
 
   /* Labels toggle button */
   var lblBtn = document.getElementById('arch-lbl-btn');
@@ -207,15 +273,18 @@
         .nodeThreeObjectExtend(true)
         .nodeThreeObject(function(n){
           if (!labelsOn) return null;
-          var sp = new SpriteText(n.label || n.id);
-          sp.color       = COLOR[n.group] || '#ccc';
-          sp.textHeight  = 3.2;
-          sp.backgroundColor = 'rgba(10,10,14,0.72)';
-          sp.padding     = 1.4;
-          sp.borderRadius = 3;
-          sp.borderWidth  = 0.4;
-          sp.borderColor  = COLOR[n.group] || '#555';
-          sp.position.y  = -10;
+          /* Two-line sprite: label (group color) + unit description (truncated) */
+          var unitShort = n.unit ? n.unit.replace(/^RT:\s*/,'').substring(0,42) : '';
+          var txt = (n.label || n.id) + (unitShort ? '\n\u21B3 ' + unitShort : '');
+          var sp = new SpriteText(txt);
+          sp.color            = COLOR[n.group] || '#ccc';
+          sp.textHeight       = 2.8;
+          sp.backgroundColor  = 'rgba(8,8,14,0.78)';
+          sp.padding          = 1.6;
+          sp.borderRadius     = 3;
+          sp.borderWidth      = 0.5;
+          sp.borderColor      = COLOR[n.group] || '#444';
+          sp.position.y       = -11;
           return sp;
         })
         .linkColor(function(l){
@@ -227,10 +296,21 @@
         .linkDirectionalArrowLength(5)
         .linkDirectionalArrowRelPos(1)
         .linkDirectionalParticles(function(l){
-          var s = l.source.id||l.source;
-          return highlighted.has(s) ? 3 : 0;
+          var s = l.source.id||l.source, t = l.target.id||l.target;
+          /* Scheduler task flows take priority over hover highlight */
+          if (hotLinks.has(s+'->'+t)) return 5;
+          if (highlighted.size) return highlighted.has(s) ? 3 : 0;
+          return 0;
         })
-        .linkDirectionalParticleSpeed(0.005)
+        .linkDirectionalParticleSpeed(function(l){
+          var s = l.source.id||l.source, t = l.target.id||l.target;
+          return hotLinks.has(s+'->'+t) ? 0.012 : 0.005;
+        })
+        .linkDirectionalParticleColor(function(l){
+          var s = l.source.id||l.source, t = l.target.id||l.target;
+          if (hotLinks.has(s+'->'+t)) return '#00e5ff';
+          return '#ffffff';
+        })
         .onNodeHover(function(node){
           el.style.cursor = node ? 'pointer' : 'default';
           highlighted.clear();
@@ -379,6 +459,8 @@
         requestAnimationFrame(animLoop);
       }
       animLoop();
+
+      /* \u2500\u2500 Scheduler task flow timers \u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500 */\n      /* Each task fires once at startup (staggered) then on its interval */\n      SCHED_TASKS.forEach(function(t, idx) {\n        /* stagger initial fires across 0\u201310s to avoid thundering herd */\n        setTimeout(function() {\n          fireTask(t.id);\n          setInterval(function() { fireTask(t.id); }, t.iv * 1000);\n        }, idx * 680 + Math.random() * 400);\n      });
 
       /* Start heartbeat polling */
       fetchHealth();
