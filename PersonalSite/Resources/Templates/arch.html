@@ -108,15 +108,20 @@
   }
 
   function nodeDisplayColor(node) {
+    var groupColor = COLOR[node.group] || '#aaa';
     var h = healthData[node.id];
-    if (!h) return COLOR[node.group] || '#aaa';
-    var base = HB_COLOR[h.status] || COLOR[node.group] || '#aaa';
+    if (!h) return groupColor;
+    /* warn/err override with health color; ok keeps the group color with pulse */
+    if (h.status === 'warn')    return '#ffcc00';
+    if (h.status === 'err')     return '#ff3333';
+    if (h.status === 'idle')    return 'rgba(80,80,100,0.7)';
+    /* ok: pulse brightness on the group color so groups stay visually distinct */
     if (h.status === 'ok' && pulsePhase[node.id]) {
       var t = (Date.now() - pulsePhase[node.id]) % 2400;
-      var bright = 0.65 + 0.35 * Math.sin(Math.PI * t / 1200);
-      return blendToWhite(base, 1 - bright);
+      var bright = 0.72 + 0.28 * Math.sin(Math.PI * t / 1200);
+      return blendToWhite(groupColor, 1 - bright);
     }
-    return base;
+    return groupColor;
   }
 
   /* Secuencia de simulacion: nodo + descripcion del paso + unidad funcional */
@@ -175,8 +180,16 @@
           return nodeDisplayColor(n);
         })
         .nodeVal(function(n){
-          if(n.group==='sentinel') return 14;
-          return ({entry:10,router:8,view:8})[n.group] || 5;
+          if(n.group==='sentinel') return 16;
+          if(n.group==='entry')    return 12;
+          if(n.group==='router')   return 10;
+          if(n.group==='view')     return 9;
+          if(n.group==='session')  return 7;
+          if(n.group==='devops')   return 7;
+          if(n.group==='ux-model') return 7;
+          if(n.group==='frontend') return 7;
+          if(n.group==='nest-rt')  return 4;
+          return 5;
         })
         .linkColor(function(l){
           if(!highlighted.size) return 'rgba(160,160,170,0.5)';
