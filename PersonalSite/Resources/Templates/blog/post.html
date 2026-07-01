@@ -10,3 +10,212 @@
 <div class="article-back">
   <a href="/blog">&larr; Volver al blog</a>
 </div>
+
+<script>
+/* ── Celdas de codigo ejecutables ───────────────────────────────────────
+   Convierte cada <pre><code> del articulo en una celda Wolfram ejecutable:
+   un boton "Ejecutar" envia el codigo a /blog/eval (kernel sandboxed) y
+   renderiza la salida nativa (MathML / SVG / OutputForm) inline. */
+(function () {
+  var body = document.querySelector('.article-body');
+  if (!body) return;
+
+  function esc(s) {
+    return String(s)
+      .replace(/&/g, '&amp;').replace(/</g, '&lt;')
+      .replace(/>/g, '&gt;').replace(/"/g, '&quot;');
+  }
+
+  /* ── Resaltado de sintaxis Wolfram Language — paleta VS Code (Dark+) ──────
+     Tokeniza el codigo WL (comentarios, strings, numeros, simbolos built-in /
+     funciones / variables, slots #, patrones _ , operadores y corchetes) y lo
+     envuelve en <span class="wl-tok-*"> para colorearlo como en el editor.
+     Es puro vanilla JS: sin dependencias ni CDNs. */
+  function highlightWL(src) {
+    function e(s) {
+      return s.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
+    }
+    var RE = /(\(\*[\s\S]*?\*\))|("(?:[^"\\]|\\.)*")|(##?\d*)|(\d+(?:\.\d*)?(?:`\d*)?(?:\*\^[+-]?\d+)?)|([A-Za-z$][A-Za-z0-9$]*(?:`[A-Za-z$][A-Za-z0-9$]*)*)|(_{1,3})|(::=|:=|->|:>|\/\.|\/;|\/@|@@@|@@|\/\/|<>|===|=!=|==|!=|<=|>=|&&|\|\||\+\+|--|[-+*\/^=<>!@&|;:,.?~])|([\[\]{}()])/g;
+    var out = '', last = 0, m, cls;
+    while ((m = RE.exec(src)) !== null) {
+      if (m.index > last) out += e(src.slice(last, m.index));
+      if (m[1]) cls = 'comment';
+      else if (m[2]) cls = 'string';
+      else if (m[3]) cls = 'slot';
+      else if (m[4]) cls = 'number';
+      else if (m[5]) {
+        cls = /^\s*\[/.test(src.slice(RE.lastIndex)) ? 'fn'
+            : (/^[A-Z]/.test(m[5]) ? 'builtin' : 'var');
+      }
+      else if (m[6]) cls = 'pattern';
+      else if (m[7]) cls = 'op';
+      else cls = 'bracket';
+      out += '<span class="wl-tok wl-tok-' + cls + '">' + e(m[0]) + '</span>';
+      last = RE.lastIndex;
+    }
+    if (last < src.length) out += e(src.slice(last));
+    return out;
+  }
+
+  /* ── Edicion en vivo de la celda ─────────────────────────────────
+     Convierte el <code> en un editor (contenteditable): el usuario puede
+     modificar el codigo y ejecutarlo. Se re-resalta en cada tecla preservando
+     la posicion del cursor, y Ctrl/Cmd+Enter lo ejecuta. */
+
+  // Offset del cursor (en caracteres) dentro del elemento editable.
+  function getCaret(el) {
+    var sel = window.getSelection();
+    if (!sel || !sel.rangeCount) return 0;
+    var range = sel.getRangeAt(0).cloneRange();
+    var probe = range.cloneRange();
+    probe.selectNodeContents(el);
+    probe.setEnd(range.endContainer, range.endOffset);
+    return probe.toString().length;
+  }
+
+  // Restaura el cursor a un offset de caracteres recorriendo los nodos de texto.
+  function setCaret(el, offset) {
+    var count = 0, done = false;
+    (function walk(node) {
+      if (done) return;
+      if (node.nodeType === 3) {
+        var next = count + node.length;
+        if (offset <= next) {
+          var r = document.createRange();
+          r.setStart(node, offset - count);
+          r.collapse(true);
+          var s = window.getSelection();
+          s.removeAllRanges();
+          s.addRange(r);
+          done = true;
+        } else { count = next; }
+      } else {
+        for (var i = 0; i < node.childNodes.length && !done; i++) walk(node.childNodes[i]);
+      }
+    })(el);
+    if (!done) {
+      var r = document.createRange();
+      r.selectNodeContents(el);
+      r.collapse(false);
+      var s = window.getSelection();
+      s.removeAllRanges();
+      s.addRange(r);
+    }
+  }
+
+  function makeEditable(code, runBtn) {
+    code.contentEditable = 'true';
+    code.spellcheck = false;
+    code.setAttribute('autocapitalize', 'off');
+    code.setAttribute('autocorrect', 'off');
+    code.setAttribute('translate', 'no');
+    code.setAttribute('role', 'textbox');
+    code.setAttribute('aria-multiline', 'true');
+    code.setAttribute('aria-label', 'Editá y ejecutá el código Wolfram');
+
+    var composing = false;
+    function rehl() {
+      var off = getCaret(code);
+      code.innerHTML = highlightWL(code.textContent);
+      setCaret(code, off);
+    }
+    code.addEventListener('compositionstart', function () { composing = true; });
+    code.addEventListener('compositionend', function () { composing = false; rehl(); });
+    code.addEventListener('input', function () { if (!composing) rehl(); });
+    code.addEventListener('paste', function (e) {
+      e.preventDefault();
+      var t = (e.clipboardData || window.clipboardData).getData('text');
+      document.execCommand('insertText', false, t);
+    });
+    code.addEventListener('keydown', function (e) {
+      if ((e.ctrlKey || e.metaKey) && e.key === 'Enter') {
+        e.preventDefault();
+        runBtn.click();
+      } else if (e.key === 'Tab') {
+        e.preventDefault();
+        document.execCommand('insertText', false, '  ');
+      } else if (e.key === 'Enter') {
+        e.preventDefault();
+        document.execCommand('insertText', false, '\n');
+      }
+    });
+  }
+
+  var RUN_SVG =
+    '<svg viewBox="0 0 24 24" width="11" height="11" fill="currentColor" aria-hidden="true">' +
+    '<path d="M8 5v14l11-7z"/></svg>';
+
+  var blocks = body.querySelectorAll('pre > code');
+
+  Array.prototype.forEach.call(blocks, function (code, i) {
+    var pre = code.parentElement;
+
+    /* Resaltado de sintaxis WL estilo VS Code (lee el texto crudo antes) */
+    code.innerHTML = highlightWL(code.textContent);
+
+    /* Envoltura de la celda — numerada como elemento de lista (In[n]/Out[n]) */
+    var cell = document.createElement('div');
+    cell.className = 'wl-run';
+    cell.setAttribute('data-n', i + 1);
+    pre.parentNode.insertBefore(cell, pre);
+    cell.appendChild(pre);
+
+    /* Boton Ejecutar (esquina superior derecha del input) */
+    var btn = document.createElement('button');
+    btn.type = 'button';
+    btn.className = 'wl-run-btn';
+    btn.title = 'Ejecutar (Ctrl+Enter)';
+    btn.innerHTML = RUN_SVG + '<span>Ejecutar</span>';
+    cell.appendChild(btn);
+
+    /* La celda es editable: el usuario puede cambiar el codigo y correrlo */
+    makeEditable(code, btn);
+
+    /* Contenedor de salida (vacio hasta evaluar) */
+    var out = document.createElement('div');
+    out.className = 'wl-run-out';
+    cell.appendChild(out);
+
+    btn.addEventListener('click', function () {
+      var src = code.textContent;
+      if (!src || !src.trim()) return;
+
+      btn.disabled = true;
+      btn.classList.add('is-busy');
+      out.classList.add('is-open');
+      out.innerHTML = '<div class="wl-run-status">Evaluando&hellip;</div>';
+
+      fetch('/blog/eval', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+        body: 'code=' + encodeURIComponent(src)
+      })
+      .then(function (r) { return r.json(); })
+      .then(function (res) {
+        btn.disabled = false;
+        btn.classList.remove('is-busy');
+        if (!res.ok) {
+          out.innerHTML =
+            '<div class="wl-run-label wl-run-label--err">Error</div>' +
+            '<div class="wl-run-err">' + esc(res.error || 'fallo de evaluacion') + '</div>';
+          return;
+        }
+        var bodyHtml = (res.html && res.html.length > 8)
+          ? res.html
+          : '<pre class="wl-nb-text">' + esc(res.text || '') + '</pre>';
+        out.innerHTML =
+          '<div class="wl-run-label wl-run-label--out">Out[' + cell.getAttribute('data-n') + ']=</div>' +
+          '<div class="wl-run-body">' + bodyHtml + '</div>' +
+          '<div class="wl-run-ms">' + res.ms + '&thinsp;ms</div>';
+      })
+      .catch(function (e) {
+        btn.disabled = false;
+        btn.classList.remove('is-busy');
+        out.innerHTML =
+          '<div class="wl-run-label wl-run-label--err">Error</div>' +
+          '<div class="wl-run-err">conexion: ' + esc(e) + '</div>';
+      });
+    });
+  });
+})();
+</script>

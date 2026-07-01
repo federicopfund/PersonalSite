@@ -4,26 +4,46 @@
 // =============================================================
 @use '../abstracts' as *;
 
+// Cabecera del post — barra oscura + etiqueta naranja estilo notebook
 .article-head {
   @include dark-gradient;
   color: var(--header-text);
   padding: 5rem 1.5rem 4rem;
+  border-bottom: 3px solid var(--accent);
 
   time {
-    display: block;
-    margin-bottom: .9rem;
-    font-size: .75rem;
+    display: inline-flex;
+    align-items: center;
+    gap: .45rem;
+    margin-bottom: 1rem;
+    font-family: $font-mono;
+    font-size: .72rem;
     font-weight: 700;
-    letter-spacing: .1em;
+    letter-spacing: .08em;
     text-transform: uppercase;
-    color: var(--header-muted);
+    color: var(--accent);
+    background: rgba(255, 255, 255, .07);
+    border: 1px solid rgba(255, 255, 255, .12);
+    border-radius: radius(pill);
+    padding: .2em .75em .2em .5em;
+
+    // Punto indicador de entrada (estilo celda Wolfram)
+    &::before {
+      content: '';
+      display: inline-block;
+      width: 7px;
+      height: 7px;
+      border-radius: 50%;
+      background: var(--accent);
+      flex-shrink: 0;
+    }
   }
 
   h1 {
     font-size: clamp(1.8rem, 4vw, 2.75rem);
-    font-weight: 800;
+    font-weight: 300;          // Segoe UI Light
     line-height: 1.2;
-    letter-spacing: -.05em;
+    letter-spacing: -.02em;
   }
 }
 
@@ -43,45 +63,83 @@
 
   p { margin-bottom: 1.5rem; }
 
+  // Secciones estilo Wolfram Docs: borde naranja izquierdo
   h2 {
     font-family: $font-sans;
-    font-size: 1.5rem;
-    font-weight: 700;
-    margin: 2.5rem 0 1rem;
-    letter-spacing: -.03em;
+    font-size: 1.4rem;
+    font-weight: 400;          // Regular — sutil sobre Light del cuerpo
+    margin: 3rem 0 1rem;
+    padding-left: .85rem;
+    border-left: 4px solid var(--accent);
+    letter-spacing: -.01em;
     color: var(--heading);
   }
 
   h3 {
     font-family: $font-sans;
-    font-size: 1.2rem;
-    font-weight: 600;
+    font-size: 1.1rem;
+    font-weight: 400;
     margin: 2rem 0 .75rem;
+    padding-left: .6rem;
+    border-left: 3px solid var(--border);
     color: var(--heading);
   }
 
+  // Código inline — estilo Wolfram Language
   code {
     font-family: $font-mono;
     font-size: .875em;
     background: var(--bg-alt);
-    color: var(--accent-strong);
-    padding: .2em .45em;
-    border-radius: 4px;
+    color: var(--accent);
+    padding: .15em .4em;
+    border-radius: 3px;
+    border: 1px solid var(--border);
   }
 
+  // Bloque de código — celda de input de Wolfram notebook (estilo VS Code)
   pre {
-    background: var(--code-bg);
-    color: var(--code-text);
-    padding: 1.5rem;
+    position: relative;
+    background: #1e1e1e;            // fondo del editor VS Code (Dark+)
+    color: #d4d4d4;
+    padding: 0;
     border-radius: radius(sm);
-    overflow-x: auto;
-    margin: 1.5rem 0;
+    border-left: 4px solid var(--accent);
+    overflow: hidden;
+    margin: 1.75rem 0;
+
+    // Etiqueta tipo "In[]:=" en la cabecera de la celda
+    &::before {
+      content: 'In[]:=';
+      display: block;
+      padding: .35rem .85rem;
+      background: rgba(255, 255, 255, .06);
+      border-bottom: 1px solid rgba(255, 255, 255, .08);
+      font-family: $font-mono;
+      font-size: .7rem;
+      font-weight: 700;
+      letter-spacing: .06em;
+      color: var(--accent);
+    }
 
     code {
+      display: block;
       background: none;
       color: inherit;
-      padding: 0;
-      font-size: .9em;
+      border: none;
+      padding: 1.25rem 1.5rem;
+      font-size: .88em;
+      overflow-x: auto;
+      font-family: 'Cascadia Code', 'Cascadia Mono', 'JetBrains Mono', $font-mono;
+      cursor: text;            // la celda es editable
+      outline: none;
+      caret-color: #fff;
+      white-space: pre;
+      tab-size: 2;
+    }
+
+    // Resalta la celda mientras se edita el codigo
+    &:focus-within {
+      box-shadow: inset 0 0 0 1px rgba(255, 255, 255, .22);
     }
   }
 }
@@ -158,19 +216,207 @@
   max-width: 760px;
   margin-inline: auto;
   padding: 2rem 1.5rem 4rem;
-  border-top: 1px solid gray(200);
+  border-top: 1px solid var(--border);
 
   a {
     display: inline-flex;
     align-items: center;
     gap: .4rem;
+    font-family: $font-mono;
+    font-size: .85rem;
     font-weight: 700;
-    color: gray(900);
-    transition: gap $ease;
+    color: var(--accent);
+    transition: gap $ease, color $ease;
 
     &:hover {
       gap: .7rem;
+      color: var(--accent-strong);
       text-decoration: none;
     }
   }
+}
+
+// =============================================================
+//  Resaltado de sintaxis Wolfram Language — paleta VS Code (Dark+).
+//  Generado por el tokenizador JS de blog/post.html (.wl-tok-*).
+// =============================================================
+.wl-tok-comment { color: #6a9955; font-style: italic; }
+.wl-tok-string  { color: #ce9178; }
+.wl-tok-number  { color: #b5cea8; }
+.wl-tok-builtin { color: #569cd6; }   // simbolos built-in (Mayuscula inicial)
+.wl-tok-fn      { color: #dcdcaa; }   // llamada a funcion  f[...]
+.wl-tok-var     { color: #9cdcfe; }   // variables (minuscula inicial)
+.wl-tok-slot    { color: #c586c0; }   // slots de funcion pura  #  ##  #1
+.wl-tok-pattern { color: #c586c0; }   // blanks  _  __  ___
+.wl-tok-op      { color: #d4d4d4; }   // operadores  -> := /@ // ...
+.wl-tok-bracket { color: #ffd700; }   // corchetes dorados estilo VS Code
+
+// =============================================================
+//  Celdas de codigo ejecutables (.wl-run-*)
+//  Cada <pre> del articulo se vuelve una celda Wolfram con boton
+//  "Ejecutar" → POST /blog/eval → salida nativa inline.
+// =============================================================
+.wl-run {
+  position: relative;
+  margin: 1.75rem 0;
+  padding-right: 14px;              // gutter para el cell bracket nativo
+
+  // El <pre> ya trae cabecera In[]:= + borde acento (ver .article-body pre)
+  > pre {
+    margin: 0;
+  }
+
+  // Cell bracket caracteristico del FrontEnd de Mathematica: una barra
+  // vertical con serifas que abarca input + output a la derecha de la celda.
+  // Se ilumina con el acento al pasar el mouse (celda "seleccionada").
+  &::after {
+    content: '';
+    position: absolute;
+    top: 4px;
+    bottom: 4px;
+    right: 0;
+    width: 8px;
+    border: 1.5px solid var(--border);
+    border-left: none;
+    border-radius: 0 3px 3px 0;
+    pointer-events: none;
+    opacity: .55;
+    transition: opacity 160ms ease, border-color 160ms ease;
+  }
+
+  &:hover::after {
+    opacity: 1;
+    border-color: var(--accent);
+  }
+
+  // Numeracion tipo notebook: cada celda es un elemento de lista In[n]:=.
+  // (la salida pone Out[n]= con el mismo indice via JS). Sobrescribe el
+  // 'In[]:=' generico de .article-body pre::before usando el atributo data-n.
+  &[data-n] > pre::before {
+    content: 'In[' attr(data-n) ']:=';
+  }
+}
+
+// Boton Ejecutar — anclado sobre la cabecera In[]:= de la celda
+.wl-run-btn {
+  position: absolute;
+  top: .28rem;
+  right: 18px;                      // despeja el cell bracket de la derecha
+  z-index: 2;
+  display: inline-flex;
+  align-items: center;
+  gap: .35rem;
+  padding: .2rem .6rem;
+  font-family: $font-mono;
+  font-size: .68rem;
+  font-weight: 600;
+  letter-spacing: .03em;
+  color: #fff;                           // texto blanco → siempre visible
+  background: rgba(255, 255, 255, .12);
+  border: 1px solid rgba(255, 255, 255, .55);
+  border-radius: 3px;
+  cursor: pointer;
+  transition: background-color 160ms ease, color 160ms ease, opacity 160ms ease;
+
+  &:hover {
+    background: #fff;                    // se llena de blanco al pasar el mouse
+    color: #111;
+    border-color: #fff;
+  }
+
+  &:active { transform: translateY(1px); }
+
+  &:disabled,
+  &.is-busy {
+    opacity: .55;
+    cursor: wait;
+  }
+
+  svg { flex-shrink: 0; }
+}
+
+// Contenedor de salida — fondo oscuro para que las clases .wl-nb-*
+// (texto claro, generadas por Output.wl) se rendericen correctamente.
+.wl-run-out {
+  display: none;
+  position: relative;
+  margin-top: -1px;            // se pega al fondo del <pre>
+  padding: .85rem 1.1rem 1.4rem;
+  background: var(--code-bg);
+  border-left: 4px solid #5aafff;   // azul Out[] nativo de WL
+  border-radius: 0 0 radius(sm) radius(sm);
+  overflow-x: auto;
+
+  &.is-open { display: block; }
+}
+
+.wl-run-label {
+  display: block;
+  margin-bottom: .4rem;
+  font-family: $font-mono;
+  font-size: .68rem;
+  font-weight: 700;
+  letter-spacing: .05em;
+
+  &--out { color: #5aafff; }
+  &--err { color: #ff6b6b; }
+}
+
+.wl-run-body {
+  color: rgba(255, 255, 255, .9);
+  font-size: .9rem;
+  line-height: 1.6;
+
+  pre {
+    margin: 0;
+    padding: 0;
+    background: none;
+    border: none;
+    border-radius: 0;
+
+    &::before { content: none; }   // sin cabecera In[]:= en la salida
+  }
+
+  // Math nativo — mas grande y aireado, como la salida tipografiada del
+  // FrontEnd de Wolfram Language.
+  .wl-nb-mathml {
+    font-size: 1.2rem;
+    padding: .3rem 0;
+  }
+
+  // Graficos (Plot / Graph / Graphics) sobre plato blanco como en un notebook
+  // real: ejes, etiquetas y aristas oscuras quedan perfectamente legibles.
+  svg {
+    background: #fff;
+    border-radius: radius(sm);
+    padding: .5rem;
+    box-shadow: 0 1px 4px rgba(0, 0, 0, .35);
+  }
+}
+
+.wl-run-ms {
+  margin-top: .55rem;
+  font-family: $font-mono;
+  font-size: .62rem;
+  color: rgba(255, 255, 255, .32);
+}
+
+.wl-run-status {
+  font-family: $font-mono;
+  font-size: .78rem;
+  color: var(--accent);
+  animation: wl-run-pulse 1s ease-in-out infinite;
+}
+
+.wl-run-err {
+  font-family: $font-mono;
+  font-size: .82rem;
+  color: #ff8a8a;
+  white-space: pre-wrap;
+  word-break: break-word;
+}
+
+@keyframes wl-run-pulse {
+  0%, 100% { opacity: .55; }
+  50%      { opacity: 1; }
 }

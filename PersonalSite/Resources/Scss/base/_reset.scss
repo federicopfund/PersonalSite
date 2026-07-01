@@ -1,10 +1,12 @@
 // =============================================================
 //  base/_reset.scss
-//  Reset minimo + fuentes + estilos base del documento.
+//  Reset mínimo + fuentes + estilos base del documento.
+//  Tipografía: Segoe UI (sistema) — sin carga externa de Inter.
+//  Merriweather solo para cuerpo de artículos (serif).
 // =============================================================
 @use '../abstracts' as *;
 
-@import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&family=Merriweather:ital,wght@0,400;0,700;1,400&display=swap');
+@import url('https://fonts.googleapis.com/css2?family=Merriweather:ital,wght@0,400;0,700;1,400&display=swap');
 
 *,
 *::before,
@@ -22,11 +24,21 @@ html {
 body {
   font-family: $font-sans;
   font-size: 1rem;
-  line-height: 1.65;
+  font-weight: 300;                // Segoe UI Light como base global
+  line-height: 1.7;
   color: var(--text);
   background: var(--bg);
   -webkit-font-smoothing: antialiased;
   transition: background-color .4s ease, color .4s ease;
+}
+
+// Elementos de UI que necesitan peso ligeramente mayor
+p, li, td, th {
+  font-weight: 300;
+}
+
+strong, b {
+  font-weight: 600;
 }
 
 img {

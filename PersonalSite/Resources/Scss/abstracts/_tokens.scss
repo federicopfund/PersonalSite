@@ -23,9 +23,11 @@ $grays: (
 );
 
 // --- Tipografia ----------------------------------------------
-$font-sans:  'Inter', system-ui, -apple-system, sans-serif;
+// Segoe UI es nativa en Windows/Surface; fallbacks para macOS y Linux.
+// Pesos: 300 = Light (display/héroe), 400 = Regular (cuerpo), 500-600 = UI.
+$font-sans:  'Segoe UI', 'Helvetica Neue', Arial, system-ui, sans-serif;
 $font-serif: 'Merriweather', Georgia, serif;
-$font-mono:  'SFMono-Regular', Consolas, monospace;
+$font-mono:  'SFMono-Regular', Consolas, 'Cascadia Code', monospace;
 
 // --- Radios ---------------------------------------------------
 $radii: (

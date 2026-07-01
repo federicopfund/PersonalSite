@@ -20,14 +20,16 @@
 
   h2 {
     font-size: clamp(1.6rem, 3vw, 2.2rem);
-    font-weight: 800;
-    letter-spacing: -.04em;
-    margin-bottom: .4rem;
+    font-weight: 300;          // Segoe UI Light
+    letter-spacing: -.015em;
+    margin-bottom: .35rem;
     color: var(--heading);
   }
 
   p {
     color: var(--text-muted);
-    font-size: 1rem;
+    font-size: .9rem;
+    font-weight: 300;
+    letter-spacing: .01em;
   }
 }

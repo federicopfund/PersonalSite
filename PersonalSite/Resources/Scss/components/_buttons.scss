@@ -1,7 +1,7 @@
 // =============================================================
 //  components/_buttons.scss
-//  Boton primario: solido oscuro (funciona sobre fondos claros).
-//  En el hero se invierte a blanco (ver _hero.scss).
+//  Sistema de botones — todos los estados de interacción cubiertos:
+//  idle → hover → active (press) → focus-visible
 // =============================================================
 @use '../abstracts' as *;
 
@@ -12,42 +12,75 @@
   inherits: false;
 }
 
+// --- Base compartida ------------------------------------------
 .btn {
   display: inline-flex;
   align-items: center;
+  justify-content: center;
   gap: .45rem;
-  padding: .72rem 1.6rem;
+  padding: .72rem 1.65rem;
   border-radius: radius(sm);
-  font-weight: 600;
-  font-size: .93rem;
+  font-weight: 500;            // UI Medium — legible en light context
+  font-size: .88rem;
+  letter-spacing: .02em;
   text-decoration: none;
-  transition: all $ease;
-
-  &:hover {
-    text-decoration: none;
-  }
-}
-
-.btn-primary {
-  background: var(--accent);
-  color: var(--accent-contrast);
-  box-shadow: 0 4px 16px var(--shadow);
-
-  &:hover {
-    background: var(--accent-strong);
-    transform: translateY(-1px);
-    box-shadow: 0 8px 24px var(--shadow);
-  }
-}
-
-.btn-ghost {
+  cursor: pointer;
+  user-select: none;
+  border: 1.5px solid transparent;
   position: relative;
   isolation: isolate;
-  border: 1.5px solid rgba(#fff, .22);
-  color: gray(200);
+  transition:
+    background-color  160ms ease,
+    border-color      160ms ease,
+    color             160ms ease,
+    transform         180ms cubic-bezier(.2, 0, .2, 1),
+    box-shadow        220ms ease,
+    opacity           160ms ease;
 
-  // Anillo de carga animado — borde conic-gradient via mask-composite
-  // El scheduler task `contact-ux` activa/desactiva la clase .is-running
+  &:hover     { text-decoration: none; }
+  &:active    { transform: scale(.96) translateY(1px); transition-duration: 80ms; }
+  &:focus-visible {
+    outline: 2px solid var(--accent);
+    outline-offset: 3px;
+    box-shadow: 0 0 0 4px rgba(0, 0, 0, .12);
+  }
+}
+
+// --- Primario (fondo de la app / secciones claras) ------------
+.btn-primary {
+  background: var(--accent);
+  color:      var(--accent-contrast);
+  border-color: var(--accent);
+  box-shadow:
+    0 1px 2px rgba(0, 0, 0, .12),
+    0 4px 12px var(--shadow);
+
+  &:hover {
+    background:   var(--accent-strong);
+    border-color: var(--accent-strong);
+    transform:    translateY(-2px);
+    box-shadow:
+      0 2px 4px rgba(0, 0, 0, .14),
+      0 8px 24px var(--shadow);
+  }
+
+  &:active {
+    background:   var(--accent-strong);
+    box-shadow:   0 1px 3px rgba(0, 0, 0, .18);
+  }
+
+  &:focus-visible {
+    outline-color: var(--accent-strong);
+  }
+}
+
+// --- Ghost (hero — fondo oscuro) -------------------------------
+.btn-ghost {
+  border-color: rgba(#fff, .25);
+  color:        rgba(#fff, .88);
+  background:   transparent;
+
+  // Anillo de carga animado (task contact-ux)
   &::before {
     content: '';
     position: absolute;
@@ -76,14 +109,26 @@
   }
 
   &:hover {
-    background: rgba(#fff, .08);
-    border-color: rgba(#fff, .4);
+    background:   rgba(#fff, .10);
+    border-color: rgba(#fff, .55);
+    color:        #fff;
+    transform:    translateY(-2px);
+    box-shadow:   0 6px 20px rgba(0, 0, 0, .30);
   }
 
-  // JS agrega esta clase cuando la tarea `contact-ux` del scheduler esta activa
+  &:active {
+    background:   rgba(#fff, .07);
+    border-color: rgba(#fff, .35);
+    box-shadow:   none;
+  }
+
+  &:focus-visible {
+    outline-color: rgba(#fff, .7);
+    box-shadow: 0 0 0 4px rgba(255, 255, 255, .14);
+  }
+
   &.is-running {
     border-color: transparent;
-
     &::before {
       opacity: 1;
       animation-play-state: running;

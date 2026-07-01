@@ -23,15 +23,33 @@
       radial-gradient(ellipse 40% 40% at 25% 80%, rgba(#fff, .035) 0%, transparent 60%);
   }
 
-  // En el hero (fondo oscuro) el CTA primario se invierte a blanco.
+  // Override del primario en el hero (fondo oscuro) → blanco sólido
   .btn-primary {
-    background: #fff;
-    color: gray(950);
-    box-shadow: 0 4px 14px rgba(0, 0, 0, .35);
+    background:   #fff;
+    color:        gray(950);
+    border-color: #fff;
+    box-shadow:
+      0 1px 2px rgba(0, 0, 0, .20),
+      0 4px 14px rgba(0, 0, 0, .35);
 
     &:hover {
-      background: gray(150);
-      box-shadow: 0 6px 20px rgba(0, 0, 0, .45);
+      background:   gray(100);
+      border-color: gray(100);
+      transform:    translateY(-2px);
+      box-shadow:
+        0 2px 4px rgba(0, 0, 0, .22),
+        0 8px 24px rgba(0, 0, 0, .45);
+    }
+
+    &:active {
+      background:   gray(200);
+      border-color: gray(200);
+      box-shadow:   0 1px 3px rgba(0, 0, 0, .25);
+    }
+
+    &:focus-visible {
+      outline-color: #fff;
+      box-shadow: 0 0 0 4px rgba(255, 255, 255, .20);
     }
   }
 
@@ -80,23 +98,25 @@
 .hero-text {
   h1 {
     font-size: clamp(2.2rem, 5vw, 3.4rem);
-    font-weight: 800;
-    line-height: 1.15;
-    letter-spacing: -.05em;
+    font-weight: 300;          // Segoe UI Light en el hero
+    line-height: 1.18;
+    letter-spacing: -.025em;
     color: var(--header-text);
     margin-bottom: 1.25rem;
 
     em {
       font-style: normal;
+      font-weight: 600;        // contraste sutil entre Light y Semibold
       color: var(--header-muted);
     }
   }
 
   p {
-    font-size: 1.1rem;
+    font-size: 1rem;
+    font-weight: 300;
     color: var(--header-muted);
     max-width: 480px;
-    line-height: 1.8;
+    line-height: 1.85;
     margin-bottom: 2.5rem;
 
     @include breakpoint(md) {
@@ -119,26 +139,72 @@
   margin-top: 1.75rem;
   display: flex;
   flex-wrap: wrap;
-  gap: .5rem;
+  gap: .45rem;
   align-items: center;
 
   @include breakpoint(md) {
     justify-content: center;
   }
 
+  // Logo al costado de los badges — círculo blanco, lobo original negro
+  .hero-wl-logo {
+    display: block;
+    height: 36px;
+    width: 36px;
+    object-fit: contain;
+    border-radius: 50%;
+    background: rgba(255, 255, 255, .92);
+    padding: 3px;
+    box-shadow:
+      0 2px 8px rgba(0, 0, 0, .45),
+      0 1px 3px rgba(0, 0, 0, .30);
+    margin-right: .35rem;
+    opacity: .92;
+    transition: opacity $ease, transform $ease;
+
+    &:hover {
+      opacity: 1;
+      transform: scale(1.06);
+    }
+  }
+
+  // Estilos nativos sobre cada badge shields.io
+  a {
+    display: inline-flex;
+    border-radius: 3px;
+    overflow: hidden;          // recorta las esquinas del img
+    text-decoration: none;
+    // Sombra del sistema de diseño, reforzada para fondo oscuro
+    box-shadow:
+      0 2px 8px rgba(0, 0, 0, .45),
+      0 1px 3px rgba(0, 0, 0, .30);
+    transition: transform $ease, box-shadow $ease;
+
+    &:hover {
+      transform: translateY(-2px);
+      box-shadow:
+        0 5px 16px rgba(0, 0, 0, .55),
+        0 2px 5px rgba(0, 0, 0, .35);
+    }
+  }
+
   img {
     display: block;
-    transition: transform $ease, opacity $ease;
-    opacity: .92;
+    height: 28px;
+    width: auto;
+    border-radius: 3px;        // refuerzo por si overflow falla en algún browser
+    opacity: .95;
+    transition: opacity $ease;
   }
 
-  a:hover img {
-    transform: translateY(-2px);
-    opacity: 1;
-  }
+  a:hover img { opacity: 1; }
 }
 
+// Clases legacy eliminadas (shields.io reemplaza estos elementos)
 .hero-wl-badge,
 .hero-wl-logo,
 .hero-wl-name,
-.hero-wl-ver { display: none; } // eliminados — sustituidos por shields.io
+.hero-wl-ver { display: none; }
+
+// Limpiar estilos de .wl-badge si quedaron de iteración anterior
+.wl-badge { display: none; }

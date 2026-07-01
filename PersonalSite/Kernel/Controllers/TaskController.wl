@@ -351,6 +351,103 @@ devopsTrajectory[nStr_String, req_] :=
               "trajectory" -> Map[KeyDrop[#, {"stageResults"}]&, traj],
               "ts"   -> DateString["ISODateTime"]|>]];
 
+(* ── GET /kpi/metrics ───────────────────────────────────────────────── *)
+(*  Serie temporal de métricas por tarea + analytics de cruce.           *)
+(*  Devuelve:                                                             *)
+(*    tasks[N].history  → últimos 20 runs {at,ms,ok,err}                 *)
+(*    tasks[N].stats    → {p50,p90,p95,cv,errorRate,runRate,efficiency}  *)
+(*    cross             → {totalRuns,globalErr%,throughput,heaviest}      *)
+(*    dbSnap           → {pipelineRuns,sessions}                         *)
+kpiMetrics::usage = "kpiMetrics[req] → JSON serie temporal + analytics de cruce.";
+kpiMetrics[req_] :=
+  Module[{snap, tasks, dbRows, sessionRows, crossMetrics,
+          pRuns, sessCount, perTask},
+
+    (* ── Runtime snapshot ───────────────────────────────────── *)
+    snap  = Quiet @ Check[PersonalSite`TaskManager`summary[], <||>];
+    tasks = Lookup[snap, "tasks", <||>];
+
+    (* ── Per-task statistics ────────────────────────────────── *)
+    (* Each task has history list of <|at,ms,ok,err|> (ring 20) *)
+    perTask = KeyValueMap[Function[{name, t},
+      Module[{hist, msList, n, sorted, p50, p90, p95,
+              errN, runRate, mu, sigma, cv, eff},
+        hist   = Lookup[t, "history", {}];
+        msList = N @ Map[Lookup[#, "ms", 0]&, hist];
+        n      = Length[msList];
+        sorted = Sort[msList];
+        p50 = If[n > 0, Quantile[sorted, .50], 0.];
+        p90 = If[n > 0, Quantile[sorted, .90], 0.];
+        p95 = If[n > 0, Quantile[sorted, .95], 0.];
+        errN   = Count[hist, h_ /; !TrueQ[h["ok"]]];
+        runRate = N @ Lookup[t, "runs",   0] / Max[Lookup[t, "interval_s", 60], 1];
+        mu   = If[n > 0, Mean[msList],   0.];
+        sigma= If[n > 1, StandardDeviation[msList], 0.];
+        cv   = If[mu > 0, 100. * sigma / mu, 0.];
+        (* efficiency: 100% = always fast & no errors, penalise by cv+errRate *)
+        eff  = Max[0., 100. - cv/2 - 100.*errN/Max[n,1]];
+        name -> <|
+          "runs"     -> Lookup[t, "runs",   0],
+          "errors"   -> Lookup[t, "errors", 0],
+          "lastMs"   -> N @ Lookup[t, "lastMs", 0.],
+          "avgMs"    -> N @ Lookup[t, "avgMs",  0.],
+          "interval" -> Lookup[t, "interval_s", 60],
+          "history"  -> hist,
+          "stats"    -> <|
+            "p50"       -> Round[p50, .1],
+            "p90"       -> Round[p90, .1],
+            "p95"       -> Round[p95, .1],
+            "cv"        -> Round[cv,  .1],
+            "errorRate" -> Round[100. * errN / Max[n, 1], .1],
+            "efficiency"-> Round[eff,  .1]
+          |>
+        |>]],
+      tasks];
+
+    (* ── Cross metrics ──────────────────────────────────────── *)
+    Module[{allRuns, allErrs, allMs, throughput, globalErrPct,
+            heaviest, efficiency, totalRuns},
+      allRuns  = Total @ Map[Lookup[#, "runs",   0]&, Values[tasks]];
+      allErrs  = Total @ Map[Lookup[#, "errors", 0]&, Values[tasks]];
+      allMs    = Flatten @ Map[Map[N @ Lookup[#, "ms", 0]&,
+                                   Lookup[#, "history", {}]]&,
+                               Values[tasks]];
+      throughput   = allRuns / Max[1, Lookup[snap, "uptime_s", 3600.]];
+      globalErrPct = If[allRuns > 0, 100. * allErrs / allRuns, 0.];
+      heaviest = If[Length[tasks] > 0,
+        First @ Keys @ TakeLargestBy[tasks, Function[t, N @ Lookup[t, "avgMs", 0.]], 1],
+        "—"];
+      efficiency = If[Length[allMs] > 0 && Mean[allMs] > 0,
+        100. - 100. * allErrs / Max[allRuns, 1], 100.];
+      totalRuns = allRuns;
+
+      (* ── DB snapshot ─────────────────────────────────────── *)
+      pRuns     = Quiet @ Check[
+        PersonalSite`Database`query["SELECT COUNT(*) AS n FROM pipeline_runs", {}],
+        {<|"n" -> 0|>}];
+      sessCount = Quiet @ Check[
+        PersonalSite`Database`query["SELECT COUNT(*) AS n FROM sessions WHERE expires_at > datetime('now')", {}],
+        {<|"n" -> 0|>}];
+
+      jsonResp[<|
+        "ts"          -> DateString["ISODateTime"],
+        "tasks"       -> perTask,
+        "cross"       -> <|
+          "totalRuns"      -> totalRuns,
+          "totalErrors"    -> allErrs,
+          "globalErrPct"   -> Round[globalErrPct, .01],
+          "throughputRPM"  -> Round[throughput * 60., .2],
+          "heaviest"       -> heaviest,
+          "efficiency"     -> Round[efficiency, .1],
+          "taskCount"      -> Lookup[snap, "taskCount", 0],
+          "running"        -> Lookup[snap, "running",   0]
+        |>,
+        "db"          -> <|
+          "pipelineRuns" -> If[Length[pRuns] > 0, Lookup[pRuns[[1]], "n", 0], 0],
+          "activeSessions" -> If[Length[sessCount] > 0, Lookup[sessCount[[1]], "n", 0], 0]
+        |>
+      |>]]];  (* end inner Module *)
+
 (* ── GET /kpi ───────────────────────────────────────────────────────── *)
 (*  Estación de trabajo KPI: health %, tareas en runtime, test runner.  *)
 kpiPage[req_] :=

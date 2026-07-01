@@ -1,45 +1,64 @@
 // =============================================================
 //  components/_cards.scss
-//  Tarjetas de post (home y blog).
+//  Tarjetas de post — estilo Wolfram Alpha "pod".
 // =============================================================
 @use '../abstracts' as *;
 
 .cards {
   display: grid;
   grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
-  gap: 1.75rem;
+  gap: 1.5rem;
 }
 
+// Pod Wolfram Alpha: cabecera gris + cuerpo blanco + borde acento izquierdo
 .card {
-  @include surface;
-  background: var(--surface);
-  border-color: var(--border);
-  padding: 1.75rem;
   display: flex;
   flex-direction: column;
-  transition: box-shadow $ease, transform $ease, border-color $ease;
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: radius(sm);
+  border-left: 3px solid var(--accent);
+  overflow: hidden;
+  transition: box-shadow $ease, border-left-color $ease;
 
   &:hover {
-    box-shadow: 0 4px 16px var(--shadow);
-    transform: translateY(-4px);
-    border-color: var(--accent);
+    box-shadow: 0 2px 12px var(--shadow);
+    border-left-color: var(--accent-strong);
   }
 
+  // Cabecera del pod: fecha estilo Wolfram "Input label"
   time {
+    display: flex;
+    align-items: center;
+    gap: .5rem;
+    padding: .5rem 1rem;
+    background: var(--bg-alt);
+    border-bottom: 1px solid var(--border);
+    font-family: $font-mono;
     font-size: .73rem;
     font-weight: 700;
-    letter-spacing: .09em;
+    letter-spacing: .05em;
     text-transform: uppercase;
-    color: var(--text-muted);
-    display: block;
-    margin-bottom: .75rem;
+    color: var(--accent);
+
+    // Punto naranja indicador de entrada (como celda de notebook)
+    &::before {
+      content: '';
+      display: inline-block;
+      width: 7px;
+      height: 7px;
+      border-radius: 50%;
+      background: var(--accent);
+      flex-shrink: 0;
+    }
   }
 
+  // Cuerpo del pod
   h3 {
-    font-size: 1.05rem;
+    font-size: 1rem;
     font-weight: 700;
-    line-height: 1.4;
-    margin-bottom: .75rem;
+    line-height: 1.45;
+    margin: 1rem 1rem .5rem;
 
     a {
       color: var(--heading);
@@ -53,21 +72,29 @@
   }
 
   p {
-    font-size: .9rem;
+    font-size: .88rem;
     color: var(--text-muted);
     flex: 1;
     line-height: 1.7;
+    margin: 0 1rem;
   }
 
+  // Separador + enlace al estilo Wolfram "More"
   .more {
     display: inline-flex;
     align-items: center;
     gap: .35rem;
-    margin-top: 1.25rem;
-    font-size: .85rem;
+    margin: 1rem;
+    margin-top: .85rem;
+    padding-top: .75rem;
+    border-top: 1px solid var(--border);
+    font-family: $font-mono;
+    font-size: .8rem;
     font-weight: 700;
     color: var(--accent);
     transition: gap $ease, color $ease;
+    align-self: flex-start;
+    width: calc(100% - 2rem);
 
     &:hover {
       gap: .6rem;

@@ -12,6 +12,14 @@ services:
       - personalsite-data:/data
       # Licencia Wolfram Engine (activar una vez con: make activate)
       - personalsite-wolfram:/home/wolframengine/.WolframEngine
+      # CSS compilado en caliente — evita rebuild de imagen en desarrollo
+      - ./PersonalSite/Resources/Static:/app/PersonalSite/Resources/Static:ro
+      # Templates HTML — evita rebuild al editar vistas
+      - ./PersonalSite/Resources/Templates:/app/PersonalSite/Resources/Templates:ro
+      # Imágenes estáticas — expone archivos nuevos sin rebuild
+      - ./PersonalSite/Resources/Img:/app/PersonalSite/Resources/Img:ro
+      # Kernel Wolfram — Router y Controllers sin rebuild
+      - ./PersonalSite/Kernel:/app/PersonalSite/Kernel:ro
     environment:
       PERSONALSITE_NAME: "Federico"
       PERSONALSITE_DB: /data/site.db

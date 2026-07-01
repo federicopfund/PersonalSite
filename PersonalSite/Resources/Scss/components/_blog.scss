@@ -1,25 +1,46 @@
 // =============================================================
 //  components/_blog.scss
-//  Cabecera de la lista del blog.
+//  Cabecera de la lista del blog — estilo Wolfram Alpha.
 // =============================================================
 @use '../abstracts' as *;
 
+// Banner superior: fondo oscuro + barra naranja inferior
 .page-head {
   margin-top: 0;
   @include dark-gradient;
   color: #fff;
   padding: 4rem 1.5rem 3.5rem;
+  border-bottom: 3px solid var(--accent);
 
   h1 {
+    display: flex;
+    align-items: center;
+    gap: .75rem;
     font-size: clamp(2rem, 4vw, 3rem);
-    font-weight: 800;
-    letter-spacing: -.05em;
+    font-weight: 300;          // Segoe UI Light
+    letter-spacing: -.02em;
+
+    // Indicador de celda estilo notebook (bracket naranja)
+    &::before {
+      content: '';
+      display: inline-block;
+      width: 4px;
+      align-self: stretch;
+      min-height: 1em;
+      background: var(--accent);
+      border-radius: 2px;
+      flex-shrink: 0;
+    }
   }
 
   p {
-    color: gray(400);
-    margin-top: .5rem;
-    font-size: 1.05rem;
+    margin-top: .6rem;
+    margin-left: 1.15rem;  // alinea con el texto del h1
+    font-size: .875rem;
+    font-weight: 600;
+    letter-spacing: .08em;
+    text-transform: uppercase;
+    color: var(--header-muted);
   }
 }
 
