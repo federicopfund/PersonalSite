@@ -17,42 +17,79 @@ archTasks::usage  = "archTasks[req] sirve el estado live de todas las tareas del
 
 Begin["`Private`"];
 
-(* ── Datos del grafo (estaticos, memoizados) ──────────────────────────── *)
+(* ── Datos del grafo — escaneado y actualizado al sistema completo ─────── *)
+(* Nodos:  58 (entry×3, router×1, ctrl×19, model×13, session×3, devops×2,
+           ux×1, frontend×1, view×1, ext×3, nest-rt×11, sentinel×4)       *)
+(* Aristas: ~115 (base, modelo, rt-pipeline, heartbeat, sentinels)         *)
+$archJSON = .;   (* invalidar caché en cada carga del paquete              *)
 $archJSON := $archJSON = buildArchJSON[];
 
 buildArchJSON[] :=
   Module[{nodes, links, data},
     nodes = {
-      (* ── Capa base ─────────────────────────────────────────────── *)
-      <|"id"->"HTTP",      "group"->"entry",   "label"->"HTTP Request"|>,
-      <|"id"->"Router",    "group"->"router",  "label"->"Router"|>,
-      <|"id"->"Home",      "group"->"ctrl",    "label"->"HomeController"|>,
-      <|"id"->"Blog",      "group"->"ctrl",    "label"->"BlogController"|>,
-      <|"id"->"Contacto",  "group"->"ctrl",    "label"->"ContactController"|>,
-      <|"id"->"WActrl",    "group"->"ctrl",    "label"->"WolframController"|>,
-      <|"id"->"Nest",      "group"->"ctrl",    "label"->"NestController"|>,
-      <|"id"->"Tasks",     "group"->"ctrl",    "label"->"TaskController"|>,
-      <|"id"->"Perf",      "group"->"ctrl",    "label"->"PerfController"|>,
-      <|"id"->"Theme",     "group"->"ctrl",    "label"->"ThemeController"|>,
-      <|"id"->"Database",  "group"->"model",   "label"->"Database"|>,
-      <|"id"->"Post",      "group"->"model",   "label"->"Post"|>,
-      <|"id"->"Mailer",    "group"->"model",   "label"->"Mailer"|>,
-      <|"id"->"WAmodel",   "group"->"model",   "label"->"WolframAlpha"|>,
-      <|"id"->"NestSched", "group"->"model",   "label"->"NestScheduler"|>,
-      <|"id"->"TaskMgr",   "group"->"model",   "label"->"TaskManager"|>,
-      <|"id"->"Scheduler", "group"->"model",   "label"->"Scheduler"|>,
-      <|"id"->"Cache",     "group"->"model",   "label"->"Cache"|>,
-      <|"id"->"Assets",    "group"->"model",   "label"->"Assets"|>,
-      <|"id"->"ThemeM",    "group"->"model",   "label"->"ThemeModel"|>,
-      <|"id"->"Renderer",  "group"->"view",    "label"->"Renderer"|>,
-      <|"id"->"SQLite",    "group"->"ext",     "label"->"SQLite"|>,
-      <|"id"->"WAAPI",     "group"->"ext",     "label"->"WA API"|>,
-      <|"id"->"SMTP",      "group"->"ext",     "label"->"SMTP"|>,
-      <|"id"->"Response",  "group"->"entry",   "label"->"HTTP Response"|>,
-      (* ── NestScheduler runtime (POST /nest/schedule trigger) ────── *)
+      (* ── Entry / Exit ──────────────────────────────────────────── *)
+      <|"id"->"HTTP",       "group"->"entry",    "label"->"HTTP Request"|>,
+      <|"id"->"Router",     "group"->"router",   "label"->"Router"|>,
+      <|"id"->"Response",   "group"->"entry",    "label"->"HTTP Response"|>,
+
+      (* ── Controllers (ctrl) ─────────────────────────────────────── *)
+      <|"id"->"Home",       "group"->"ctrl",     "label"->"HomeController"|>,
+      <|"id"->"Blog",       "group"->"ctrl",     "label"->"BlogController"|>,
+      <|"id"->"Contacto",   "group"->"ctrl",     "label"->"ContactController"|>,
+      <|"id"->"WActrl",     "group"->"ctrl",     "label"->"WolframController"|>,
+      <|"id"->"Nest",       "group"->"ctrl",     "label"->"NestController"|>,
+      <|"id"->"Tasks",      "group"->"ctrl",     "label"->"TaskController"|>,
+      <|"id"->"Perf",       "group"->"ctrl",     "label"->"PerfController"|>,
+      <|"id"->"Theme",      "group"->"ctrl",     "label"->"ThemeController"|>,
+      <|"id"->"ArchCtrl",   "group"->"ctrl",     "label"->"ArchController"|>,
+      <|"id"->"KpiCtrl",    "group"->"ctrl",     "label"->"KpiController"|>,
+      <|"id"->"FlowCtrl",   "group"->"ctrl",     "label"->"FlowController"|>,
+      <|"id"->"StyleCtrl",  "group"->"ctrl",     "label"->"StyleController"|>,
+      <|"id"->"RuliCtrl",   "group"->"ctrl",     "label"->"RuliologyController"|>,
+      <|"id"->"KernelCtrl", "group"->"ctrl",     "label"->"KernelController"|>,
+      <|"id"->"DagCtrl",    "group"->"ctrl",     "label"->"DagController"|>,
+
+      (* ── Session subsystem ──────────────────────────────────────── *)
+      <|"id"->"SessionCtrl","group"->"session",  "label"->"SessionController"|>,
+      <|"id"->"SessionFSM", "group"->"session",  "label"->"SessionFSM"|>,
+      <|"id"->"SessionStore","group"->"session", "label"->"SessionStore"|>,
+
+      (* ── DevOps subsystem ───────────────────────────────────────── *)
+      <|"id"->"DevOpsCtrl", "group"->"devops",   "label"->"DevOpsController"|>,
+      <|"id"->"DevOpsModel","group"->"devops",   "label"->"DevOps"|>,
+      <|"id"->"DevStyleM",  "group"->"devops",   "label"->"DevStyle"|>,
+
+      (* ── Core models ────────────────────────────────────────────── *)
+      <|"id"->"Database",   "group"->"model",    "label"->"Database"|>,
+      <|"id"->"Post",       "group"->"model",    "label"->"Post"|>,
+      <|"id"->"Mailer",     "group"->"model",    "label"->"Mailer"|>,
+      <|"id"->"WAmodel",    "group"->"model",    "label"->"WolframAlpha"|>,
+      <|"id"->"NestSched",  "group"->"model",    "label"->"NestScheduler"|>,
+      <|"id"->"TaskMgr",    "group"->"model",    "label"->"TaskManager"|>,
+      <|"id"->"Scheduler",  "group"->"model",    "label"->"Scheduler"|>,
+      <|"id"->"Cache",      "group"->"model",    "label"->"Cache"|>,
+      <|"id"->"Assets",     "group"->"model",    "label"->"Assets"|>,
+      <|"id"->"ThemeM",     "group"->"model",    "label"->"ThemeModel"|>,
+      <|"id"->"FlowModel",  "group"->"model",    "label"->"Flow"|>,
+      <|"id"->"SettingsM",  "group"->"model",    "label"->"Settings"|>,
+      <|"id"->"TaskConfigM","group"->"model",    "label"->"TaskConfig"|>,
+
+      (* ── UX / FrontEnd subsystem ────────────────────────────────── *)
+      <|"id"->"UXColorM",   "group"->"ux-model", "label"->"UXColorRules"|>,
+      <|"id"->"FrontEndM",  "group"->"frontend", "label"->"FrontEnd/StyleEngine"|>,
+
+      (* ── View ───────────────────────────────────────────────────── *)
+      <|"id"->"Renderer",   "group"->"view",     "label"->"Renderer"|>,
+
+      (* ── External ───────────────────────────────────────────────── *)
+      <|"id"->"SQLite",     "group"->"ext",      "label"->"SQLite"|>,
+      <|"id"->"WAAPI",      "group"->"ext",      "label"->"WA API"|>,
+      <|"id"->"SMTP",       "group"->"ext",      "label"->"SMTP"|>,
+
+      (* ── NestScheduler runtime pipeline ────────────────────────── *)
       <|"id"->"NestTrigger", "group"->"nest-rt", "label"->"POST /nest/schedule"|>,
-      <|"id"->"RulesParser", "group"->"nest-rt", "label"->"Parse rules / seeds / depth"|>,
-      <|"id"->"RecordsBuild","group"->"nest-rt", "label"->"buildRecords[rules,seeds,depth]"|>,
+      <|"id"->"RulesParser", "group"->"nest-rt", "label"->"Parse rules/seeds/depth"|>,
+      <|"id"->"RecordsBuild","group"->"nest-rt", "label"->"buildRecords[rules,seeds,d]"|>,
       <|"id"->"SpecConvert", "group"->"nest-rt", "label"->"recordsToSpec[records,rules]"|>,
       <|"id"->"FlowL0",      "group"->"nest-rt", "label"->"Layer 0 \[DoubleVerticalBar] Seeds"|>,
       <|"id"->"FlowL1",      "group"->"nest-rt", "label"->"Layer 1 \[DoubleVerticalBar] rule(seed)"|>,
@@ -61,83 +98,188 @@ buildArchJSON[] :=
       <|"id"->"NestStore",   "group"->"nest-rt", "label"->"$lastResults"|>,
       <|"id"->"SchedLoop",   "group"->"nest-rt", "label"->"ScheduledTask (every N s)"|>,
       <|"id"->"NestAPI",     "group"->"nest-rt", "label"->"GET /nest/results"|>,
-      (* ── Confluent sentinels (convergencia de salud por capa) ── *)
-      <|"id"->"SentCtrl",  "group"->"sentinel", "label"->"⦿ Ctrl Health"|>,
-      <|"id"->"SentModel", "group"->"sentinel", "label"->"⦿ Model Health"|>,
-      <|"id"->"SentExt",   "group"->"sentinel", "label"->"⦿ Ext Health"|>,
-      <|"id"->"SysState",  "group"->"sentinel", "label"->"⦿ System State"|>
+
+      (* ── Confluent sentinels ────────────────────────────────────── *)
+      <|"id"->"SentCtrl",   "group"->"sentinel", "label"->"⦿ Ctrl Health"|>,
+      <|"id"->"SentModel",  "group"->"sentinel", "label"->"⦿ Model Health"|>,
+      <|"id"->"SentExt",    "group"->"sentinel", "label"->"⦿ Ext Health"|>,
+      <|"id"->"SysState",   "group"->"sentinel", "label"->"⦿ System State"|>
     };
+
     links = {
-      (* ── Aristas base ──────────────────────────────────────────── *)
-      <|"source"->"HTTP",      "target"->"Router"|>,
-      <|"source"->"Router",    "target"->"Home"|>,
-      <|"source"->"Router",    "target"->"Blog"|>,
-      <|"source"->"Router",    "target"->"Contacto"|>,
-      <|"source"->"Router",    "target"->"WActrl"|>,
-      <|"source"->"Router",    "target"->"Nest"|>,
-      <|"source"->"Router",    "target"->"Tasks"|>,
-      <|"source"->"Router",    "target"->"Perf"|>,
-      <|"source"->"Router",    "target"->"Theme"|>,
-      <|"source"->"Home",      "target"->"Database"|>,
-      <|"source"->"Home",      "target"->"Cache"|>,
-      <|"source"->"Blog",      "target"->"Post"|>,
-      <|"source"->"Post",      "target"->"Database"|>,
-      <|"source"->"Contacto",  "target"->"Mailer"|>,
-      <|"source"->"WActrl",    "target"->"WAmodel"|>,
-      <|"source"->"Nest",      "target"->"NestSched"|>,
-      <|"source"->"Tasks",     "target"->"TaskMgr"|>,
-      <|"source"->"Scheduler", "target"->"TaskMgr"|>,
-      <|"source"->"Perf",      "target"->"Cache"|>,
-      <|"source"->"Perf",      "target"->"Assets"|>,
-      <|"source"->"Theme",     "target"->"ThemeM"|>,
-      <|"source"->"Home",      "target"->"Renderer"|>,
-      <|"source"->"Blog",      "target"->"Renderer"|>,
-      <|"source"->"Contacto",  "target"->"Renderer"|>,
-      <|"source"->"Nest",      "target"->"Renderer"|>,
-      <|"source"->"Tasks",     "target"->"Renderer"|>,
-      <|"source"->"Perf",      "target"->"Renderer"|>,
-      <|"source"->"Theme",     "target"->"Renderer"|>,
-      <|"source"->"Database",  "target"->"SQLite"|>,
-      <|"source"->"Mailer",    "target"->"SMTP"|>,
-      <|"source"->"WAmodel",   "target"->"WAAPI"|>,
-      <|"source"->"Renderer",  "target"->"Response"|>,
-      (* ── NestScheduler runtime trigger ─────────────────────────── *)
-      <|"source"->"NestTrigger","target"->"Router",      "rt"->True|>,
-      <|"source"->"Nest",       "target"->"RulesParser", "rt"->True|>,
-      <|"source"->"RulesParser","target"->"RecordsBuild","rt"->True|>,
-      <|"source"->"RecordsBuild","target"->"SpecConvert","rt"->True|>,
-      <|"source"->"SpecConvert","target"->"FlowL0",      "rt"->True|>,
-      <|"source"->"FlowL0",    "target"->"FlowL1",       "rt"->True|>,
-      <|"source"->"FlowL1",    "target"->"FlowL2",       "rt"->True|>,
-      <|"source"->"FlowL2",    "target"->"FlowLN",       "rt"->True|>,
-      <|"source"->"FlowLN",    "target"->"NestStore",    "rt"->True|>,
-      <|"source"->"NestStore", "target"->"SchedLoop",    "rt"->True|>,
-      <|"source"->"SchedLoop", "target"->"Nest",         "rt"->True|>,
-      <|"source"->"NestStore", "target"->"NestAPI",      "rt"->True|>,
-      <|"source"->"NestAPI",   "target"->"Response",     "rt"->True|>,
-      (* ── Heartbeat self-loops (un ciclo por nodo monitoreado) ── *)
-      <|"source"->"Router",    "target"->"Router",    "hb"->True|>,
-      <|"source"->"Database",  "target"->"Database",  "hb"->True|>,
-      <|"source"->"NestSched", "target"->"NestSched", "hb"->True|>,
-      <|"source"->"TaskMgr",   "target"->"TaskMgr",   "hb"->True|>,
-      <|"source"->"Scheduler", "target"->"Scheduler", "hb"->True|>,
-      <|"source"->"Cache",     "target"->"Cache",     "hb"->True|>,
-      <|"source"->"Renderer",  "target"->"Renderer",  "hb"->True|>,
-      (* ── Convergencia hacia sentinels ─────────────────────────── *)
-      <|"source"->"Home",    "target"->"SentCtrl",  "conv"->True|>,
-      <|"source"->"Blog",    "target"->"SentCtrl",  "conv"->True|>,
-      <|"source"->"Nest",    "target"->"SentCtrl",  "conv"->True|>,
-      <|"source"->"Tasks",   "target"->"SentCtrl",  "conv"->True|>,
-      <|"source"->"Database","target"->"SentModel", "conv"->True|>,
-      <|"source"->"NestSched","target"->"SentModel","conv"->True|>,
-      <|"source"->"TaskMgr", "target"->"SentModel", "conv"->True|>,
-      <|"source"->"Cache",   "target"->"SentModel", "conv"->True|>,
-      <|"source"->"SQLite",  "target"->"SentExt",   "conv"->True|>,
-      <|"source"->"WAAPI",   "target"->"SentExt",   "conv"->True|>,
-      <|"source"->"SMTP",    "target"->"SentExt",   "conv"->True|>,
-      <|"source"->"SentCtrl", "target"->"SysState", "conv"->True|>,
-      <|"source"->"SentModel","target"->"SysState", "conv"->True|>,
-      <|"source"->"SentExt",  "target"->"SysState", "conv"->True|>
+      (* ── HTTP entry ────────────────────────────────────────────── *)
+      <|"source"->"HTTP",       "target"->"Router"|>,
+
+      (* ── Router → all controllers ──────────────────────────────── *)
+      <|"source"->"Router",     "target"->"Home"|>,
+      <|"source"->"Router",     "target"->"Blog"|>,
+      <|"source"->"Router",     "target"->"Contacto"|>,
+      <|"source"->"Router",     "target"->"WActrl"|>,
+      <|"source"->"Router",     "target"->"Nest"|>,
+      <|"source"->"Router",     "target"->"Tasks"|>,
+      <|"source"->"Router",     "target"->"Perf"|>,
+      <|"source"->"Router",     "target"->"Theme"|>,
+      <|"source"->"Router",     "target"->"ArchCtrl"|>,
+      <|"source"->"Router",     "target"->"KpiCtrl"|>,
+      <|"source"->"Router",     "target"->"FlowCtrl"|>,
+      <|"source"->"Router",     "target"->"StyleCtrl"|>,
+      <|"source"->"Router",     "target"->"RuliCtrl"|>,
+      <|"source"->"Router",     "target"->"SessionCtrl"|>,
+      <|"source"->"Router",     "target"->"KernelCtrl"|>,
+      <|"source"->"Router",     "target"->"DevOpsCtrl"|>,
+      <|"source"->"Router",     "target"->"DagCtrl"|>,
+
+      (* ── Controllers → Models (derivado de imports reales) ─────── *)
+      (* Home: Assets *)
+      <|"source"->"Home",       "target"->"Assets"|>,
+      <|"source"->"Home",       "target"->"Cache"|>,
+      (* Blog: Post, Assets, DevOps, SessionStore, Settings, Mailer *)
+      <|"source"->"Blog",       "target"->"Post"|>,
+      <|"source"->"Blog",       "target"->"Assets"|>,
+      <|"source"->"Blog",       "target"->"DevOpsModel"|>,
+      <|"source"->"Blog",       "target"->"SessionStore"|>,
+      <|"source"->"Blog",       "target"->"SettingsM"|>,
+      (* Contacto: Mailer *)
+      <|"source"->"Contacto",   "target"->"Mailer"|>,
+      (* WActrl: WAmodel *)
+      <|"source"->"WActrl",     "target"->"WAmodel"|>,
+      (* Nest: NestScheduler *)
+      <|"source"->"Nest",       "target"->"NestSched"|>,
+      (* Tasks/KPI: TaskMgr, Database, DevOps, Settings *)
+      <|"source"->"Tasks",      "target"->"TaskMgr"|>,
+      <|"source"->"Tasks",      "target"->"Database"|>,
+      <|"source"->"Tasks",      "target"->"DevOpsModel"|>,
+      <|"source"->"Tasks",      "target"->"SettingsM"|>,
+      <|"source"->"KpiCtrl",    "target"->"TaskMgr"|>,
+      <|"source"->"KpiCtrl",    "target"->"Database"|>,
+      <|"source"->"KpiCtrl",    "target"->"SettingsM"|>,
+      (* Perf: Assets, Cache *)
+      <|"source"->"Perf",       "target"->"Assets"|>,
+      <|"source"->"Perf",       "target"->"Cache"|>,
+      (* Theme: ThemeModel *)
+      <|"source"->"Theme",      "target"->"ThemeM"|>,
+      (* Arch: Cache, Database, NestSched, TaskMgr *)
+      <|"source"->"ArchCtrl",   "target"->"Cache"|>,
+      <|"source"->"ArchCtrl",   "target"->"Database"|>,
+      <|"source"->"ArchCtrl",   "target"->"NestSched"|>,
+      <|"source"->"ArchCtrl",   "target"->"TaskMgr"|>,
+      (* Flow: FlowModel *)
+      <|"source"->"FlowCtrl",   "target"->"FlowModel"|>,
+      (* Style/Kernel: FrontEnd *)
+      <|"source"->"StyleCtrl",  "target"->"FrontEndM"|>,
+      <|"source"->"KernelCtrl", "target"->"FrontEndM"|>,
+      <|"source"->"KernelCtrl", "target"->"TaskMgr"|>,
+      (* Session: SessionFSM, SessionStore *)
+      <|"source"->"SessionCtrl","target"->"SessionFSM"|>,
+      <|"source"->"SessionCtrl","target"->"SessionStore"|>,
+      (* DevOps: DevOpsModel, TaskMgr *)
+      <|"source"->"DevOpsCtrl", "target"->"DevOpsModel"|>,
+      <|"source"->"DevOpsCtrl", "target"->"TaskMgr"|>,
+      (* Dag: TaskMgr *)
+      <|"source"->"DagCtrl",    "target"->"TaskMgr"|>,
+
+      (* ── Controllers → Renderer → Response ─────────────────────── *)
+      <|"source"->"Home",       "target"->"Renderer"|>,
+      <|"source"->"Blog",       "target"->"Renderer"|>,
+      <|"source"->"Contacto",   "target"->"Renderer"|>,
+      <|"source"->"Nest",       "target"->"Renderer"|>,
+      <|"source"->"Tasks",      "target"->"Renderer"|>,
+      <|"source"->"Perf",       "target"->"Renderer"|>,
+      <|"source"->"Theme",      "target"->"Renderer"|>,
+      <|"source"->"ArchCtrl",   "target"->"Renderer"|>,
+      <|"source"->"KpiCtrl",    "target"->"Renderer"|>,
+      <|"source"->"FlowCtrl",   "target"->"Renderer"|>,
+      <|"source"->"StyleCtrl",  "target"->"Renderer"|>,
+      <|"source"->"RuliCtrl",   "target"->"Renderer"|>,
+      <|"source"->"KernelCtrl", "target"->"Renderer"|>,
+      <|"source"->"SessionCtrl","target"->"Renderer"|>,
+      <|"source"->"DevOpsCtrl", "target"->"Renderer"|>,
+      <|"source"->"Renderer",   "target"->"Response"|>,
+
+      (* ── Model inter-dependencies (de imports reales) ───────────── *)
+      <|"source"->"Post",        "target"->"Database"|>,
+      <|"source"->"Assets",      "target"->"Cache"|>,
+      <|"source"->"Assets",      "target"->"Post"|>,
+      <|"source"->"Assets",      "target"->"FlowModel"|>,
+      <|"source"->"FlowModel",   "target"->"NestSched"|>,
+      <|"source"->"NestSched",   "target"->"FlowModel"|>,
+      <|"source"->"DevOpsModel", "target"->"Database"|>,
+      <|"source"->"DevOpsModel", "target"->"FlowModel"|>,
+      <|"source"->"DevStyleM",   "target"->"Cache"|>,
+      <|"source"->"DevStyleM",   "target"->"TaskMgr"|>,
+      <|"source"->"SettingsM",   "target"->"Database"|>,
+      <|"source"->"ThemeM",      "target"->"SettingsM"|>,
+      <|"source"->"UXColorM",    "target"->"SettingsM"|>,
+      <|"source"->"UXColorM",    "target"->"ThemeM"|>,
+      <|"source"->"SessionStore","target"->"Cache"|>,
+      <|"source"->"SessionStore","target"->"Database"|>,
+      <|"source"->"SessionFSM",  "target"->"SessionStore"|>,
+      <|"source"->"TaskConfigM", "target"->"Assets"|>,
+      <|"source"->"TaskConfigM", "target"->"Database"|>,
+      <|"source"->"TaskConfigM", "target"->"DevOpsModel"|>,
+      <|"source"->"TaskConfigM", "target"->"NestSched"|>,
+      <|"source"->"TaskConfigM", "target"->"SettingsM"|>,
+      <|"source"->"TaskConfigM", "target"->"UXColorM"|>,
+      <|"source"->"TaskConfigM", "target"->"DevStyleM"|>,
+      <|"source"->"Scheduler",   "target"->"TaskMgr"|>,
+      <|"source"->"Scheduler",   "target"->"TaskConfigM"|>,
+      <|"source"->"Scheduler",   "target"->"NestSched"|>,
+      <|"source"->"Scheduler",   "target"->"UXColorM"|>,
+      <|"source"->"Scheduler",   "target"->"DevStyleM"|>,
+      <|"source"->"Mailer",      "target"->"SMTP"|>,
+      <|"source"->"WAmodel",     "target"->"WAAPI"|>,
+      <|"source"->"Database",    "target"->"SQLite"|>,
+
+      (* ── NestScheduler runtime pipeline ────────────────────────── *)
+      <|"source"->"NestTrigger", "target"->"Router",      "rt"->True|>,
+      <|"source"->"Nest",        "target"->"RulesParser", "rt"->True|>,
+      <|"source"->"RulesParser", "target"->"RecordsBuild","rt"->True|>,
+      <|"source"->"RecordsBuild","target"->"SpecConvert", "rt"->True|>,
+      <|"source"->"SpecConvert", "target"->"FlowL0",      "rt"->True|>,
+      <|"source"->"FlowL0",      "target"->"FlowL1",      "rt"->True|>,
+      <|"source"->"FlowL1",      "target"->"FlowL2",      "rt"->True|>,
+      <|"source"->"FlowL2",      "target"->"FlowLN",      "rt"->True|>,
+      <|"source"->"FlowLN",      "target"->"NestStore",   "rt"->True|>,
+      <|"source"->"NestStore",   "target"->"SchedLoop",   "rt"->True|>,
+      <|"source"->"SchedLoop",   "target"->"Nest",        "rt"->True|>,
+      <|"source"->"NestStore",   "target"->"NestAPI",     "rt"->True|>,
+      <|"source"->"NestAPI",     "target"->"Response",    "rt"->True|>,
+
+      (* ── Heartbeat self-loops ────────────────────────────────────── *)
+      <|"source"->"Router",      "target"->"Router",      "hb"->True|>,
+      <|"source"->"Database",    "target"->"Database",    "hb"->True|>,
+      <|"source"->"NestSched",   "target"->"NestSched",   "hb"->True|>,
+      <|"source"->"TaskMgr",     "target"->"TaskMgr",     "hb"->True|>,
+      <|"source"->"Scheduler",   "target"->"Scheduler",   "hb"->True|>,
+      <|"source"->"Cache",       "target"->"Cache",       "hb"->True|>,
+      <|"source"->"Renderer",    "target"->"Renderer",    "hb"->True|>,
+      <|"source"->"SessionStore","target"->"SessionStore","hb"->True|>,
+      <|"source"->"SettingsM",   "target"->"SettingsM",   "hb"->True|>,
+
+      (* ── Confluent sentinel convergence ─────────────────────────── *)
+      <|"source"->"Home",       "target"->"SentCtrl",  "conv"->True|>,
+      <|"source"->"Blog",       "target"->"SentCtrl",  "conv"->True|>,
+      <|"source"->"Nest",       "target"->"SentCtrl",  "conv"->True|>,
+      <|"source"->"Tasks",      "target"->"SentCtrl",  "conv"->True|>,
+      <|"source"->"ArchCtrl",   "target"->"SentCtrl",  "conv"->True|>,
+      <|"source"->"KpiCtrl",    "target"->"SentCtrl",  "conv"->True|>,
+      <|"source"->"KernelCtrl", "target"->"SentCtrl",  "conv"->True|>,
+      <|"source"->"SessionCtrl","target"->"SentCtrl",  "conv"->True|>,
+      <|"source"->"DevOpsCtrl", "target"->"SentCtrl",  "conv"->True|>,
+      <|"source"->"Database",   "target"->"SentModel", "conv"->True|>,
+      <|"source"->"NestSched",  "target"->"SentModel", "conv"->True|>,
+      <|"source"->"TaskMgr",    "target"->"SentModel", "conv"->True|>,
+      <|"source"->"Cache",      "target"->"SentModel", "conv"->True|>,
+      <|"source"->"SettingsM",  "target"->"SentModel", "conv"->True|>,
+      <|"source"->"SessionStore","target"->"SentModel","conv"->True|>,
+      <|"source"->"DevOpsModel","target"->"SentModel", "conv"->True|>,
+      <|"source"->"UXColorM",   "target"->"SentModel", "conv"->True|>,
+      <|"source"->"SQLite",     "target"->"SentExt",   "conv"->True|>,
+      <|"source"->"WAAPI",      "target"->"SentExt",   "conv"->True|>,
+      <|"source"->"SMTP",       "target"->"SentExt",   "conv"->True|>,
+      <|"source"->"SentCtrl",   "target"->"SysState",  "conv"->True|>,
+      <|"source"->"SentModel",  "target"->"SysState",  "conv"->True|>,
+      <|"source"->"SentExt",    "target"->"SysState",  "conv"->True|>
     };
     data = <|"nodes" -> nodes, "links" -> links|>;
     Quiet @ Check[
@@ -207,6 +349,29 @@ archHealth[req_] :=
                        hOk["scheduled"],
                        hIdle["not scheduled"]],
       "NestAPI"    -> hOk["results API"],
+      (* ── Nuevos controllers ──────────────────────────────────── *)
+      "ArchCtrl"   -> hOk["ctrl"],
+      "KpiCtrl"    -> hOk["ctrl"],
+      "FlowCtrl"   -> hOk["ctrl"],
+      "StyleCtrl"  -> hOk["ctrl"],
+      "RuliCtrl"   -> hOk["ctrl"],
+      "KernelCtrl" -> hOk["ctrl"],
+      "DagCtrl"    -> hOk["ctrl"],
+      (* ── Session subsystem ──────────────────────────────────── *)
+      "SessionCtrl"  -> hOk["session"],
+      "SessionFSM"   -> hOk["fsm · 5 states"],
+      "SessionStore" -> If[dbOk, hOk["store · SQLite"], hErr["unreachable"]],
+      (* ── DevOps subsystem ────────────────────────────────────── *)
+      "DevOpsCtrl"  -> hOk["ctrl"],
+      "DevOpsModel" -> If[dbOk, hOk["pipeline · L0-L7"], hWarn["DB warn"]],
+      "DevStyleM"   -> hOk["hot-reload"],
+      (* ── Nuevos modelos ──────────────────────────────────────── *)
+      "FlowModel"   -> hOk["NestGraph engine"],
+      "SettingsM"   -> If[dbOk, hOk["kv store"], hErr["unreachable"]],
+      "TaskConfigM" -> If[dbOk, hOk["10 tasks"], hWarn["DB warn"]],
+      (* ── UX / FrontEnd ───────────────────────────────────────── *)
+      "UXColorM"   -> hOk["color rules eval"],
+      "FrontEndM"  -> hOk["StyleEngine · Output"],
       (* Confluent sentinels *)
       "SentCtrl"   -> hOk["ctrl layer"],
       "SentModel"  -> If[dbOk, hOk["model layer"], hWarn["DB warn"]],
@@ -217,12 +382,16 @@ archHealth[req_] :=
     |>;
 
     groups = <|
-      "entry"   -> "ok",
-      "ctrl"    -> "ok",
-      "model"   -> If[dbOk, "ok", "warn"],
-      "ext"     -> "unknown",
-      "nest-rt" -> If[TrueQ[Lookup[nestInfo,"active",False]], "ok", "idle"],
-      "sentinel"-> If[dbOk, "ok", "warn"]
+      "entry"    -> "ok",
+      "ctrl"     -> "ok",
+      "model"    -> If[dbOk, "ok", "warn"],
+      "session"  -> If[dbOk, "ok", "warn"],
+      "devops"   -> If[dbOk, "ok", "idle"],
+      "ux-model" -> "ok",
+      "frontend" -> "ok",
+      "ext"      -> "unknown",
+      "nest-rt"  -> If[TrueQ[Lookup[nestInfo,"active",False]], "ok", "idle"],
+      "sentinel" -> If[dbOk, "ok", "warn"]
     |>;
 
     Quiet @ Check[

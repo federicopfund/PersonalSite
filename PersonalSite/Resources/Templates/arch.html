@@ -3,7 +3,7 @@
     <div class="arch-hero-text">
       <span class="arch-badge">Graph 3D &bull; Wolfram Language &bull; Live Heartbeat</span>
       <h1>Arquitectura del Sistema</h1>
-      <p>40 nodos &bull; 58+ aristas &bull; Heartbeat en tiempo real &bull; Flujos aut&oacute;nomos convergentes.<br>
+      <p>58 nodos &bull; 115+ aristas &bull; Heartbeat en tiempo real &bull; Flujos aut&oacute;nomos convergentes.<br>
          Arrastr&aacute; para rotar &bull; Scroll para zoom &bull; Hover para resaltar vecinos.</p>
     </div>
     <div class="arch-legend">
@@ -11,6 +11,10 @@
       <span class="arch-leg arch-leg--router">Router</span>
       <span class="arch-leg arch-leg--ctrl">Controllers</span>
       <span class="arch-leg arch-leg--model">Models</span>
+      <span class="arch-leg arch-leg--session">Session</span>
+      <span class="arch-leg arch-leg--devops">DevOps</span>
+      <span class="arch-leg arch-leg--ux-model">UX Rules</span>
+      <span class="arch-leg arch-leg--frontend">FrontEnd</span>
       <span class="arch-leg arch-leg--view">Renderer</span>
       <span class="arch-leg arch-leg--ext">External / Data</span>
       <span class="arch-leg arch-leg--nest-rt">NestScheduler RT</span>
@@ -84,7 +88,9 @@
   var COLOR = {
     entry:'#3389ff', router:'#7a7a85', ctrl:'#eb7a1a',
     model:'#2db85e', view:'#aa44e0',   ext:'#d93535',
-    'nest-rt':'#00e5ff', sentinel:'#ffd700'
+    'nest-rt':'#00e5ff', sentinel:'#ffd700',
+    session:'#14b8a6',  devops:'#f97316',
+    'ux-model':'#c084fc', frontend:'#ec4899'
   };
   var HB_COLOR = { ok:'#00ff88', warn:'#ffcc00', err:'#ff3333', idle:'#555566', unknown:'#7777aa' };
   var healthData = {};

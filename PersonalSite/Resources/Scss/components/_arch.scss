@@ -78,13 +78,18 @@
   border-radius: radius(pill);
   color: #fff;
 
-  &--entry  { background: #3389ff; }
-  &--router { background: #7a7a85; }
-  &--ctrl   { background: #eb7a1a; }
-  &--model  { background: #2db85e; }
-  &--view   { background: #aa44e0; }
-  &--nest-rt { background: #00b8cc; }
-  &--sentinel { background: #c8a000; }
+  &--entry    { background: #3389ff; }
+  &--router   { background: #7a7a85; }
+  &--ctrl     { background: #eb7a1a; }
+  &--model    { background: #2db85e; }
+  &--view     { background: #aa44e0; }
+  &--session  { background: #14b8a6; }
+  &--devops   { background: #f97316; }
+  &--ux-model { background: #c084fc; }
+  &--frontend { background: #ec4899; }
+  &--ext      { background: #d93535; }
+  &--nest-rt  { background: #00e5ff; color: #000; }
+  &--sentinel { background: #ffd700; color: #000; }
 }
 
 // ── Simulation bar ─────────────────────────────────────────────
