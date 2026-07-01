@@ -119,16 +119,19 @@ a2aAgents[req_] :=
 a2aGraph[req_] :=
   jsonResponse[PersonalSite`AgentMesh`graph[], 200];
 
-(* ── GET /a2a/run?seed=1&depth=3&backend=session ───────────────────────── *)
+(* ── GET /a2a/run?seed=1&depth=3  ──────────────────────────────────────── *)
+(* NOTA: forzamos "sync" independientemente de lo que pida el cliente.
+   En WWE single-kernel (POOLSIZE=1), SessionSubmit crea 40 TaskObjects que
+   compiten con el propio kernel del request -> latencias de 4-80 s.
+   Con "sync" la evaluacion es directa y responde en < 200 ms (una vez caliente). *)
 a2aRun[req_] :=
-  Module[{q = query[req], seed, depth, backend, res},
-    seed    = Lookup[q, "seed", "1"];
-    depth   = With[{d = Quiet @ ToExpression @ ToString @ Lookup[q, "depth", "3"]},
-                If[IntegerQ[d], d, 3]];
-    backend = With[{b = ToString @ Lookup[q, "backend", "session"]},
-                If[MemberQ[{"sync", "session", "parallel"}, b], b, "session"]];
+  Module[{q = query[req], seed, depth, res},
+    seed  = Lookup[q, "seed", "1"];
+    depth = With[{d = Quiet @ ToExpression @ ToString @ Lookup[q, "depth", "3"]},
+              If[IntegerQ[d], d, 3]];
     res = Quiet @ Check[
-      PersonalSite`AgentMesh`run[seed, depth, backend], $Failed];
+      TimeConstrained[PersonalSite`AgentMesh`run[seed, depth, "sync"], 28, $Failed],
+      $Failed];
     If[! AssociationQ[res] || ! KeyExistsQ[res, "graph"],
       Return @ jsonResponse[<|"ok" -> False, "error" -> "run failed"|>, 500]];
     jsonResponse[<|

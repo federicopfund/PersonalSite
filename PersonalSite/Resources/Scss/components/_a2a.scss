@@ -568,6 +568,74 @@
   &__arrow { color: var(--muted); font-size: .8rem; }
 }
 
+// ── Feed de ciclo de vida A2A ─────────────────────────────────────────────
+.a2a-feed {
+  max-height: 310px;
+  overflow-y: auto;
+  background: #0b0c12;
+  border: 1px solid rgba(99, 102, 241, .22);
+  border-radius: 14px;
+  padding: .85rem 1.1rem;
+  display: flex;
+  flex-direction: column;
+  gap: .3rem;
+  font-family: $font-mono;
+  font-size: .8rem;
+  scroll-behavior: smooth;
+  box-shadow: inset 0 0 0 1px rgba(99, 102, 241, .06);
+}
+
+.a2a-feed-timer {
+  font-family: $font-mono;
+  font-size: .76rem;
+  color: var(--muted);
+  min-width: 60px;
+  text-align: right;
+}
+
+.a2a-feed-row {
+  display: grid;
+  grid-template-columns: 56px 18px 1fr;
+  gap: .55rem;
+  align-items: baseline;
+  opacity: 0;
+  transform: translateX(-6px);
+  animation: a2a-row-in .18s ease forwards;
+
+  &--user  .a2a-feed-icon { color: #818cf8; }
+  &--orch  .a2a-feed-icon { color: #e2e8f0; }
+  &--rule  .a2a-feed-icon { color: #6366f1; }
+  &--proto .a2a-feed-icon { color: #94a3b8; }
+  &--done  .a2a-feed-icon { color: #34d399; }
+  &--err   .a2a-feed-icon { color: #f87171; }
+}
+
+.a2a-feed-ts   { color: #475569; font-size: .7rem; text-align: right; }
+.a2a-feed-icon { line-height: 1; }
+.a2a-feed-text {
+  color: #cbd5e1;
+  line-height: 1.45;
+
+  code     { color: #818cf8; background: rgba(99, 102, 241, .12);
+             padding: .05em .35em; border-radius: 4px; }
+  strong   { color: #e2e8f0; }
+}
+
+// ── Nodos SVG — aparición animada ─────────────────────────────────────────
+// Las aristas y nodos se ocultan al construir el SVG y se revelan en JS.
+.a2a-svg--anim {
+  .a2a-node--hidden {
+    opacity: 0;
+    transform-origin: center;
+    transition: opacity .28s ease;
+  }
+  .a2a-edge--hidden { opacity: 0; transition: opacity .4s ease; }
+}
+
+@keyframes a2a-row-in {
+  to { opacity: 1; transform: translateX(0); }
+}
+
 // ── Terminal / código ─────────────────────────────────────────────────────
 .a2a-terminal {
   border-radius: 14px;

@@ -31,6 +31,9 @@ If[! TrueQ[$PersonalSiteReady],
      El asset pesado se computa perezosamente (en subkernel) al primer /perf y
      lo mantiene la ScheduledTask metric-refresh. *)
   Quiet @ Check[PersonalSite`Assets`refreshCards[], Null];
+  (* Calentar el modulo A2A: la primera evaluacion carga timezone DB + JSON libs
+     de WL (~19 s); las siguientes son < 100 ms. Depth=1 = 4 nodos, muy rapido. *)
+  Quiet @ Check[PersonalSite`AgentMesh`run[1, 1, "sync"], Null];
   $PersonalSiteReady = True;
 ];
 

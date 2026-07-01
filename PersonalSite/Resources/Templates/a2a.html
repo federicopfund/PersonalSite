@@ -93,14 +93,6 @@
           <label for="a2a-depth">Profundidad (1–5)</label>
           <input id="a2a-depth" type="number" min="1" max="5" value="3">
         </div>
-        <div class="a2a-field">
-          <label for="a2a-backend">Backend</label>
-          <select id="a2a-backend">
-            <option value="session" selected>session</option>
-            <option value="sync">sync</option>
-            <option value="parallel">parallel</option>
-          </select>
-        </div>
         <div class="a2a-field a2a-field--action">
           <button id="a2a-send" class="btn btn--primary">➤ Enviar mensaje</button>
         </div>
@@ -115,6 +107,17 @@
         <div><dt>Hojas (stacks)</dt><dd id="st-leaves">—</dd></div>
         <div><dt>Tiempo</dt><dd id="st-elapsed">—</dd></div>
       </dl>
+    </section>
+
+    <!-- ── Feed de ciclo de vida A2A ─────────────────────────────────── -->
+    <section class="a2a-section a2a-section--feed" id="a2a-feed-section">
+      <div class="a2a-section__head">
+        <h2>Ciclo de vida del mensaje A2A</h2>
+        <span id="a2a-timer" class="a2a-feed-timer">&mdash;</span>
+      </div>
+      <div id="a2a-feed" class="a2a-feed" role="log" aria-live="polite" aria-label="Protocolo A2A">
+        <p class="a2a-empty">Enviá un mensaje para ver el ciclo de vida A2A en tiempo real.</p>
+      </div>
     </section>
 
     <!-- ── Grafo de comunicacion ──────────────────────────────────── -->
@@ -190,118 +193,183 @@
   <script>
   (function(){
     const $ = id => document.getElementById(id);
-    const RULE_CLASS = i => 'a2a-node--rule' + (((i||0)%3));
+    const RULE_CLS = i => 'a2a-node--rule'+(((i||0)%3));
 
-    /* ── Colorear los dots de los agentes (server-rendered) ─────────── */
+    /* ── Dots de agentes ─────────────────────────────────────────────── */
     document.querySelectorAll('.a2a-agent__dot').forEach(dot=>{
       const r = parseInt(dot.getAttribute('data-rule'))||0;
       dot.classList.add(r===0 ? 'a2a-dot--orch' : 'a2a-dot--rule'+((r-1)%3));
     });
 
-    /* ── Render del grafo como árbol SVG por niveles ────────────────── */
-    function renderGraph(graph){
-      const box = $('a2a-graph');
-      const nodes = graph.nodes||[], edges = graph.edges||[];
+    /* ── Feed: simulación del ciclo de vida A2A ──────────────────────── */
+    let _t0=0, _simTimers=[], _serverMs=null;
+    function clearSim(){ _simTimers.forEach(t=>clearTimeout(t)); _simTimers=[]; }
+
+    function feedRow(icon, role, html){
+      const feed=$('a2a-feed'); if(!feed) return;
+      const ms=Math.round(Date.now()-_t0);
+      const el=document.createElement('div');
+      el.className='a2a-feed-row a2a-feed-row--'+role;
+      el.innerHTML='<span class="a2a-feed-ts">+'+ms+'ms</span>'
+        +'<span class="a2a-feed-icon">'+icon+'</span>'
+        +'<span class="a2a-feed-text">'+html+'</span>';
+      feed.appendChild(el);
+      feed.scrollTop=feed.scrollHeight;
+      if($('a2a-timer')) $('a2a-timer').textContent='+'+ms+' ms';
+    }
+
+    function buildSteps(seed, depth){
+      const v1=2*seed+1, v2=seed+14, v3=seed-18;
+      const s=[
+        {d:0,   i:'→', r:'user',  h:'<strong>message.send</strong> enviado → Ruliad Orchestrator'},
+        {d:80,  i:'⬡', r:'proto', h:'Task creada &middot; estado <code>submitted</code>'},
+        {d:160, i:'▶', r:'proto', h:'<code>submitted</code> → <strong>working</strong>'},
+        {d:270, i:'⊛', r:'orch',  h:'Orquestador: construyendo Ruliad — <code>seed='+seed+'</code> <code>depth='+depth+'</code>'},
+        {d:390, i:'◉', r:'orch',  h:'Layer&nbsp;0 · seed <code>['+seed+']</code> → <strong>n1</strong>'},
+        {d:500, i:'◈', r:'rule',  h:'Layer&nbsp;1 · agent <strong>2x+1</strong>: '+seed+' → <strong>'+v1+'</strong>'},
+        {d:580, i:'◈', r:'rule',  h:'Layer&nbsp;1 · agent <strong>x+14</strong>: '+seed+' → <strong>'+v2+'</strong>'},
+        {d:660, i:'◈', r:'rule',  h:'Layer&nbsp;1 · agent <strong>x−18</strong>: '+seed+' → <strong>'+v3+'</strong>'},
+      ];
+      if(depth>=2) s.push({d:760, i:'◈', r:'rule', h:'Layer&nbsp;2 · <strong>9</strong> mensajes A2A dispatched'});
+      if(depth>=3) s.push({d:860, i:'◈', r:'rule', h:'Layer&nbsp;3 · <strong>27</strong> mensajes A2A dispatched'});
+      if(depth>=4) s.push({d:940, i:'◈', r:'rule', h:'Layer&nbsp;4 · <strong>81</strong> mensajes A2A dispatched'});
+      const last=(s[s.length-1].d||800)+100;
+      s.push({d:last,    i:'◎', r:'proto', h:'Generando <strong>3 artifacts</strong> — trajectory · stacks · summary'});
+      s.push({d:last+140,i:'✓', r:'done',  h:'<code>working</code> → <strong>completed</strong> · Task finalizada'});
+      return s;
+    }
+
+    function runSim(steps){
+      clearSim();
+      const feed=$('a2a-feed');
+      if(feed) feed.innerHTML='';
+      _t0=Date.now(); _serverMs=null;
+      steps.forEach(s=>{ _simTimers.push(setTimeout(()=>feedRow(s.i,s.r,s.h), s.d)); });
+      return steps[steps.length-1].d+200;
+    }
+
+    /* ── Grafo: construcción SVG + animación por niveles ─────────────── */
+    function animateGraph(graph){
+      const box=$('a2a-graph');
+      const nodes=graph.nodes||[], edges=graph.edges||[];
       if(!nodes.length){ box.innerHTML='<p class="a2a-empty">Sin datos.</p>'; return; }
 
-      /* Agrupar por nivel */
-      const levels = {};
-      nodes.forEach(n=>{ (levels[n.level]=levels[n.level]||[]).push(n); });
-      const maxLevel = Math.max(...nodes.map(n=>n.level));
-      const rowH = 96, padX = 40, padY = 48;
-      const byLevelCount = {};
-      Object.keys(levels).forEach(lv=>byLevelCount[lv]=levels[lv].length);
-      const width = Math.max(720, Math.max(...Object.values(byLevelCount)) * 78 + padX*2);
-      const height = (maxLevel+1)*rowH + padY;
-
-      /* Posiciones */
-      const pos = {};
+      const levels={}; nodes.forEach(n=>{ (levels[n.level]=levels[n.level]||[]).push(n); });
+      const rowH=96, padY=52;
+      const maxW=Math.max(...Object.values(levels).map(a=>a.length));
+      const width=Math.max(760, maxW*78+80);
+      const height=(Math.max(...nodes.map(n=>n.level))+1)*rowH+padY;
+      const pos={};
       Object.keys(levels).sort((a,b)=>a-b).forEach(lv=>{
-        const row = levels[lv];
-        const gap = width/(row.length+1);
-        row.forEach((n,i)=>{ pos[n.id] = { x: gap*(i+1), y: padY + lv*rowH }; });
+        const row=levels[lv], gap=width/(row.length+1);
+        row.forEach((n,i)=>{ pos[n.id]={x:gap*(i+1), y:padY+lv*rowH}; });
       });
 
-      let svg = `<svg viewBox="0 0 ${width} ${height}" class="a2a-svg" preserveAspectRatio="xMidYMin meet">`;
-      /* Aristas (mensajes A2A) */
+      let svg=`<svg viewBox="0 0 ${width} ${height}" class="a2a-svg a2a-svg--anim" preserveAspectRatio="xMidYMin meet">`;
       edges.forEach(e=>{
-        const a = pos[e.from], b = pos[e.to];
-        if(!a||!b) return;
-        const cls = 'a2a-edge a2a-edge--rule'+(((e.ruleIdx||1)-1)%3);
-        svg += `<path class="${cls}" d="M${a.x},${a.y} C${a.x},${(a.y+b.y)/2} ${b.x},${(a.y+b.y)/2} ${b.x},${b.y}"/>`;
+        const a=pos[e.from], b=pos[e.to]; if(!a||!b) return;
+        const lv=Math.min(e.ruleIdx||1, Object.keys(levels).length-1);
+        svg+=`<path class="a2a-edge a2a-edge--rule${((e.ruleIdx||1)-1)%3} a2a-edge--hidden" data-level="${lv}"
+          d="M${a.x},${a.y} C${a.x},${(a.y+b.y)/2} ${b.x},${(a.y+b.y)/2} ${b.x},${b.y}"/>`;
       });
-      /* Nodos */
       nodes.forEach(n=>{
-        const p = pos[n.id]; if(!p) return;
-        const cls = n.level===0 ? 'a2a-node a2a-node--orch'
-                                : 'a2a-node '+RULE_CLASS(((n.ruleIdx||1)-1));
-        const title = `${n.id} · ${n.agent} · valor ${n.value}`;
-        svg += `<g class="${cls}" transform="translate(${p.x},${p.y})">
-          <title>${title}</title>
+        const p=pos[n.id]; if(!p) return;
+        const cls=n.level===0?'a2a-node a2a-node--orch':'a2a-node '+RULE_CLS(((n.ruleIdx||1)-1));
+        svg+=`<g class="${cls} a2a-node--hidden" data-level="${n.level}" transform="translate(${p.x},${p.y})">
+          <title>${n.id} · ${n.agent} · val=${n.value}</title>
           <circle r="16"></circle>
           <text class="a2a-node__val" dy="4">${n.value}</text>
         </g>`;
       });
-      svg += '</svg>';
-      box.innerHTML = svg;
+      svg+='</svg>';
+      box.innerHTML=svg;
+
+      /* aristas primero, luego nodos nivel a nivel */
+      setTimeout(()=>box.querySelectorAll('.a2a-edge--hidden')
+        .forEach(el=>el.classList.remove('a2a-edge--hidden')), 60);
+      Object.keys(levels).sort((a,b)=>a-b).forEach((lv,i)=>{
+        setTimeout(()=>box.querySelectorAll(`[data-level="${lv}"].a2a-node--hidden`)
+          .forEach(el=>el.classList.remove('a2a-node--hidden')), 180+i*150);
+      });
     }
 
-    /* ── Render de los stacks de funciones ──────────────────────────── */
+    /* ── Stacks ─────────────────────────────────────────────────────────── */
     function renderStacks(stacks){
-      const box = $('a2a-stacks');
-      if(!stacks || !stacks.length){ box.innerHTML='<p class="a2a-empty">Sin datos.</p>'; return; }
-      const shown = stacks.slice(0, 12);
-      box.innerHTML = shown.map(s=>{
-        const chain = (s.stack||[]).map(step=>{
-          const cls = step.level===0 ? 'a2a-step--seed' : 'a2a-step--rule'+(((step.ruleIdx||1)-1)%3);
+      const box=$('a2a-stacks');
+      if(!stacks||!stacks.length){ box.innerHTML='<p class="a2a-empty">Sin datos.</p>'; return; }
+      const shown=stacks.slice(0,12);
+      box.innerHTML=shown.map(s=>{
+        const chain=(s.stack||[]).map(step=>{
+          const cls=step.level===0?'a2a-step--seed':'a2a-step--rule'+(((step.ruleIdx||1)-1)%3);
           return `<span class="a2a-step ${cls}">${step.label}</span>`;
         }).join('<span class="a2a-step__arrow">→</span>');
         return `<div class="a2a-stack">
           <div class="a2a-stack__chain">${chain}</div>
           <div class="a2a-stack__res">= <strong>${s.value}</strong></div>
         </div>`;
-      }).join('') +
-      (stacks.length>shown.length ? `<p class="a2a-note">… y ${stacks.length-shown.length} stacks más.</p>` : '');
+      }).join('')+(stacks.length>shown.length?`<p class="a2a-note">… y ${stacks.length-shown.length} stacks más.</p>`:'');
     }
 
-    /* ── Enviar mensaje (message/send via /a2a/run) ─────────────────── */
+    /* ── Enviar mensaje ─────────────────────────────────────────────────── */
     $('a2a-send').addEventListener('click', async ()=>{
-      const btn = $('a2a-send');
-      const seed    = parseInt($('a2a-seed').value)||1;
-      const depth   = Math.min(5, Math.max(1, parseInt($('a2a-depth').value)||3));
-      const backend = $('a2a-backend').value;
-      btn.disabled = true; btn.textContent = '⏳ Enviando…';
-      $('a2a-state').textContent = 'working'; $('a2a-state').className = 'a2a-pill a2a-pill--on';
-      try{
-        const r = await fetch(`/a2a/run?seed=${seed}&depth=${depth}&backend=${backend}`);
-        const d = await r.json();
-        if(d.ok){
-          const s = d.stats||{};
-          $('st-task').textContent    = (d.taskId||'—').slice(0,8);
-          $('st-state').textContent   = d.state||'—';
-          $('st-agents').textContent  = s.agents ?? '—';
-          $('st-msgs').textContent    = s.messages ?? '—';
-          $('st-arts').textContent    = s.artifacts ?? '—';
-          $('st-leaves').textContent  = s.leaves ?? '—';
-          $('st-elapsed').textContent = s.elapsed!=null ? (s.elapsed).toFixed(3)+' s' : '—';
-          $('a2a-state').textContent  = d.state||'completed';
-          $('a2a-state').className     = 'a2a-pill a2a-pill--ok';
-          renderGraph(d.graph||{});
+      const btn=$('a2a-send');
+      const seed =parseInt($('a2a-seed').value)||1;
+      const depth=Math.min(5, Math.max(1, parseInt($('a2a-depth').value)||3));
+      btn.disabled=true; btn.textContent='⏳ Enviando…';
+      $('a2a-state').textContent='working';
+      $('a2a-state').className='a2a-pill a2a-pill--on';
+
+      const steps  =buildSteps(seed, depth);
+      const simEnd =runSim(steps);
+      let fetchDone=false, fetchData=null, simDone=false;
+
+      function applyResults(){
+        if(!fetchDone||!simDone) return;
+        const d=fetchData;
+        if(d&&d.ok){
+          const s=d.stats||{};
+          $('st-task').textContent    =(d.taskId||'—').slice(0,8)+'…';
+          $('st-state').textContent   =d.state||'—';
+          $('st-agents').textContent  =s.agents  ??'—';
+          $('st-msgs').textContent    =s.messages??'—';
+          $('st-arts').textContent    =s.artifacts??'—';
+          $('st-leaves').textContent  =s.leaves  ??'—';
+          $('st-elapsed').textContent =s.elapsed!=null?s.elapsed.toFixed(3)+' s':'—';
+          $('a2a-state').textContent  =d.state||'completed';
+          $('a2a-state').className    ='a2a-pill a2a-pill--ok';
+          if(_serverMs!==null)
+            feedRow('⚡','proto','Servidor respondió en <strong>'+_serverMs+' ms</strong> — visualizando…');
+          animateGraph(d.graph||{});
           renderStacks((d.graph||{}).stacks);
         } else {
-          $('a2a-state').textContent = 'failed';
-          $('a2a-state').className    = 'a2a-pill a2a-pill--err';
+          $('a2a-state').textContent='failed';
+          $('a2a-state').className='a2a-pill a2a-pill--err';
+          feedRow('✗','err',d?.error||'Error del servidor');
         }
+        btn.disabled=false; btn.textContent='➤ Enviar mensaje';
+      }
+
+      _simTimers.push(setTimeout(()=>{ simDone=true; applyResults(); }, simEnd));
+
+      const ctrl=new AbortController();
+      const kill=setTimeout(()=>ctrl.abort(), 30000);
+      const t1=Date.now();
+      try{
+        const r=await fetch(`/a2a/run?seed=${seed}&depth=${depth}`,{signal:ctrl.signal});
+        clearTimeout(kill);
+        _serverMs=Math.round(Date.now()-t1);
+        fetchData=await r.json();
+        fetchDone=true; applyResults();
       }catch(e){
-        $('a2a-state').textContent = 'error';
-        $('a2a-state').className    = 'a2a-pill a2a-pill--err';
-      }finally{
-        btn.disabled = false; btn.textContent = '➤ Enviar mensaje';
+        clearTimeout(kill);
+        fetchDone=true;
+        fetchData={ok:false,error:e.name==='AbortError'?'Timeout (30 s)':String(e)};
+        applyResults();
       }
     });
 
     /* Nav toggle */
-    const nt = $('nt'), nl = $('nl');
+    const nt=$('nt'),nl=$('nl');
     if(nt) nt.addEventListener('click',()=>nl.classList.toggle('open'));
   })();
   </script>
