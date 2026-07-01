@@ -189,7 +189,10 @@
   <section class="dv-history">
     <div class="dv-history__head">
       <h2 class="dv-sec-title"><span class="dv-sec-title__mark">04</span> ThreadHistory — la serie Ruliad persistida</h2>
-      <button id="dv-hist-refresh" class="btn btn--ghost btn--sm">⟳ Actualizar</button>
+      <div class="dv-history__actions">
+        <span id="dv-hist-ts" class="dv-hist-ts">—</span>
+        <button id="dv-hist-refresh" class="btn btn--ghost btn--sm">⟳ Actualizar</button>
+      </div>
     </div>
     <p class="dv-sec-lead">
       Cada run del pipeline se guarda en el Warehouse como un paso de la trayectoria.
@@ -487,29 +490,43 @@
   }
 
   // ── History (Warehouse) ──────────────────────────────────────────────────
+  let histTop = null;   // último id conocido — para marcar filas nuevas
   async function fetchHistory(){
+    const btn = $('dv-hist-refresh');
+    if (btn){ btn.disabled = true; btn.classList.add('is-loading'); btn.textContent = '⟳ Actualizando…'; }
     try {
-      const r = await fetch(API.history, {cache:'no-store'});
+      const r = await fetch(API.history + '?t=' + Date.now(), {cache:'no-store'});
       const d = await r.json();
       const runs = d.runs || [];
       const body = $('dv-hist-body');
       if (!runs.length){
         body.innerHTML = '<tr><td colspan="6" class="dv-hist-empty">'
           + 'Sin runs aún — ejecuta el pipeline para poblar la serie.</td></tr>';
-        return;
+      } else {
+        body.innerHTML = runs.map(x => {
+          const ok = String(x.status).toLowerCase() === 'ok';
+          const isNew = histTop !== null && Number(x.id) > histTop;
+          const ms = (x.elapsed_ms!=null) ? Math.round(Number(x.elapsed_ms)) : '—';
+          return '<tr'+(isNew?' class="dv-row-new"':'')+'>'
+            + '<td class="dv-mono">'+esc(x.id)+'</td>'
+            + '<td class="dv-mono">'+esc(x.sha||'—')+'</td>'
+            + '<td class="dv-mono dv-dim">'+esc(x.started_at||'—')+'</td>'
+            + '<td class="dv-mono">'+esc(ms)+'</td>'
+            + '<td><span class="dv-badge dv-badge--'+(ok?'ok':'fail')+'">'+esc(x.status)+'</span></td>'
+            + '<td class="dv-mono">'+esc(x.step_num!=null?x.step_num:'—')+'</td>'
+            + '</tr>';
+        }).join('');
+        histTop = Math.max.apply(null, runs.map(x => Number(x.id)));
       }
-      body.innerHTML = runs.map(x => {
-        const ok = String(x.status).toLowerCase() === 'ok';
-        return '<tr>'
-          + '<td class="dv-mono">'+esc(x.id)+'</td>'
-          + '<td class="dv-mono">'+esc(x.sha||'—')+'</td>'
-          + '<td class="dv-mono dv-dim">'+esc(x.started_at||'—')+'</td>'
-          + '<td class="dv-mono">'+esc(x.elapsed_ms!=null?x.elapsed_ms:'—')+'</td>'
-          + '<td><span class="dv-badge dv-badge--'+(ok?'ok':'fail')+'">'+esc(x.status)+'</span></td>'
-          + '<td class="dv-mono">'+esc(x.step_num!=null?x.step_num:'—')+'</td>'
-          + '</tr>';
-      }).join('');
-    } catch(e){ /* silent */ }
+      const ts = $('dv-hist-ts');
+      if (ts) ts.textContent = 'actualizado ' + new Date().toLocaleTimeString()
+                             + ' · ' + runs.length + ' runs';
+    } catch(e){
+      const ts = $('dv-hist-ts');
+      if (ts) ts.textContent = '✗ error al actualizar';
+    } finally {
+      if (btn){ btn.disabled = false; btn.classList.remove('is-loading'); btn.textContent = '⟳ Actualizar'; }
+    }
   }
 
   // ── Reset local status view (does not touch server) ──────────────────────
@@ -535,6 +552,7 @@
   fetchDag();
   fetchHistory();
   setInterval(fetchStatus, 15000);
+  setInterval(fetchHistory, 15000);   // Warehouse en vivo — la serie se auto-refresca
 })();
 </script>
 </body>

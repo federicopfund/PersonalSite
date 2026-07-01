@@ -315,6 +315,25 @@
   &--fail { color: var(--dv-err); background: rgba(239,68,68,.14); }
 }
 
+// ── Historia · acciones + estado de refresco ────────────────────────────────
+.dv-history__actions {
+  display: flex; align-items: center; gap: .8rem; flex-wrap: wrap;
+}
+.dv-hist-ts {
+  font-family: var(--dv-mono); font-size: .72rem; color: var(--dv-dim);
+  white-space: nowrap;
+}
+// Botón "Actualizar" mientras carga: icono girando + atenuado
+.btn.is-loading { opacity: .7; }
+.btn.is-loading::first-letter { display: inline-block; animation: dv-spin .8s linear infinite; }
+@keyframes dv-spin { to { transform: rotate(360deg); } }
+// Flash verde al aparecer una fila nueva en el Warehouse
+@keyframes dv-flash {
+  0%   { background: rgba(34,197,94,.28); }
+  100% { background: transparent; }
+}
+.dv-hist-table tr.dv-row-new td { animation: dv-flash 2.6s ease-out; }
+
 // ── Footer nav ──────────────────────────────────────────────────────────────
 .dv-footer-nav {
   display: flex; flex-wrap: wrap; gap: 1.5rem; justify-content: center;
