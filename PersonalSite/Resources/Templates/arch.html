@@ -444,7 +444,15 @@
       }
       animLoop();
 
-      /* \u2500\u2500 Scheduler task flow timers \u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500 */\n      /* Each task fires once at startup (staggered) then on its interval */\n      SCHED_TASKS.forEach(function(t, idx) {\n        /* stagger initial fires across 0\u201310s to avoid thundering herd */\n        setTimeout(function() {\n          fireTask(t.id);\n          setInterval(function() { fireTask(t.id); }, t.iv * 1000);\n        }, idx * 680 + Math.random() * 400);\n      });
+      /* -- Scheduler task flow timers -- */
+      /* Each task fires once at startup (staggered) then on its interval */
+      SCHED_TASKS.forEach(function(t, idx) {
+        /* stagger initial fires across 0-10s to avoid thundering herd */
+        setTimeout(function() {
+          fireTask(t.id);
+          setInterval(function() { fireTask(t.id); }, t.iv * 1000);
+        }, idx * 680 + Math.random() * 400);
+      });
 
       /* Start heartbeat polling */
       fetchHealth();
