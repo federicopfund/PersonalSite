@@ -94,6 +94,7 @@ dispatcher[] := Delayed @ URLDispatcher[{
   "/flow"          ~~ EndOfString :> PersonalSite`Controller`flow[HTTPRequestData[]],
   "/perf"          ~~ EndOfString :> PersonalSite`Controller`perf[HTTPRequestData[]],
   "/dag"                    ~~ EndOfString :> PersonalSite`Controller`dagDashboard[HTTPRequestData[]],
+  "/devops"                 ~~ EndOfString :> PersonalSite`Controller`devopsPage[HTTPRequestData[]],
   "/devops/dag"             ~~ EndOfString :> PersonalSite`Controller`devopsDag[HTTPRequestData[]],
   "/devops/status"          ~~ EndOfString :> PersonalSite`Controller`devopsStatus[HTTPRequestData[]],
   "/devops/run/"    ~~ stage__ ~~ EndOfString :> PersonalSite`Controller`devopsRunStage[stage, HTTPRequestData[]],

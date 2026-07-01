@@ -1,0 +1,537 @@
+<!DOCTYPE html>
+<html lang="es" data-theme="<* TemplateSlot["theme"] *>"
+      data-theme-mode="<* TemplateSlot["themeMode"] *>"
+      data-theme-order="<* TemplateSlot["themeOrder"] *>"
+      data-theme-interval="<* TemplateSlot["themeInterval"] *>"
+      data-theme-epoch="<* TemplateSlot["themeEpoch"] *>">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>DevOps · Consola Ruliad — <* TemplateSlot["siteName"] *></title>
+  <link rel="stylesheet" href="/static/styles.css">
+</head>
+<body class="dv-body">
+
+  <!-- ═══════════════════════════ HEADER ═══════════════════════════════ -->
+  <header class="dv-header">
+    <div class="dv-header__brand">
+      <span class="dv-brand-icon">◈</span>
+      <div class="dv-brand-txt">
+        <span class="dv-brand-title">DevOps · Consola Ruliad</span>
+        <span class="dv-brand-sub">Kernel&nbsp;#<span id="dv-kernel"><* TemplateSlot["kernelID"] *></span></span>
+      </div>
+    </div>
+    <div class="dv-header__status">
+      <span class="dv-bridge" id="dv-bridge">
+        <span class="dv-bridge__dot"></span>
+        <span id="dv-bridge-txt">verificando bridge…</span>
+      </span>
+      <span class="dv-live">
+        <span class="dv-live__pulse"></span> LIVE
+      </span>
+    </div>
+  </header>
+
+  <!-- ═════════════════════════════ HERO ═══════════════════════════════ -->
+  <section class="dv-hero">
+    <div class="dv-hero__aura" aria-hidden="true"></div>
+    <p class="dv-hero__eyebrow">CICLO DE VIDA COMPUTACIONAL · END&nbsp;TO&nbsp;END</p>
+    <h1 class="dv-hero__title">
+      El desarrollo como una <em>trayectoria</em> en el&nbsp;Ruliad
+    </h1>
+    <p class="dv-hero__lead">
+      Cada commit, cada build y cada deploy es un <strong>paso computacional</strong>.
+      Este pipeline no es una lista de tareas: es una <strong>trayectoria reducible</strong>
+      dentro del Ruliad —el límite entrelazado de todas las computaciones posibles— que
+      avanza, capa a capa, en una única dirección determinada: <strong>producción</strong>.
+    </p>
+    <div class="dv-hero__stats">
+      <div class="dv-hstat">
+        <span class="dv-hstat__n" id="dv-h-stages"><* TemplateSlot["stageCount"] *></span>
+        <span class="dv-hstat__l">etapas</span>
+      </div>
+      <div class="dv-hstat">
+        <span class="dv-hstat__n" id="dv-h-layers"><* TemplateSlot["layerCount"] *></span>
+        <span class="dv-hstat__l">niveles topológicos</span>
+      </div>
+      <div class="dv-hstat">
+        <span class="dv-hstat__n" id="dv-h-teams"><* TemplateSlot["groupCount"] *></span>
+        <span class="dv-hstat__l">equipos reducibles</span>
+      </div>
+      <div class="dv-hstat">
+        <span class="dv-hstat__n">→</span>
+        <span class="dv-hstat__l">integración unidireccional</span>
+      </div>
+    </div>
+    <div class="dv-hero__cta">
+      <a class="btn btn--primary dv-cta-primary" href="#pipeline">▶ Recorrer la trayectoria</a>
+      <a class="btn btn--ghost" href="#equipos">Conocer los equipos</a>
+    </div>
+  </section>
+
+  <!-- ══════════════════════════ MANIFIESTO ════════════════════════════ -->
+  <section class="dv-manifesto">
+    <h2 class="dv-sec-title"><span class="dv-sec-title__mark">01</span> El marco que medimos</h2>
+    <p class="dv-sec-lead">
+      El objetivo del framework es medir <em>cuánto</em> del desarrollo de software puede
+      reducirse a un flujo predecible y automatizable — la <strong>completación computacional</strong>
+      del ciclo — y cuánto sigue siendo irreducible y necesita criterio humano.
+    </p>
+    <div class="dv-manifesto__grid">
+      <article class="dv-story">
+        <span class="dv-story__glyph">∴</span>
+        <h3 class="dv-story__t">Todo cambio es una computación</h3>
+        <p class="dv-story__p">
+          Cada etapa aplica una regla determinista sobre el estado del repositorio.
+          El resultado no se adivina: se computa, se mide en milisegundos y se registra.
+        </p>
+      </article>
+      <article class="dv-story">
+        <span class="dv-story__glyph">⧉</span>
+        <h3 class="dv-story__t">Reducibilidad computacional</h3>
+        <p class="dv-story__p">
+          <strong id="dv-story-stages"><* TemplateSlot["stageCount"] *></strong> etapas en
+          <strong id="dv-story-layers"><* TemplateSlot["layerCount"] *></strong> niveles con una topología fija.
+          El pipeline es la porción <em>reducible</em> del Ruliad: la parte que la máquina
+          puede recorrer sin sorpresas.
+        </p>
+      </article>
+      <article class="dv-story">
+        <span class="dv-story__glyph">≋</span>
+        <h3 class="dv-story__t">ThreadHistory · la serie Ruliad</h3>
+        <p class="dv-story__p">
+          <code>NestList[runPipeline, estado₀, n]</code> genera la trayectoria: una sucesión
+          de estados persistida en el Warehouse. Cada run es un hilo de la serie, reproducible
+          y auditable.
+        </p>
+      </article>
+      <article class="dv-story">
+        <span class="dv-story__glyph">→</span>
+        <h3 class="dv-story__t">Integración en una dirección</h3>
+        <p class="dv-story__p">
+          El DAG no tiene ciclos. La integración fluye de <strong>L0 (código)</strong> a
+          <strong>L7 (deploy)</strong> en una sola dirección, convergiendo hacia un estado
+          desplegado coherente.
+        </p>
+      </article>
+    </div>
+  </section>
+
+  <!-- ═══════════════════════════ EQUIPOS ══════════════════════════════ -->
+  <section id="equipos" class="dv-teams">
+    <h2 class="dv-sec-title"><span class="dv-sec-title__mark">02</span> Los equipos del stack reducible</h2>
+    <p class="dv-sec-lead">
+      Cuatro equipos, un mismo stack de computación reducible. Cada grupo posee sus etapas
+      y coopera con los demás a través del DAG — como un equipo de integración planificado
+      en una dirección concreta.
+    </p>
+    <div class="dv-teams__grid" id="dv-teams-grid">
+      <!-- team cards rendered by JS -->
+    </div>
+  </section>
+
+  <!-- ═══════════════════════════ PIPELINE ═════════════════════════════ -->
+  <section id="pipeline" class="dv-pipeline">
+    <h2 class="dv-sec-title"><span class="dv-sec-title__mark">03</span> La trayectoria — ejecuta el Ruliad</h2>
+    <p class="dv-sec-lead">
+      Haz clic en cualquier etapa para computarla, o lanza el pipeline completo. Cada
+      ejecución avanza la trayectoria y queda registrada como un hilo de la serie.
+    </p>
+
+    <div class="dv-pipe-controls">
+      <button id="dv-run-all" class="btn btn--primary btn--sm">▶ Ejecutar pipeline completo</button>
+      <div class="dv-traj">
+        <label for="dv-traj-n">Trayectoria&nbsp;NestList</label>
+        <select id="dv-traj-n" class="dv-select">
+          <option value="1">n = 1</option>
+          <option value="2">n = 2</option>
+          <option value="3">n = 3</option>
+          <option value="4">n = 4</option>
+          <option value="5">n = 5</option>
+        </select>
+        <button id="dv-run-traj" class="btn btn--ghost btn--sm">≋ Generar serie</button>
+      </div>
+      <div class="dv-pipe-controls__right">
+        <span class="dv-progress" id="dv-progress">0 / <* TemplateSlot["stageCount"] *> etapas</span>
+        <button id="dv-reset" class="btn btn--ghost btn--sm" title="Reiniciar estados">↺ Reset</button>
+        <button id="dv-refresh" class="btn btn--ghost btn--sm" title="Refrescar DAG">⟳</button>
+      </div>
+    </div>
+
+    <div class="dv-pipe-layout">
+      <!-- DAG canvas -->
+      <div class="dv-dag-wrap">
+        <div class="dv-dag-levelbar" id="dv-levelbar"></div>
+        <div class="dv-dag-scroll" id="dv-dag-scroll">
+          <svg id="dv-svg" xmlns="http://www.w3.org/2000/svg" style="display:block"></svg>
+        </div>
+        <div class="dv-dag-legend" id="dv-legend"></div>
+      </div>
+
+      <!-- Console log -->
+      <aside class="dv-console">
+        <div class="dv-console__head">
+          <span>Consola de ejecución</span>
+          <button id="dv-clear" class="btn btn--ghost btn--xs">✕ Limpiar</button>
+        </div>
+        <div id="dv-log" class="dv-console__log">
+          <p class="dv-log-hint">
+            Selecciona una etapa del grafo para computarla,<br>
+            o presiona <strong>▶ Ejecutar pipeline completo</strong>.
+          </p>
+        </div>
+      </aside>
+    </div>
+  </section>
+
+  <!-- ════════════════════════ THREADHISTORY ═══════════════════════════ -->
+  <section class="dv-history">
+    <div class="dv-history__head">
+      <h2 class="dv-sec-title"><span class="dv-sec-title__mark">04</span> ThreadHistory — la serie Ruliad persistida</h2>
+      <button id="dv-hist-refresh" class="btn btn--ghost btn--sm">⟳ Actualizar</button>
+    </div>
+    <p class="dv-sec-lead">
+      Cada run del pipeline se guarda en el Warehouse como un paso de la trayectoria.
+      Estos son los flujos de datos que se pueden planificar desde la serie.
+    </p>
+    <div class="dv-history__wrap">
+      <table class="dv-hist-table">
+        <thead>
+          <tr>
+            <th>#</th><th>SHA</th><th>Inicio</th><th>Δt (ms)</th><th>Estado</th><th>Step</th>
+          </tr>
+        </thead>
+        <tbody id="dv-hist-body">
+          <tr><td colspan="6" class="dv-hist-empty">Sin runs aún — ejecuta el pipeline para poblar la serie.</td></tr>
+        </tbody>
+      </table>
+    </div>
+  </section>
+
+  <!-- ═══════════════════════════ FOOTER NAV ═══════════════════════════ -->
+  <nav class="dv-footer-nav">
+    <a href="/">Inicio</a>
+    <a href="/tasks">Tasks</a>
+    <a href="/dag">DAG</a>
+    <a href="/kernel">Kernel</a>
+    <a href="/kpi">KPI</a>
+    <a href="/perf">Perf</a>
+  </nav>
+
+<!-- ═════════════════════════════ SCRIPTS ════════════════════════════════ -->
+<script>
+(function(){
+  'use strict';
+  const $  = id => document.getElementById(id);
+  const API = {
+    dag:      '/devops/dag',
+    status:   '/devops/status',
+    run:      s => '/devops/run/' + encodeURIComponent(s),
+    pipeline: '/devops/pipeline/run',
+    history:  '/devops/pipeline/history',
+    traj:     n => '/devops/trajectory/' + n
+  };
+
+  // ── Equipos (stack de computación reducible) ─────────────────────────────
+  const GROUPS = {
+    git:   { label:'git · control de versiones', color:'#f97316',
+             tagline:'El historial como fuente de verdad.' },
+    build: { label:'build · compilación',        color:'#06b6d4',
+             tagline:'Del fuente al artefacto verificable.' },
+    test:  { label:'test · verificación',        color:'#22c55e',
+             tagline:'La evidencia antes del despliegue.' },
+    ops:   { label:'ops · operaciones',          color:'#a855f7',
+             tagline:'Del artefacto a producción medida.' }
+  };
+  const groupColor = g => (GROUPS[g] && GROUPS[g].color) || '#8b93b0';
+
+  let DAG = { nodes:[], edges:[] };
+  let running = {};   // id -> true while executing
+
+  // ── Logging ──────────────────────────────────────────────────────────────
+  function logHint(){ return $('dv-log').querySelector('.dv-log-hint'); }
+  function log(msg, cls){
+    const h = logHint(); if(h) h.remove();
+    const el = document.createElement('div');
+    el.className = 'dv-log-line' + (cls ? ' dv-log-line--'+cls : '');
+    const t = new Date().toLocaleTimeString('es', {hour12:false});
+    el.innerHTML = '<span class="dv-log-t">'+t+'</span>' + msg;
+    const box = $('dv-log');
+    box.appendChild(el);
+    box.scrollTop = box.scrollHeight;
+  }
+
+  // ── Bridge status ────────────────────────────────────────────────────────
+  async function fetchStatus(){
+    try {
+      const r = await fetch(API.status, {cache:'no-store'});
+      const d = await r.json();
+      const badge = $('dv-bridge'), txt = $('dv-bridge-txt');
+      if (d.bridge_ok){
+        badge.classList.remove('is-down'); badge.classList.add('is-up');
+        txt.textContent = 'bridge activo · ' + (d.bridge_ms||0) + ' ms';
+      } else {
+        badge.classList.remove('is-up'); badge.classList.add('is-down');
+        txt.textContent = 'bridge offline · modo nativo';
+      }
+    } catch(e){
+      const badge = $('dv-bridge');
+      badge.classList.remove('is-up'); badge.classList.add('is-down');
+      $('dv-bridge-txt').textContent = 'bridge sin respuesta';
+    }
+  }
+
+  // ── DAG fetch + render ───────────────────────────────────────────────────
+  async function fetchDag(){
+    try {
+      const r = await fetch(API.dag, {cache:'no-store'});
+      DAG = await r.json();
+      renderTeams();
+      renderDag();
+      updateProgress();
+    } catch(e){ log('⚠ no se pudo cargar el DAG: '+e, 'err'); }
+  }
+
+  function stageStatus(node){
+    if (running[node.id]) return 'run';
+    const lr = node.lastResult;
+    if (!lr || Object.keys(lr).length === 0) return 'idle';
+    return lr.ok ? 'ok' : 'fail';
+  }
+
+  function updateProgress(){
+    const total = DAG.nodes.length || 0;
+    const done  = DAG.nodes.filter(n => { const s = stageStatus(n); return s==='ok'||s==='fail'; }).length;
+    $('dv-progress').textContent = done + ' / ' + total + ' etapas';
+  }
+
+  // ── Team cards ───────────────────────────────────────────────────────────
+  function renderTeams(){
+    const grid = $('dv-teams-grid');
+    const byGroup = {};
+    DAG.nodes.forEach(n => { (byGroup[n.group] = byGroup[n.group] || []).push(n); });
+    const order = ['git','build','test','ops'];
+    const groups = order.filter(g => byGroup[g]).concat(
+      Object.keys(byGroup).filter(g => order.indexOf(g) === -1));
+    grid.innerHTML = groups.map(g => {
+      const nodes = byGroup[g] || [];
+      const meta  = GROUPS[g] || { label:g, color:groupColor(g), tagline:'' };
+      const done  = nodes.filter(n => stageStatus(n)==='ok').length;
+      const fail  = nodes.filter(n => stageStatus(n)==='fail').length;
+      const pct   = nodes.length ? Math.round(done / nodes.length * 100) : 0;
+      const chips = nodes
+        .sort((a,b) => a.level - b.level)
+        .map(n => '<button class="dv-chip dv-chip--'+stageStatus(n)+'" data-stage="'+n.id+'" '
+                + 'style="--c:'+meta.color+'" title="Ejecutar '+n.label+'">'+n.label+'</button>')
+        .join('');
+      return ''
+        + '<article class="dv-team" style="--c:'+meta.color+'">'
+        +   '<header class="dv-team__head">'
+        +     '<span class="dv-team__dot"></span>'
+        +     '<div><h3 class="dv-team__name">'+meta.label+'</h3>'
+        +     '<p class="dv-team__tag">'+meta.tagline+'</p></div>'
+        +     '<span class="dv-team__count">'+nodes.length+'</span>'
+        +   '</header>'
+        +   '<div class="dv-team__bar"><span style="width:'+pct+'%"></span></div>'
+        +   '<div class="dv-team__meta">'+done+' ok · '+fail+' fail · '+pct+'%</div>'
+        +   '<div class="dv-team__chips">'+chips+'</div>'
+        + '</article>';
+    }).join('');
+    grid.querySelectorAll('.dv-chip').forEach(b =>
+      b.addEventListener('click', () => runStage(b.dataset.stage)));
+  }
+
+  // ── DAG SVG ──────────────────────────────────────────────────────────────
+  const COLW = 168, ROWH = 66, NW = 132, NH = 46, PADX = 28, PADY = 34;
+
+  function renderDag(){
+    const svg = $('dv-svg');
+    const nodes = DAG.nodes.slice();
+    if (!nodes.length){ svg.innerHTML = ''; return; }
+
+    // bucket by level
+    const levels = {};
+    nodes.forEach(n => { (levels[n.level] = levels[n.level] || []).push(n); });
+    const levelKeys = Object.keys(levels).map(Number).sort((a,b)=>a-b);
+    const maxRows = Math.max.apply(null, levelKeys.map(l => levels[l].length));
+
+    const pos = {};
+    levelKeys.forEach((l, ci) => {
+      const col = levels[l];
+      const offset = (maxRows - col.length) * ROWH / 2;
+      col.forEach((n, ri) => {
+        pos[n.id] = { x: PADX + ci*COLW, y: PADY + offset + ri*ROWH };
+      });
+    });
+
+    const W = PADX*2 + (levelKeys.length-1)*COLW + NW;
+    const H = PADY*2 + (maxRows-1)*ROWH + NH;
+    svg.setAttribute('viewBox', '0 0 '+W+' '+H);
+    svg.setAttribute('width', W); svg.setAttribute('height', H);
+
+    // edges
+    let edges = '';
+    (DAG.edges||[]).forEach(e => {
+      const a = pos[e.from], b = pos[e.to];
+      if (!a || !b) return;
+      const x1 = a.x + NW, y1 = a.y + NH/2;
+      const x2 = b.x,      y2 = b.y + NH/2;
+      const mx = (x1 + x2) / 2;
+      edges += '<path class="dv-edge" d="M'+x1+' '+y1+' C'+mx+' '+y1+' '+mx+' '+y2+' '+x2+' '+y2+'"/>';
+    });
+
+    // nodes
+    let boxes = '';
+    nodes.forEach(n => {
+      const p = pos[n.id], c = groupColor(n.group), st = stageStatus(n);
+      boxes += ''
+        + '<g class="dv-node dv-node--'+st+'" data-stage="'+n.id+'" '
+        +   'transform="translate('+p.x+','+p.y+')" style="--c:'+c+'">'
+        +   '<rect class="dv-node__box" width="'+NW+'" height="'+NH+'" rx="9"/>'
+        +   '<circle class="dv-node__stat" cx="14" cy="'+(NH/2)+'" r="4"/>'
+        +   '<text class="dv-node__lbl" x="26" y="'+(NH/2-2)+'">'+esc(n.label)+'</text>'
+        +   '<text class="dv-node__id"  x="26" y="'+(NH/2+13)+'">'+esc(n.id)+'</text>'
+        + '</g>';
+    });
+
+    svg.innerHTML = edges + boxes;
+    svg.querySelectorAll('.dv-node').forEach(g =>
+      g.addEventListener('click', () => runStage(g.dataset.stage)));
+
+    // level bar
+    $('dv-levelbar').innerHTML = levelKeys
+      .map(l => '<span class="dv-levellbl" style="width:'+COLW+'px">L'+l+'</span>').join('');
+
+    // legend
+    $('dv-legend').innerHTML = ['git','build','test','ops']
+      .filter(g => nodes.some(n => n.group===g))
+      .map(g => '<span class="dv-leg"><i style="background:'+groupColor(g)+'"></i>'
+              + (GROUPS[g]?GROUPS[g].label.split(' ·')[0]:g)+'</span>').join('');
+  }
+
+  function esc(s){ return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;'); }
+
+  function markRunning(id, on){
+    running[id] = on;
+    renderTeams(); renderDag();
+  }
+
+  // ── Execute a single stage ───────────────────────────────────────────────
+  async function runStage(id){
+    if (running[id]) return;
+    markRunning(id, true);
+    log('▷ <strong>'+id+'</strong> — computando…', 'run');
+    try {
+      const r = await fetch(API.run(id), {cache:'no-store'});
+      const d = await r.json();
+      const ok = !!d.ok;
+      log((ok?'✔':'✗') + ' <strong>'+id+'</strong> — ' + (ok?'ok':'fail')
+        + ' · ' + (d.ms||0) + ' ms', ok?'ok':'fail');
+    } catch(e){
+      log('✗ <strong>'+id+'</strong> — error de red', 'err');
+    } finally {
+      running[id] = false;
+      await fetchDag();
+    }
+  }
+
+  // ── Run full pipeline ────────────────────────────────────────────────────
+  async function runPipeline(){
+    const btn = $('dv-run-all');
+    btn.disabled = true; btn.textContent = '⧗ Ejecutando…';
+    log('▶ <strong>pipeline completo</strong> — recorriendo la trayectoria…', 'run');
+    try {
+      const r = await fetch(API.pipeline, {cache:'no-store'});
+      const d = await r.json();
+      const ok = !!d.ok;
+      log((ok?'✔':'✗') + ' pipeline — ' + (ok?'ok':'fail')
+        + ' · sha ' + (d.sha||'?') + ' · ' + (d.elapsedMs||0) + ' ms', ok?'ok':'fail');
+    } catch(e){
+      log('✗ pipeline — error de red', 'err');
+    } finally {
+      btn.disabled = false; btn.textContent = '▶ Ejecutar pipeline completo';
+      await fetchDag();
+      await fetchHistory();
+    }
+  }
+
+  // ── Trajectory (NestList) ────────────────────────────────────────────────
+  async function runTrajectory(){
+    const n = $('dv-traj-n').value;
+    const btn = $('dv-run-traj');
+    btn.disabled = true;
+    log('≋ <strong>trayectoria</strong> — NestList[runPipeline, estado₀, '+n+']…', 'run');
+    try {
+      const r = await fetch(API.traj(n), {cache:'no-store'});
+      const d = await r.json();
+      if (d.ok){
+        log('✔ serie generada — ' + (d.steps||0) + ' pasos persistidos', 'ok');
+        (d.trajectory||[]).forEach(s => {
+          if (s.step) log('&nbsp;&nbsp;· step '+s.step+' · '+(s.ok?'ok':'fail')
+                        + ' · sha '+(s.sha||'?'), s.ok?'ok':'fail');
+        });
+      } else {
+        log('✗ trayectoria — ' + (d.err||'fail'), 'fail');
+      }
+    } catch(e){
+      log('✗ trayectoria — error de red', 'err');
+    } finally {
+      btn.disabled = false;
+      await fetchDag();
+      await fetchHistory();
+    }
+  }
+
+  // ── History (Warehouse) ──────────────────────────────────────────────────
+  async function fetchHistory(){
+    try {
+      const r = await fetch(API.history, {cache:'no-store'});
+      const d = await r.json();
+      const runs = d.runs || [];
+      const body = $('dv-hist-body');
+      if (!runs.length){
+        body.innerHTML = '<tr><td colspan="6" class="dv-hist-empty">'
+          + 'Sin runs aún — ejecuta el pipeline para poblar la serie.</td></tr>';
+        return;
+      }
+      body.innerHTML = runs.map(x => {
+        const ok = String(x.status).toLowerCase() === 'ok';
+        return '<tr>'
+          + '<td class="dv-mono">'+esc(x.id)+'</td>'
+          + '<td class="dv-mono">'+esc(x.sha||'—')+'</td>'
+          + '<td class="dv-mono dv-dim">'+esc(x.started_at||'—')+'</td>'
+          + '<td class="dv-mono">'+esc(x.elapsed_ms!=null?x.elapsed_ms:'—')+'</td>'
+          + '<td><span class="dv-badge dv-badge--'+(ok?'ok':'fail')+'">'+esc(x.status)+'</span></td>'
+          + '<td class="dv-mono">'+esc(x.step_num!=null?x.step_num:'—')+'</td>'
+          + '</tr>';
+      }).join('');
+    } catch(e){ /* silent */ }
+  }
+
+  // ── Reset local status view (does not touch server) ──────────────────────
+  function resetView(){
+    running = {};
+    DAG.nodes.forEach(n => { n.lastResult = {}; });
+    renderTeams(); renderDag(); updateProgress();
+    log('↺ vista reiniciada — estados locales limpiados', '');
+  }
+
+  // ── Wire up ──────────────────────────────────────────────────────────────
+  $('dv-run-all').addEventListener('click', runPipeline);
+  $('dv-run-traj').addEventListener('click', runTrajectory);
+  $('dv-reset').addEventListener('click', resetView);
+  $('dv-refresh').addEventListener('click', fetchDag);
+  $('dv-clear').addEventListener('click', () => {
+    $('dv-log').innerHTML = '<p class="dv-log-hint">Consola limpia. Selecciona una etapa o ejecuta el pipeline.</p>';
+  });
+  $('dv-hist-refresh').addEventListener('click', fetchHistory);
+
+  // ── Boot ─────────────────────────────────────────────────────────────────
+  fetchStatus();
+  fetchDag();
+  fetchHistory();
+  setInterval(fetchStatus, 15000);
+})();
+</script>
+</body>
+</html>

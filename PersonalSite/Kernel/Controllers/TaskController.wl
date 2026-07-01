@@ -37,6 +37,7 @@ tasksConfigApply::usage  = "tasksConfigApply[req] aplica todos los configs de DB
 tasksConfigSeed::usage   = "tasksConfigSeed[req] siembra los defaults en la DB.";
 tasksConfigById::usage   = "tasksConfigById[id, req] devuelve un config por task_id.";
 uxContactState::usage    = "uxContactState[req] devuelve el estado UX del boton Contacto (JSON).";
+devopsPage::usage        = "devopsPage[req] renderiza la consola narrativa DevOps (Ruliad, end-to-end).";
 devopsDag::usage         = "devopsDag[req] devuelve el DAG del pipeline DevOps (18 stages).";
 devopsStatus::usage      = "devopsStatus[req] devuelve el estado del bridge y resultados recientes.";
 devopsRunStage::usage    = "devopsRunStage[stage, req] ejecuta una etapa del pipeline DevOps.";
@@ -272,6 +273,23 @@ uxContactState[req_] :=
    GET  /devops/status      → bridge health + resultados recientes
    POST /devops/run/:stage  → ejecuta una etapa puntual
    ══════════════════════════════════════════════════════════════════ *)
+
+(* ── GET /devops ─── consola narrativa Ruliad (página completa) ───── *)
+devopsPage[req_] :=
+  Module[{d, nodes, stageCount, layerCount, groupCount, snap, kid},
+    d          = Quiet @ Check[PersonalSite`DevOps`dag[], <|"nodes"->{}, "stageCount"->0|>];
+    nodes      = Lookup[d, "nodes", {}];
+    stageCount = Lookup[d, "stageCount", Length[nodes]];
+    layerCount = With[{lv = Lookup[#, "level", 0] & /@ nodes},
+                   If[lv === {}, 0, Max[lv] + 1]];
+    groupCount = Length @ DeleteDuplicates[Lookup[#, "group", "?"] & /@ nodes];
+    snap       = Quiet @ Check[PersonalSite`TaskManager`summary[], <||>];
+    kid        = ToString[Lookup[snap, "kernel", "?"]];
+    PersonalSite`View`render["devops",
+      <|"kernelID"   -> kid,
+        "stageCount" -> ToString[stageCount],
+        "layerCount" -> ToString[layerCount],
+        "groupCount" -> ToString[groupCount]|>]];
 
 (* ── GET /devops/dag ─────────────────────────────────────────────── *)
 devopsDag[req_] :=
