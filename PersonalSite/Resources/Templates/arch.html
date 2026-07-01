@@ -28,6 +28,7 @@
     <div id="arch-sim-bar">
       <button id="arch-sim-btn" class="arch-sim-btn">&#9654; Simular NestSchedule</button>
       <button id="arch-hb-btn" class="arch-sim-btn arch-hb-btn">&#9679; Heartbeat ON</button>
+      <button id="arch-lbl-btn" class="arch-sim-btn arch-lbl-btn">&#9634; Labels OFF</button>
       <span id="arch-sim-label" class="arch-sim-label"></span>
       <span id="arch-hb-ts" class="arch-hb-ts"></span>
       <div id="arch-unit-badge" class="arch-unit-badge" aria-live="polite"></div>
@@ -84,6 +85,7 @@
 </section>
 
 <script src="https://unpkg.com/3d-force-graph@1/dist/3d-force-graph.min.js"></script>
+<script src="https://unpkg.com/three-spritetext@1/dist/three-spritetext.min.js"></script>
 <script>
 (function() {
   var COLOR = {
@@ -158,15 +160,26 @@
      unit:'HTTP 200 OK · Content-Type HTML/JSON · exit'}
   ];
   var simTimer = [], simActive = false;
+  var labelsOn  = false;   /* floating SpriteText labels toggle */
   var el = document.getElementById('arch-graph');
   el.style.height = '620px';
+  var Graph;   /* declared here so the labels toggle closure can reach it */
+
+  /* Labels toggle button */
+  var lblBtn = document.getElementById('arch-lbl-btn');
+  if (lblBtn) lblBtn.addEventListener('click', function() {
+    labelsOn = !labelsOn;
+    lblBtn.textContent = labelsOn ? '\u25A3 Labels ON' : '\u25A2 Labels OFF';
+    lblBtn.classList.toggle('arch-lbl-btn--on', labelsOn);
+    if (Graph) Graph.nodeThreeObject(Graph.nodeThreeObject());
+  });
 
   fetch('/arch/data')
     .then(function(r){ return r.json(); })
     .then(function(data) {
       var highlighted = new Set();
 
-      var Graph = ForceGraph3D()(el)
+      Graph = ForceGraph3D()(el)
         .width(el.parentElement.offsetWidth || window.innerWidth)
         .height(620)
         .backgroundColor('#0f0f10')
@@ -190,6 +203,20 @@
           if(n.group==='frontend') return 7;
           if(n.group==='nest-rt')  return 4;
           return 5;
+        })
+        .nodeThreeObjectExtend(true)
+        .nodeThreeObject(function(n){
+          if (!labelsOn) return null;
+          var sp = new SpriteText(n.label || n.id);
+          sp.color       = COLOR[n.group] || '#ccc';
+          sp.textHeight  = 3.2;
+          sp.backgroundColor = 'rgba(10,10,14,0.72)';
+          sp.padding     = 1.4;
+          sp.borderRadius = 3;
+          sp.borderWidth  = 0.4;
+          sp.borderColor  = COLOR[n.group] || '#555';
+          sp.position.y  = -10;
+          return sp;
         })
         .linkColor(function(l){
           if(!highlighted.size) return 'rgba(160,160,170,0.5)';

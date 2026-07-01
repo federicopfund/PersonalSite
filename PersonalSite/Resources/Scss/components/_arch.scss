@@ -132,6 +132,18 @@
       color: #555;
     }
   }
+
+  &.arch-lbl-btn {
+    border-color: #7a7a85;
+    color: #7a7a85;
+    font-size: .72rem;
+    &:hover { background: rgba(#7a7a85, .12); }
+    &--on {
+      border-color: #00e5ff;
+      color: #00e5ff;
+      background: rgba(#00e5ff, .1);
+    }
+  }
 }
 
 .arch-sim-label {
