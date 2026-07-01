@@ -9,27 +9,29 @@
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <title>KPI Workstation — Federico</title>
-  <link rel="stylesheet" href="/static/styles.css">
+  <link rel="stylesheet" href="/static/styles.css?v=<* TemplateSlot["cssVersion"] *>">
 </head>
 <body class="kpi-body">
 
   <!-- ═══════════════════════════ HEADER ═══════════════════════════════ -->
   <header class="kpi-header">
-    <div class="kpi-header__brand">
-      <span class="kpi-brand-icon">◈</span>
-      <span class="kpi-brand-text">KPI Workstation</span>
-      <span class="kpi-brand-sub">Kernel&nbsp;#<span id="kpi-kernel">—</span></span>
-    </div>
+    <div class="kpi-header__inner">
+      <div class="kpi-header__brand">
+        <span class="kpi-brand-icon">◈</span>
+        <span class="kpi-brand-text">KPI Workstation</span>
+        <span class="kpi-brand-sub">Kernel&nbsp;#<span id="kpi-kernel">—</span></span>
+      </div>
 
-    <div class="kpi-clock-wrap">
-      <div class="kpi-clock" id="kpi-clock">--:--:--</div>
-      <div class="kpi-date"  id="kpi-date">—</div>
-    </div>
+      <div class="kpi-clock-wrap">
+        <div class="kpi-clock" id="kpi-clock">--:--:--</div>
+        <div class="kpi-date"  id="kpi-date">—</div>
+      </div>
 
-    <div class="kpi-live-badge">
-      <span class="kpi-pulse"></span>
-      <span>LIVE</span>
-      <span class="kpi-poll-dot" id="kpi-poll-dot" title="último poll"></span>
+      <div class="kpi-live-badge">
+        <span class="kpi-pulse"></span>
+        <span>LIVE</span>
+        <span class="kpi-poll-dot" id="kpi-poll-dot" title="último poll"></span>
+      </div>
     </div>
   </header>
 
@@ -179,12 +181,14 @@
 
   <!-- ═══════════════════════════ FOOTER NAV ══════════════════════════ -->
   <nav class="kpi-footer-nav">
-    <a href="/tasks">Tasks</a>
-    <a href="/dag">DAG</a>
-    <a href="/kernel">Kernel</a>
-    <a href="/devops">DevOps</a>
-    <a href="/perf">Perf</a>
-    <a href="/">Inicio</a>
+    <div class="kpi-footer-nav__inner">
+      <a href="/tasks">Tasks</a>
+      <a href="/dag">DAG</a>
+      <a href="/kernel">Kernel</a>
+      <a href="/devops">DevOps</a>
+      <a href="/perf">Perf</a>
+      <a href="/">Inicio</a>
+    </div>
   </nav>
 
 <!-- ═════════════════════════════ SCRIPTS ════════════════════════════════ -->

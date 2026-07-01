@@ -29,6 +29,7 @@
   --kpi-mono:     'SFMono-Regular', Consolas, 'Cascadia Code', monospace;
   --kpi-gap:      1rem;
   --kpi-radius:   10px;
+  --kpi-maxw:     1200px;
 
   min-height: 100vh;
   background: var(--kpi-bg);
@@ -40,18 +41,25 @@
 
 // ── Header ─────────────────────────────────────────────────────────────────
 .kpi-header {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  padding: .85rem 1.5rem;
+  padding: .85rem 0;
   border-bottom: 1px solid var(--kpi-border);
   background: rgba(0,0,0,.35);
   backdrop-filter: blur(12px);
   position: sticky;
   top: 0;
   z-index: 50;
-  gap: 1rem;
-  flex-wrap: wrap;
+
+  &__inner {
+    width: 100%;
+    max-width: var(--kpi-maxw);
+    margin-inline: auto;
+    padding-inline: 1.5rem;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 1rem;
+    flex-wrap: wrap;
+  }
 
   &__brand {
     display: flex;
@@ -151,6 +159,9 @@
   display: grid;
   grid-template-columns: 160px 1fr;
   gap: var(--kpi-gap);
+  width: 100%;
+  max-width: var(--kpi-maxw);
+  margin-inline: auto;
   padding: 1.25rem 1.5rem .75rem;
   align-items: center;
 
@@ -300,16 +311,30 @@
   display: flex;
   align-items: center;
   justify-content: space-between;
-  margin-bottom: .6rem;
   gap: .5rem;
+  margin-bottom: .7rem;
+  padding-bottom: .45rem;
+  border-bottom: 1px solid var(--kpi-border);
 }
 
 .kpi-section-title {
-  font-size: .68rem;
+  display: inline-flex;
+  align-items: center;
+  gap: .5rem;
+  font-size: .74rem;
   font-weight: 700;
-  letter-spacing: .12em;
+  letter-spacing: .1em;
   text-transform: uppercase;
-  color: var(--kpi-muted);
+  color: var(--kpi-text);
+
+  &::before {
+    content: '';
+    width: 3px;
+    height: .95em;
+    border-radius: 2px;
+    background: var(--kpi-glow);
+    box-shadow: 0 0 8px color-mix(in srgb, var(--kpi-glow) 60%, transparent);
+  }
 }
 
 .kpi-section-meta {
@@ -351,6 +376,9 @@
 
 // ── Runtime analytics (serie temporal + métricas de cruce) ─────────────────
 .kpi-analytics {
+  width: 100%;
+  max-width: var(--kpi-maxw);
+  margin-inline: auto;
   padding: .5rem 1.5rem 1rem;
 }
 
@@ -478,11 +506,14 @@
   opacity: .6;
 }
 
-// ── Bottom: tasks + runner ────────────────────────────────────────────────
+// ── Bottom: tasks + runner ──────────────────────────────────────────────
 .kpi-bottom {
   display: grid;
   grid-template-columns: 1fr 340px;
   gap: var(--kpi-gap);
+  width: 100%;
+  max-width: var(--kpi-maxw);
+  margin-inline: auto;
   padding: 0 1.5rem 1.5rem;
   flex: 1;
   align-items: start;
@@ -712,12 +743,19 @@
 
 // ── Footer nav ────────────────────────────────────────────────────────────
 .kpi-footer-nav {
-  display: flex;
-  gap: 1.5rem;
-  padding: .85rem 1.5rem;
+  padding: .85rem 0;
   border-top: 1px solid var(--kpi-border);
   background: rgba(0,0,0,.2);
   flex-shrink: 0;
+
+  &__inner {
+    width: 100%;
+    max-width: var(--kpi-maxw);
+    margin-inline: auto;
+    padding-inline: 1.5rem;
+    display: flex;
+    gap: 1.5rem;
+  }
 
   a {
     font-size: .75rem;
