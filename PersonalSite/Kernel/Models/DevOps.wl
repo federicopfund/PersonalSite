@@ -36,8 +36,8 @@ smokeTest::usage     = "smokeTest[] HTTP GET localhost:18000 health check.";
 deployNotify::usage  = "deployNotify[] registra evento de deploy con timestamp.";
 perfCheck::usage     = "perfCheck[] mide latencia de GET / en ms.";
 changelogGen::usage  = "changelogGen[] git log --oneline -10 como changelog.";
-toFlowSpec::usage    = "toFlowSpec[] convierte $devopsStages en un Flow spec (deps+action).";
-runPipeline::usage   = "runPipeline[] ejecuta el pipeline completo via Flow.run con paralelismo topologico.";
+toFlowSpec::usage    = "toFlowSpec[skip] convierte $devopsStages en un Flow spec (deps+action); skip omite etapas como no-ops verdes.";
+runPipeline::usage   = "runPipeline[] ejecuta el pipeline completo via Flow.run; runPipeline[\"demo\"] omite las etapas mutantes/push ($demoSkip).";
 trajectory::usage    = "trajectory[n] aplica NestList[runPipeline, state0, n] — trayectoria Ruliad.";
 saveRun::usage       = "saveRun[stepNum, state] persiste un paso del pipeline en pipeline_runs (Warehouse).";
 pipelineHistory::usage = "pipelineHistory[n] retorna los ultimos n runs desde el Warehouse (SQLite).";
@@ -51,16 +51,50 @@ $appRoot = FileNameJoin[{$root, "PersonalSite"}];
 (* ── Helper: ejecutar proceso externo ───────────────────────────────── *)
 run[args_List] :=
   Module[{r},
-    r = TimeConstrained[
+    r = Quiet @ TimeConstrained[
           RunProcess[args, All, ProcessDirectory -> $root],
           30,
           <|"ExitCode" -> -1, "StandardOutput" -> "",
             "StandardError" -> "process timeout (30s)"|>];
-    <|"exit" -> Lookup[r, "ExitCode", -1],
-      "out"  -> StringTake[Lookup[r, "StandardOutput",  ""], UpTo[600]],
-      "err"  -> StringTake[Lookup[r, "StandardError",   ""], UpTo[300]]|>];
+    If[! AssociationQ[r],
+      (* RunProcess devolvio $Failed: binario inexistente en el runtime.
+         Silenciado (Quiet) para no disparar el Check de runStage.        *)
+      <|"exit" -> -127, "out" -> "",
+        "err"  -> First[args, "cmd"] <> ": binario no disponible en el runtime"|>,
+      <|"exit" -> Lookup[r, "ExitCode", -1],
+        "out"  -> StringTake[Lookup[r, "StandardOutput",  ""], UpTo[600]],
+        "err"  -> StringTake[Lookup[r, "StandardError",   ""], UpTo[300]]|>]];
 
 runQ[args_List] := run[args]["exit"] === 0;
+
+(* ── DevOps Bridge (host) ────────────────────────────────────
+   Las etapas que dependen de git/docker/python NO existen dentro del
+   contenedor runtime (solo tiene wolframscript + python3, sin .git). El
+   bridge corre en el host (make bridge) y expone cada operacion via HTTP.
+   Preferimos el bridge; si no responde, caemos a ejecucion nativa para
+   entornos que SI tienen las herramientas (p.ej. el devcontainer).      *)
+$bridgeBase = "http://172.18.0.1:8091";
+
+bridgePost[path_String, timeout_ : 60] :=
+  Module[{body},
+    body = Quiet @ Check[
+      TimeConstrained[
+        URLRead[HTTPRequest[$bridgeBase <> path,
+                  <|"Method" -> "POST", "Body" -> ""|>], "Body"],
+        timeout, $Failed],
+      $Failed];
+    If[! StringQ[body] || body === "", Return[$Failed]];
+    Quiet @ Check[
+      With[{j = Developer`ReadRawJSONString[body]},
+        If[AssociationQ[j], j, $Failed]],
+      $Failed]];
+
+(* Ejecuta la etapa via bridge; si no hay bridge, usa la funcion nativa. *)
+bridgeOr[path_String, timeout_, nativeFn_] :=
+  Module[{b = bridgePost[path, timeout]},
+    If[AssociationQ[b],
+      Append[b, "via" -> "bridge"],
+      Append[nativeFn[], "via" -> "native"]]];
 
 (* ── L0 · code-lint ─────────────────────────────────────────────────── *)
 (*  SyntaxQ check de cada archivo .wl en Kernel/                         *)
@@ -82,12 +116,13 @@ PersonalSite`DevOps`codeLint[] :=
 
 (* ── L0 · git-status ────────────────────────────────────────────────── *)
 PersonalSite`DevOps`gitStatus[] :=
+  bridgeOr["/git/status", 30, Function[
   Module[{r, lines},
     r = run[{"git", "-C", $root, "status", "--porcelain"}];
     lines = Select[StringSplit[r["out"], "\n"], StringLength[#] > 0 &];
     <|"ok"      -> (r["exit"] === 0),
       "changed" -> Length[lines],
-      "raw"     -> StringTake[r["out"], UpTo[400]]|>];
+      "raw"     -> StringTake[r["out"], UpTo[400]]|>]]];
 
 (* ── L1 · test-run ───────────────────────────────────────────────────── *)
 (*  Ejecuta TestReport[file] nativamente en el kernel actual —            *)
@@ -157,31 +192,40 @@ PersonalSite`DevOps`runTests[layer_String] :=
 
 (* ── L1 · git-diff ──────────────────────────────────────────────────── *)
 PersonalSite`DevOps`gitDiff[] :=
+  bridgeOr["/git/diff", 30, Function[
   Module[{r},
     r = run[{"git", "-C", $root, "diff", "--stat", "HEAD"}];
     <|"ok"   -> (r["exit"] === 0),
-      "stat" -> StringTake[r["out"] <> r["err"], UpTo[500]]|>];
+      "stat" -> StringTake[r["out"] <> r["err"], UpTo[500]]|>]]];
 
 (* ── L2 · test-report ───────────────────────────────────────────────── *)
 PersonalSite`DevOps`testReport[] :=
-  Module[{r},
-    r = run[{"git", "-C", $root, "log", "--oneline", "-1"}];
-    <|"ok"     -> (r["exit"] === 0),
-      "commit" -> StringTrim[r["out"]],
-      "ts"     -> DateString["ISODateTime"]|>];
+  Module[{b},
+    b = bridgePost["/git/log", 30];
+    If[AssociationQ[b] && StringQ[Lookup[b, "log", Null]],
+      <|"ok"     -> TrueQ[b["ok"]],
+        "commit" -> First[Select[StringSplit[b["log"], "\n"], # =!= "" &], ""],
+        "ts"     -> DateString["ISODateTime"], "via" -> "bridge"|>,
+      Module[{r},
+        r = run[{"git", "-C", $root, "log", "--oneline", "-1"}];
+        <|"ok"     -> (r["exit"] === 0),
+          "commit" -> StringTrim[r["out"]],
+          "ts"     -> DateString["ISODateTime"], "via" -> "native"|>]]];
 
 (* ── L2 · paclet-clean ──────────────────────────────────────────────── *)
 PersonalSite`DevOps`pacletClean[] :=
+  bridgeOr["/build/clean", 30, Function[
   Module[{buildDir, files},
     buildDir = FileNameJoin[{$root, "build"}];
     files = If[DirectoryQ[buildDir],
               FileNames["*.paclet", buildDir], {}];
     Quiet @ Scan[DeleteFile, files];
     <|"ok"      -> True,
-      "deleted" -> Length[files]|>];
+      "deleted" -> Length[files]|>]]];
 
 (* ── L3 · paclet-build ─────────────────────────────────────────────── *)
 PersonalSite`DevOps`pacletBuild[] :=
+  bridgeOr["/build/paclet", 90, Function[
   Module[{r, built},
     r = run[{"python3",
              FileNameJoin[{$root, "tools", "build_paclet.py"}]}];
@@ -190,17 +234,19 @@ PersonalSite`DevOps`pacletBuild[] :=
     <|"ok"     -> (r["exit"] === 0),
       "exit"   -> r["exit"],
       "paclet" -> If[built =!= {}, FileNameTake[Last[built]], "none"],
-      "out"    -> StringTake[r["out"], UpTo[400]]|>];
+      "out"    -> StringTake[r["out"], UpTo[400]]|>]]];
 
 (* ── L3 · git-stage ─────────────────────────────────────────────────── *)
 PersonalSite`DevOps`gitStage[] :=
+  bridgeOr["/git/stage", 30, Function[
   Module[{r},
     r = run[{"git", "-C", $root, "add", "-A"}];
     <|"ok"   -> (r["exit"] === 0),
-      "exit" -> r["exit"]|>];
+      "exit" -> r["exit"]|>]]];
 
 (* ── L4 · paclet-verify ─────────────────────────────────────────────── *)
 PersonalSite`DevOps`pacletVerify[] :=
+  bridgeOr["/build/verify", 30, Function[
   Module[{buildDir, files, f},
     buildDir = FileNameJoin[{$root, "build"}];
     files = If[DirectoryQ[buildDir],
@@ -210,7 +256,7 @@ PersonalSite`DevOps`pacletVerify[] :=
     f = Last[files];
     <|"ok"    -> True,
       "file"  -> FileNameTake[f],
-      "bytes" -> FileByteCount[f]|>];
+      "bytes" -> FileByteCount[f]|>]]];
 
 (* ── L4 · docker-build ──────────────────────────────────────────────── *)
 PersonalSite`DevOps`dockerBuild[] :=
@@ -226,30 +272,33 @@ PersonalSite`DevOps`dockerBuild[] :=
 
 (* ── L4 · git-commit ────────────────────────────────────────────────── *)
 PersonalSite`DevOps`gitCommit[] :=
+  bridgeOr["/git/commit", 30, Function[
   Module[{msg, r},
     msg = "auto: devops pipeline deploy " <> DateString["ISODateTime"];
     r = run[{"git", "-C", $root, "commit",
              "-m", msg, "--allow-empty"}];
     <|"ok"   -> (r["exit"] === 0),
       "msg"  -> msg,
-      "out"  -> StringTake[r["out"] <> r["err"], UpTo[300]]|>];
+      "out"  -> StringTake[r["out"] <> r["err"], UpTo[300]]|>]]];
 
 (* ── L5 · docker-verify ─────────────────────────────────────────────── *)
 PersonalSite`DevOps`dockerVerify[] :=
+  bridgeOr["/docker/verify", 30, Function[
   Module[{r},
     r = run[{"docker", "ps",
              "--filter", "name=profile-web-1",
              "--format", "{{.Status}}"}];
     <|"ok"     -> StringContainsQ[r["out"], "Up"],
-      "status" -> StringTrim[r["out"]]|>];
+      "status" -> StringTrim[r["out"]]|>]]];
 
 (* ── L5 · git-push ──────────────────────────────────────────────────── *)
 PersonalSite`DevOps`gitPush[] :=
+  bridgeOr["/git/push", 90, Function[
   Module[{r},
     r = run[{"git", "-C", $root, "push", "origin", "main"}];
     <|"ok"   -> (r["exit"] === 0),
       "exit" -> r["exit"],
-      "out"  -> StringTake[r["out"] <> r["err"], UpTo[400]]|>];
+      "out"  -> StringTake[r["out"] <> r["err"], UpTo[400]]|>]]];
 
 (* ── L6 · smoke-test ────────────────────────────────────────────────── *)
 PersonalSite`DevOps`smokeTest[] :=
@@ -268,12 +317,16 @@ PersonalSite`DevOps`smokeTest[] :=
 
 (* ── L6 · deploy-notify ─────────────────────────────────────────────── *)
 PersonalSite`DevOps`deployNotify[] :=
-  Module[{r},
-    r = run[{"git", "-C", $root, "log", "--oneline", "-1"}];
+  Module[{b, commit},
+    b = bridgePost["/git/log", 30];
+    commit = If[AssociationQ[b] && StringQ[Lookup[b, "log", Null]],
+      First[Select[StringSplit[b["log"], "\n"], # =!= "" &], ""],
+      StringTrim[run[{"git", "-C", $root, "log", "--oneline", "-1"}]["out"]]];
     <|"ok"     -> True,
       "event"  -> "deploy",
-      "commit" -> StringTrim[r["out"]],
-      "ts"     -> DateString["ISODateTime"]|>];
+      "commit" -> commit,
+      "ts"     -> DateString["ISODateTime"],
+      "via"    -> If[AssociationQ[b], "bridge", "native"]|>];
 
 (* ── L7 · perf-check ────────────────────────────────────────────────── *)
 PersonalSite`DevOps`perfCheck[] :=
@@ -293,14 +346,19 @@ PersonalSite`DevOps`perfCheck[] :=
 
 (* ── L7 · changelog-gen ─────────────────────────────────────────────── *)
 PersonalSite`DevOps`changelogGen[] :=
-  Module[{r, logR, authors},
-    r     = run[{"git", "-C", $root, "log", "--oneline", "-10"}];
-    logR  = run[{"git", "-C", $root, "log",
-                 "--pretty=format:%s", "-10"}];
-    <|"ok"     -> (r["exit"] === 0),
-      "log"    -> StringTrim[r["out"]],
-      "msgs"   -> StringSplit[logR["out"], "\n"],
-      "ts"     -> DateString["ISODateTime"]|>];
+  Module[{b, r, logR},
+    b = bridgePost["/git/log", 30];
+    If[AssociationQ[b] && StringQ[Lookup[b, "log", Null]],
+      <|"ok"   -> TrueQ[b["ok"]],
+        "log"  -> StringTrim[b["log"]],
+        "msgs" -> Select[StringSplit[b["log"], "\n"], # =!= "" &],
+        "ts"   -> DateString["ISODateTime"], "via" -> "bridge"|>,
+      r    = run[{"git", "-C", $root, "log", "--oneline", "-10"}];
+      logR = run[{"git", "-C", $root, "log", "--pretty=format:%s", "-10"}];
+      <|"ok"   -> (r["exit"] === 0),
+        "log"  -> StringTrim[r["out"]],
+        "msgs" -> StringSplit[logR["out"], "\n"],
+        "ts"   -> DateString["ISODateTime"], "via" -> "native"|>]];
 
 (* ══════════════════════════════════════════════════════════════════════
    FASE 1 — Flow integration + Ruliad NestList Warehouse
@@ -313,17 +371,31 @@ PersonalSite`DevOps`changelogGen[] :=
    pipelineHistory[] → query los ultimos N runs
    ────────────────────────────────────────────────────────────────────── *)
 
-(* ── toFlowSpec[] ─────────────────────────────────────────────────── *)
+(* ── $demoSkip ────────────────────────────────────────────────────── *)
+(*  Etapas omitidas en modo demo (no-push): mutan el repo/host, hacen  *)
+(*  push al remoto o no pueden auto-verificarse (smoke-test hace un    *)
+(*  self-request al mismo kernel single-thread → deadlock).            *)
+$demoSkip = {"git-stage", "git-commit", "git-push",
+             "docker-build", "paclet-clean", "smoke-test"};
+
+(* ── toFlowSpec[skip] ─────────────────────────────────────────────── *)
 (*  Convierte $devopsStages en Association{id -> <|deps, action|>}    *)
-(*  compatible con PersonalSite`Flow`run.                             *)
-PersonalSite`DevOps`toFlowSpec[] :=
+(*  compatible con PersonalSite`Flow`run. Las etapas en `skip` se      *)
+(*  resuelven como no-ops verdes (skipped).                            *)
+PersonalSite`DevOps`toFlowSpec[skip_List : {}] :=
   Association @ Map[
     Function[s,
       With[{id = s[[1]], deps = s[[5]]},
         id -> <|
           "deps"   -> deps,
-          "action" -> With[{stageId = id},
-            Function[prev, PersonalSite`DevOps`runStage[stageId]]]
+          "action" -> If[MemberQ[skip, id],
+            With[{stageId = id},
+              Function[prev,
+                <|"ok" -> True, "skipped" -> True, "stage" -> stageId,
+                  "note" -> "omitido en modo demo (no-push)",
+                  "ms" -> 0, "ts" -> DateString["ISODateTime"]|>]],
+            With[{stageId = id},
+              Function[prev, PersonalSite`DevOps`runStage[stageId]]]]
         |>]],
     $devopsStages];
 
@@ -331,26 +403,42 @@ PersonalSite`DevOps`toFlowSpec[] :=
 (*  Ejecuta el pipeline completo via Flow.run ("session" backend).    *)
 (*  Las etapas independientes de cada nivel topologico corren en      *)
 (*  paralelo como TaskObjects (SessionSubmit, timeout 60s por capa).  *)
-PersonalSite`DevOps`runPipeline[] :=
-  Module[{spec, t0, flowResult, allOk, ms, sha},
-    spec       = PersonalSite`DevOps`toFlowSpec[];
+PersonalSite`DevOps`runPipeline[] := PersonalSite`DevOps`runPipeline[{}];
+
+PersonalSite`DevOps`runPipeline["demo"] :=
+  PersonalSite`DevOps`runPipeline[$demoSkip];
+
+PersonalSite`DevOps`runPipeline[skip_List] :=
+  Module[{spec, t0, flowResult, stages, allOk, ms, sha},
+    spec       = PersonalSite`DevOps`toFlowSpec[skip];
     t0         = AbsoluteTime[];
     flowResult = Quiet @ Check[
       PersonalSite`Flow`run[spec, "session"],
       <||>];
     ms     = Round[(AbsoluteTime[] - t0) * 1000, 1];
-    allOk  = AllTrue[
-      Values[flowResult],
+    (* Flow`run devuelve un wrapper; los resultados por etapa estan
+       bajo la clave "results" (Association id -> resultado).        *)
+    stages = Lookup[flowResult, "results", <||>];
+    allOk  = stages =!= <||> && AllTrue[
+      Values[stages],
       Function[r, AssociationQ[r] && TrueQ[r["ok"]]]];
     sha    = Quiet @ Check[
-      StringTrim[run[{"git", "-C", $root, "log", "--format=%h", "-1"}]["out"]],
+      Module[{b = bridgePost["/git/log", 30], line, native},
+        If[AssociationQ[b] && StringQ[Lookup[b, "log", Null]],
+          line = First[Select[StringSplit[b["log"], "\n"], # =!= "" &], ""];
+          First[StringSplit[line], "unknown"],
+          native = StringTrim[run[{"git", "-C", $root,
+                     "log", "--format=%h", "-1"}]["out"]];
+          If[native === "", "unknown", native]]],
       "unknown"];
     $devopsResults = Association @ KeyValueMap[
       Function[{k, v}, k -> If[AssociationQ[v], v, <|"ok"->False|>]],
-      flowResult];
+      stages];
     <|"ok"          -> allOk,
       "sha"         -> sha,
-      "stageResults"-> flowResult,
+      "demo"        -> (skip =!= {}),
+      "skipped"     -> skip,
+      "stageResults"-> stages,
       "elapsedMs"   -> ms,
       "ts"          -> DateString["ISODateTime"],
       "layerCount"  -> (Max[#[[4]] & /@ $devopsStages] + 1)|>];

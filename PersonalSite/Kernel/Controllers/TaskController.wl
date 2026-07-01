@@ -42,6 +42,7 @@ devopsDag::usage         = "devopsDag[req] devuelve el DAG del pipeline DevOps (
 devopsStatus::usage      = "devopsStatus[req] devuelve el estado del bridge y resultados recientes.";
 devopsRunStage::usage    = "devopsRunStage[stage, req] ejecuta una etapa del pipeline DevOps.";
 devopsPipelineRun::usage     = "devopsPipelineRun[req] ejecuta runPipeline() via Flow.run y persiste en Warehouse.";
+devopsPipelineDemo::usage    = "devopsPipelineDemo[req] ejecuta runPipeline(\"demo\") (sin push/commit) y persiste en Warehouse.";
 devopsPipelineHistory::usage = "devopsPipelineHistory[req] retorna los ultimos 50 runs del Warehouse.";
 devopsTrajectory::usage      = "devopsTrajectory[n, req] ejecuta NestList[runPipeline, state0, n] y guarda cada step.";
 devopsTestsRun::usage        = "devopsTestsRun[req] ejecuta runTests[layer] — layer via query ?layer=... o FormRules.";
@@ -325,6 +326,31 @@ devopsPipelineRun[req_] :=
     res   = Quiet @ Check[
       TimeConstrained[
         PersonalSite`DevOps`runPipeline[],
+        90,
+        <|"ok"->False, "err"->"pipeline timeout (90s)",
+          "ts"->DateString["ISODateTime"]|>],
+      <|"ok"->False, "err"->"runPipeline exception",
+        "ts"->DateString["ISODateTime"]|>];
+    saved = Quiet @ Check[
+      PersonalSite`DevOps`saveRun[1,
+        <|"ok"  -> TrueQ[res["ok"]],
+          "sha" -> Lookup[res, "sha", ""],
+          "ts"  -> Lookup[res, "ts", DateString["ISODateTime"]],
+          "runLog" -> {<|"step"->1, "ok"->TrueQ[res["ok"]],
+                         "ms"->Lookup[res,"elapsedMs",0],
+                         "ts"->Lookup[res,"ts",""]|>}|>],
+      $Failed];
+    jsonResp[<|res, "warehouse" -> (saved =!= $Failed)|>]];
+
+(* ── POST /devops/pipeline/demo ───────────────────────────────── *)
+(*  Igual que /pipeline/run pero en modo demo: omite git-stage,      *)
+(*  git-commit, git-push, docker-build, paclet-clean y smoke-test.   *)
+(*  No toca el remoto — solo popula el Warehouse con un run verde.   *)
+devopsPipelineDemo[req_] :=
+  Module[{res, saved},
+    res   = Quiet @ Check[
+      TimeConstrained[
+        PersonalSite`DevOps`runPipeline["demo"],
         90,
         <|"ok"->False, "err"->"pipeline timeout (90s)",
           "ts"->DateString["ISODateTime"]|>],

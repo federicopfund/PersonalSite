@@ -99,6 +99,7 @@ dispatcher[] := Delayed @ URLDispatcher[{
   "/devops/status"          ~~ EndOfString :> PersonalSite`Controller`devopsStatus[HTTPRequestData[]],
   "/devops/run/"    ~~ stage__ ~~ EndOfString :> PersonalSite`Controller`devopsRunStage[stage, HTTPRequestData[]],
   "/devops/pipeline/run"    ~~ EndOfString :> PersonalSite`Controller`devopsPipelineRun[HTTPRequestData[]],
+  "/devops/pipeline/demo"   ~~ EndOfString :> PersonalSite`Controller`devopsPipelineDemo[HTTPRequestData[]],
   "/devops/pipeline/history"~~ EndOfString :> PersonalSite`Controller`devopsPipelineHistory[HTTPRequestData[]],
   "/devops/trajectory/" ~~ n__ ~~ EndOfString :> PersonalSite`Controller`devopsTrajectory[n, HTTPRequestData[]],
   "/devops/tests/run/"  ~~ layer__ ~~ EndOfString :> PersonalSite`Controller`devopsTestsRunLayer[layer, HTTPRequestData[]],

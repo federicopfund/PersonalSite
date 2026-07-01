@@ -139,7 +139,8 @@
     </p>
 
     <div class="dv-pipe-controls">
-      <button id="dv-run-all" class="btn btn--primary btn--sm">▶ Ejecutar pipeline completo</button>
+      <button id="dv-run-all" class="btn btn--primary btn--sm"
+              title="Modo demo: omite git-stage/commit/push, docker-build, paclet-clean y smoke-test. No toca el remoto.">▶ Ejecutar pipeline (demo · sin push)</button>
       <div class="dv-traj">
         <label for="dv-traj-n">Trayectoria&nbsp;NestList</label>
         <select id="dv-traj-n" class="dv-select">
@@ -177,7 +178,7 @@
         <div id="dv-log" class="dv-console__log">
           <p class="dv-log-hint">
             Selecciona una etapa del grafo para computarla,<br>
-            o presiona <strong>▶ Ejecutar pipeline completo</strong>.
+            o presiona <strong>▶ Ejecutar pipeline (demo · sin push)</strong>.
           </p>
         </div>
       </aside>
@@ -228,6 +229,7 @@
     status:   '/devops/status',
     run:      s => '/devops/run/' + encodeURIComponent(s),
     pipeline: '/devops/pipeline/run',
+    demo:     '/devops/pipeline/demo',
     history:  '/devops/pipeline/history',
     traj:     n => '/devops/trajectory/' + n
   };
@@ -439,17 +441,19 @@
   async function runPipeline(){
     const btn = $('dv-run-all');
     btn.disabled = true; btn.textContent = '⧗ Ejecutando…';
-    log('▶ <strong>pipeline completo</strong> — recorriendo la trayectoria…', 'run');
+    log('▶ <strong>pipeline (demo · sin push)</strong> — recorriendo la trayectoria…', 'run');
     try {
-      const r = await fetch(API.pipeline, {cache:'no-store'});
+      const r = await fetch(API.demo, {cache:'no-store'});
       const d = await r.json();
       const ok = !!d.ok;
+      const skipped = (d.skipped||[]).length;
       log((ok?'✔':'✗') + ' pipeline — ' + (ok?'ok':'fail')
-        + ' · sha ' + (d.sha||'?') + ' · ' + (d.elapsedMs||0) + ' ms', ok?'ok':'fail');
+        + ' · sha ' + (d.sha||'?') + ' · ' + (d.elapsedMs||0) + ' ms'
+        + (skipped ? ' · ' + skipped + ' omitidas (demo)' : ''), ok?'ok':'fail');
     } catch(e){
       log('✗ pipeline — error de red', 'err');
     } finally {
-      btn.disabled = false; btn.textContent = '▶ Ejecutar pipeline completo';
+      btn.disabled = false; btn.textContent = '▶ Ejecutar pipeline (demo · sin push)';
       await fetchDag();
       await fetchHistory();
     }
