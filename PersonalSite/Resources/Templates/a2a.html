@@ -1,0 +1,322 @@
+<!DOCTYPE html>
+<html lang="es" data-theme="<* TemplateSlot["theme"] *>"
+      data-theme-mode="<* TemplateSlot["themeMode"] *>"
+      data-theme-order="<* TemplateSlot["themeOrder"] *>"
+      data-theme-interval="<* TemplateSlot["themeInterval"] *>"
+      data-theme-epoch="<* TemplateSlot["themeEpoch"] *>">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>A2A Agent Mesh — Federico</title>
+  <link rel="stylesheet" href="/static/styles.css?v=<* TemplateSlot["cssVersion"] *>">
+</head>
+<body>
+  <div class="theme-bar" aria-hidden="true"></div>
+  <nav class="navbar">
+    <div class="nav-container">
+      <a class="nav-brand" href="/">Federico</a>
+      <button class="nav-toggle" id="nt" aria-label="Menú">
+        <span></span><span></span><span></span>
+      </button>
+      <ul class="nav-links" id="nl">
+        <li><a href="/">Inicio</a></li>
+        <li><a href="/blog">Blog</a></li>
+        <li><a href="/nest">NestScheduler</a></li>
+        <li><a class="nav-cta active" href="/a2a">A2A Mesh</a></li>
+        <li><a class="nav-cta" href="/contacto">Contacto</a></li>
+      </ul>
+    </div>
+  </nav>
+
+  <main class="a2a-main">
+    <section class="a2a-hero">
+      <div class="a2a-hero__grid" aria-hidden="true"></div>
+      <div class="a2a-hero__glow" aria-hidden="true"></div>
+      <div class="a2a-hero__inner">
+        <span class="a2a-badge"><span class="a2a-badge__dot"></span>A2A Protocol v<* TemplateSlot["protocolVersion"] *> &bull; JSON-RPC 2.0 &bull; Ruliad Mesh</span>
+        <h1 class="a2a-hero__title"><* TemplateSlot["agentName"] *></h1>
+        <p class="a2a-hero__sub"><* TemplateSlot["agentDesc"] *></p>
+        <div class="a2a-hero__meta">
+          <span class="a2a-metric"><strong><* TemplateSlot["agentCount"] *></strong><span>agentes</span></span>
+          <span class="a2a-metric"><strong><* TemplateSlot["ruleCount"] *></strong><span>reglas</span></span>
+          <span class="a2a-metric a2a-metric--live"><span class="a2a-metric__pulse"></span><span>protocol online</span></span>
+        </div>
+      </div>
+    </section>
+
+    <!-- ── Discovery ──────────────────────────────────────────────── -->
+    <section class="a2a-section">
+      <div class="a2a-section__head">
+        <h2>Agent Card &amp; Discovery</h2>
+        <span class="a2a-pill"><* TemplateSlot["agentCount"] *> agentes &bull; <* TemplateSlot["ruleCount"] *> reglas</span>
+      </div>
+      <div class="a2a-discovery">
+        <div class="a2a-disc-item">
+          <span class="a2a-disc-item__k">Agent Card</span>
+          <a class="a2a-disc-item__v" href="/.well-known/agent-card.json" target="_blank" rel="noopener">
+            <code><* TemplateSlot["cardUrl"] *></code>
+          </a>
+        </div>
+        <div class="a2a-disc-item">
+          <span class="a2a-disc-item__k">JSON-RPC endpoint</span>
+          <code class="a2a-disc-item__v"><* TemplateSlot["rpcUrl"] *></code>
+        </div>
+        <div class="a2a-disc-item">
+          <span class="a2a-disc-item__k">Transport</span>
+          <code class="a2a-disc-item__v">JSONRPC &bull; message/send &bull; tasks/get &bull; tasks/cancel</code>
+        </div>
+      </div>
+    </section>
+
+    <!-- ── Agentes ────────────────────────────────────────────────── -->
+    <section class="a2a-section">
+      <h2>Agentes de la malla</h2>
+      <p class="a2a-note">
+        Cada regla del <code>NestGraph</code> es un agente A2A con una skill.
+        El orquestador reparte cada valor entre los agentes-regla, nivel a nivel.
+      </p>
+      <div class="a2a-agents"><* TemplateSlot["agentsHtml"] *></div>
+    </section>
+
+    <!-- ── Consola A2A ────────────────────────────────────────────── -->
+    <section class="a2a-section">
+      <div class="a2a-section__head">
+        <h2>Consola &mdash; message/send</h2>
+        <span id="a2a-state" class="a2a-pill a2a-pill--off">idle</span>
+      </div>
+      <div class="a2a-console">
+        <div class="a2a-field">
+          <label for="a2a-seed">Seed</label>
+          <input id="a2a-seed" type="number" value="1" step="1">
+        </div>
+        <div class="a2a-field">
+          <label for="a2a-depth">Profundidad (1–5)</label>
+          <input id="a2a-depth" type="number" min="1" max="5" value="3">
+        </div>
+        <div class="a2a-field">
+          <label for="a2a-backend">Backend</label>
+          <select id="a2a-backend">
+            <option value="session" selected>session</option>
+            <option value="sync">sync</option>
+            <option value="parallel">parallel</option>
+          </select>
+        </div>
+        <div class="a2a-field a2a-field--action">
+          <button id="a2a-send" class="btn btn--primary">➤ Enviar mensaje</button>
+        </div>
+      </div>
+
+      <dl class="a2a-stats" id="a2a-stats">
+        <div><dt>Task</dt><dd id="st-task">—</dd></div>
+        <div><dt>Estado</dt><dd id="st-state">—</dd></div>
+        <div><dt>Agentes</dt><dd id="st-agents">—</dd></div>
+        <div><dt>Mensajes A2A</dt><dd id="st-msgs">—</dd></div>
+        <div><dt>Artifacts</dt><dd id="st-arts">—</dd></div>
+        <div><dt>Hojas (stacks)</dt><dd id="st-leaves">—</dd></div>
+        <div><dt>Tiempo</dt><dd id="st-elapsed">—</dd></div>
+      </dl>
+    </section>
+
+    <!-- ── Grafo de comunicacion ──────────────────────────────────── -->
+    <section class="a2a-section">
+      <div class="a2a-section__head">
+        <h2>Grafo de comunicación de la Ruliad</h2>
+        <div class="a2a-legend">
+          <span class="a2a-legend__item"><span class="a2a-legend__dot a2a-dot--orch"></span>orchestrator</span>
+          <span class="a2a-legend__item"><span class="a2a-legend__dot a2a-dot--rule0"></span>2x+1</span>
+          <span class="a2a-legend__item"><span class="a2a-legend__dot a2a-dot--rule1"></span>x+14</span>
+          <span class="a2a-legend__item"><span class="a2a-legend__dot a2a-dot--rule2"></span>x−18</span>
+        </div>
+      </div>
+      <p class="a2a-note">
+        Cada arista es un salto de mensaje A2A entre agentes; el color indica el
+        agente-regla que produjo el nodo.
+      </p>
+      <div id="a2a-graph" class="a2a-graph">
+        <p class="a2a-empty">Enviá un mensaje para expandir la Ruliad.</p>
+      </div>
+    </section>
+
+    <!-- ── Stacks de funciones ────────────────────────────────────── -->
+    <section class="a2a-section">
+      <h2>Stacks de funciones <span class="a2a-pill a2a-pill--info">raíz → hoja</span></h2>
+      <div id="a2a-stacks" class="a2a-stacks">
+        <p class="a2a-empty">Sin datos.</p>
+      </div>
+    </section>
+
+    <!-- ── Ejemplo JSON-RPC ───────────────────────────────────────── -->
+    <section class="a2a-section">
+      <h2>Ejemplo JSON-RPC (<code>message/send</code>)</h2>
+      <div class="a2a-terminal">
+        <div class="a2a-terminal__bar">
+          <span class="a2a-terminal__dot"></span>
+          <span class="a2a-terminal__dot"></span>
+          <span class="a2a-terminal__dot"></span>
+          <em class="a2a-terminal__title">message/send · curl</em>
+        </div>
+        <pre class="a2a-code"><code>curl -X POST <* TemplateSlot["rpcUrl"] *> \
+  -H 'Content-Type: application/json' \
+  -d '{
+    "jsonrpc": "2.0",
+    "id": "1",
+    "method": "message/send",
+    "params": {
+      "message": {
+        "role": "user",
+        "parts": [{ "kind": "data", "data": { "seed": 1, "depth": 3 } }],
+        "messageId": "msg-1"
+      }
+    }
+  }'</code></pre>
+      </div>
+      <p class="a2a-note">
+        Transporte canónico A2A: <code>application/json</code>. En este despliegue
+        con Wolfram&nbsp;Web&nbsp;Engine el cuerpo crudo JSON no se expone, así que el
+        endpoint también acepta el mismo payload como
+        <code>application/x-www-form-urlencoded</code>, o podés usar
+        <code>GET /a2a/run?seed=1&amp;depth=3</code>.
+      </p>
+    </section>
+  </main>
+
+  <footer class="footer">
+    <div class="footer__inner">
+      <span>© 2026 Federico Pfund</span>
+      <span>A2A Protocol — Ruliad Agent Mesh</span>
+    </div>
+  </footer>
+
+  <script>
+  (function(){
+    const $ = id => document.getElementById(id);
+    const RULE_CLASS = i => 'a2a-node--rule' + (((i||0)%3));
+
+    /* ── Colorear los dots de los agentes (server-rendered) ─────────── */
+    document.querySelectorAll('.a2a-agent__dot').forEach(dot=>{
+      const r = parseInt(dot.getAttribute('data-rule'))||0;
+      dot.classList.add(r===0 ? 'a2a-dot--orch' : 'a2a-dot--rule'+((r-1)%3));
+    });
+
+    /* ── Render del grafo como árbol SVG por niveles ────────────────── */
+    function renderGraph(graph){
+      const box = $('a2a-graph');
+      const nodes = graph.nodes||[], edges = graph.edges||[];
+      if(!nodes.length){ box.innerHTML='<p class="a2a-empty">Sin datos.</p>'; return; }
+
+      /* Agrupar por nivel */
+      const levels = {};
+      nodes.forEach(n=>{ (levels[n.level]=levels[n.level]||[]).push(n); });
+      const maxLevel = Math.max(...nodes.map(n=>n.level));
+      const rowH = 96, padX = 40, padY = 48;
+      const byLevelCount = {};
+      Object.keys(levels).forEach(lv=>byLevelCount[lv]=levels[lv].length);
+      const width = Math.max(720, Math.max(...Object.values(byLevelCount)) * 78 + padX*2);
+      const height = (maxLevel+1)*rowH + padY;
+
+      /* Posiciones */
+      const pos = {};
+      Object.keys(levels).sort((a,b)=>a-b).forEach(lv=>{
+        const row = levels[lv];
+        const gap = width/(row.length+1);
+        row.forEach((n,i)=>{ pos[n.id] = { x: gap*(i+1), y: padY + lv*rowH }; });
+      });
+
+      let svg = `<svg viewBox="0 0 ${width} ${height}" class="a2a-svg" preserveAspectRatio="xMidYMin meet">`;
+      /* Aristas (mensajes A2A) */
+      edges.forEach(e=>{
+        const a = pos[e.from], b = pos[e.to];
+        if(!a||!b) return;
+        const cls = 'a2a-edge a2a-edge--rule'+(((e.ruleIdx||1)-1)%3);
+        svg += `<path class="${cls}" d="M${a.x},${a.y} C${a.x},${(a.y+b.y)/2} ${b.x},${(a.y+b.y)/2} ${b.x},${b.y}"/>`;
+      });
+      /* Nodos */
+      nodes.forEach(n=>{
+        const p = pos[n.id]; if(!p) return;
+        const cls = n.level===0 ? 'a2a-node a2a-node--orch'
+                                : 'a2a-node '+RULE_CLASS(((n.ruleIdx||1)-1));
+        const title = `${n.id} · ${n.agent} · valor ${n.value}`;
+        svg += `<g class="${cls}" transform="translate(${p.x},${p.y})">
+          <title>${title}</title>
+          <circle r="16"></circle>
+          <text class="a2a-node__val" dy="4">${n.value}</text>
+        </g>`;
+      });
+      svg += '</svg>';
+      box.innerHTML = svg;
+    }
+
+    /* ── Render de los stacks de funciones ──────────────────────────── */
+    function renderStacks(stacks){
+      const box = $('a2a-stacks');
+      if(!stacks || !stacks.length){ box.innerHTML='<p class="a2a-empty">Sin datos.</p>'; return; }
+      const shown = stacks.slice(0, 12);
+      box.innerHTML = shown.map(s=>{
+        const chain = (s.stack||[]).map(step=>{
+          const cls = step.level===0 ? 'a2a-step--seed' : 'a2a-step--rule'+(((step.ruleIdx||1)-1)%3);
+          return `<span class="a2a-step ${cls}">${step.label}</span>`;
+        }).join('<span class="a2a-step__arrow">→</span>');
+        return `<div class="a2a-stack">
+          <div class="a2a-stack__chain">${chain}</div>
+          <div class="a2a-stack__res">= <strong>${s.value}</strong></div>
+        </div>`;
+      }).join('') +
+      (stacks.length>shown.length ? `<p class="a2a-note">… y ${stacks.length-shown.length} stacks más.</p>` : '');
+    }
+
+    /* ── Enviar mensaje (message/send via /a2a/run) ─────────────────── */
+    $('a2a-send').addEventListener('click', async ()=>{
+      const btn = $('a2a-send');
+      const seed    = parseInt($('a2a-seed').value)||1;
+      const depth   = Math.min(5, Math.max(1, parseInt($('a2a-depth').value)||3));
+      const backend = $('a2a-backend').value;
+      btn.disabled = true; btn.textContent = '⏳ Enviando…';
+      $('a2a-state').textContent = 'working'; $('a2a-state').className = 'a2a-pill a2a-pill--on';
+      try{
+        const r = await fetch(`/a2a/run?seed=${seed}&depth=${depth}&backend=${backend}`);
+        const d = await r.json();
+        if(d.ok){
+          const s = d.stats||{};
+          $('st-task').textContent    = (d.taskId||'—').slice(0,8);
+          $('st-state').textContent   = d.state||'—';
+          $('st-agents').textContent  = s.agents ?? '—';
+          $('st-msgs').textContent    = s.messages ?? '—';
+          $('st-arts').textContent    = s.artifacts ?? '—';
+          $('st-leaves').textContent  = s.leaves ?? '—';
+          $('st-elapsed').textContent = s.elapsed!=null ? (s.elapsed).toFixed(3)+' s' : '—';
+          $('a2a-state').textContent  = d.state||'completed';
+          $('a2a-state').className     = 'a2a-pill a2a-pill--ok';
+          renderGraph(d.graph||{});
+          renderStacks((d.graph||{}).stacks);
+        } else {
+          $('a2a-state').textContent = 'failed';
+          $('a2a-state').className    = 'a2a-pill a2a-pill--err';
+        }
+      }catch(e){
+        $('a2a-state').textContent = 'error';
+        $('a2a-state').className    = 'a2a-pill a2a-pill--err';
+      }finally{
+        btn.disabled = false; btn.textContent = '➤ Enviar mensaje';
+      }
+    });
+
+    /* Nav toggle */
+    const nt = $('nt'), nl = $('nl');
+    if(nt) nt.addEventListener('click',()=>nl.classList.toggle('open'));
+  })();
+  </script>
+
+  <script>
+  /* Live theme rotation (igual que layout.html) */
+  (function(){
+    const h=document.documentElement,
+          order=(h.dataset.themeOrder||'slate').split(',').filter(Boolean),
+          mode=h.dataset.themeMode||'manual',
+          iv=(parseInt(h.dataset.themeInterval)||20)*1000;
+    if(mode!=='auto'||order.length<2) return;
+    let i=order.indexOf(h.dataset.theme); if(i<0)i=0;
+    setInterval(()=>{ i=(i+1)%order.length; h.dataset.theme=order[i]; }, iv);
+  })();
+  </script>
+</body>
+</html>

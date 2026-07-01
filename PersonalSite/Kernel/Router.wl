@@ -63,6 +63,13 @@ serveFile[rootParts_List, file_String] :=
 serveStatic[file_String] := serveFile[{"Resources", "Static"}, file];
 serveImage[file_String]  := serveFile[{"Resources", "Img"}, file];
 
+(* /a2a: el mismo path sirve la UI (GET) y el endpoint JSON-RPC A2A (POST).
+   URLDispatcher matchea solo el path, asi que despachamos por metodo aca. *)
+a2aEntry[request_] :=
+  If[ToUpperCase[ToString[Quiet @ request["Method"]]] === "POST",
+    PersonalSite`Controller`a2aRpc[request],
+    PersonalSite`Controller`a2a[request]];
+
 (* /wa-img: redirige (302) a la grafica de Wolfram|Alpha para la query 'q'.
    Se usa redirect en vez de servir bytes porque wolframwebengine no admite
    un BodyByteArray vacio; el body de texto evita ese caso. *)
@@ -128,6 +135,12 @@ dispatcher[] := Delayed @ URLDispatcher[{
   "/nest/schedule"  ~~ EndOfString :> PersonalSite`Controller`nestSchedule[HTTPRequestData[]],
   "/nest/cancel"    ~~ EndOfString :> PersonalSite`Controller`nestCancel[HTTPRequestData[]],
   "/nest"           ~~ EndOfString :> PersonalSite`Controller`nest[HTTPRequestData[]],
+  "/.well-known/agent-card.json" ~~ EndOfString :> PersonalSite`Controller`a2aCard[HTTPRequestData[]],
+  "/.well-known/agent.json"      ~~ EndOfString :> PersonalSite`Controller`a2aCard[HTTPRequestData[]],
+  "/a2a/agents"     ~~ EndOfString :> PersonalSite`Controller`a2aAgents[HTTPRequestData[]],
+  "/a2a/graph"      ~~ EndOfString :> PersonalSite`Controller`a2aGraph[HTTPRequestData[]],
+  "/a2a/run"        ~~ EndOfString :> PersonalSite`Controller`a2aRun[HTTPRequestData[]],
+  "/a2a"            ~~ EndOfString :> a2aEntry[HTTPRequestData[]],
   "/ruliology/eval"    ~~ EndOfString :> PersonalSite`Controller`ruliologyEval[HTTPRequestData[]],
   "/ruliology/metrics" ~~ EndOfString :> PersonalSite`Controller`ruliologyMetrics[HTTPRequestData[]],
   "/ruliology"         ~~ EndOfString :> PersonalSite`Controller`ruliologyPage[HTTPRequestData[]],

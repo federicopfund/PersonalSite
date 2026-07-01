@@ -18,9 +18,10 @@ archTasks::usage  = "archTasks[req] sirve el estado live de todas las tareas del
 Begin["`Private`"];
 
 (* ── Datos del grafo — escaneado y actualizado al sistema completo ─────── *)
-(* Nodos:  58 (entry×3, router×1, ctrl×19, model×13, session×3, devops×2,
-           ux×1, frontend×1, view×1, ext×3, nest-rt×11, sentinel×4)       *)
-(* Aristas: ~115 (base, modelo, rt-pipeline, heartbeat, sentinels)         *)
+(* Nodos:  71 (entry×3, router×1, ctrl×19, model×13, a2a×3, session×3,
+           devops×2, ux×1, frontend×1, view×1, ext×3, nest-rt×11,
+           a2a-rt×10, sentinel×4)                                          *)
+(* Aristas: ~172 (base, modelo, a2a, rt-pipeline, heartbeat, sentinels)     *)
 $archJSON = .;   (* invalidar caché en cada carga del paquete              *)
 $archJSON := $archJSON = buildArchJSON[];
 
@@ -85,6 +86,14 @@ buildArchJSON[] :=
         "unit"->"Acciones git+docker+paclet · L0-L7 DAG"|>,
       <|"id"->"DevStyleM",  "group"->"devops",   "label"->"DevStyle",
         "unit"->"SCSS detect→compile→hash→cache-bust hot-reload"|>,
+
+      (* ── A2A subsystem (Agent2Agent protocol · Ruliad mesh) ─────── *)
+      <|"id"->"A2ACtrl",    "group"->"a2a",      "label"->"A2AController",
+        "unit"->"A2A HTTP · JSON-RPC 2.0 + Agent Card + UI /a2a"|>,
+      <|"id"->"A2AProto",   "group"->"a2a",      "label"->"A2A Protocol",
+        "unit"->"Message/Part/Task/Artifact · FSM · JSON-RPC framing · task store"|>,
+      <|"id"->"AgentMeshM", "group"->"a2a",      "label"->"AgentMesh ⊛",
+        "unit"->"Ruliad → agentes A2A · orquestador + agentes-regla · Agent Card"|>,
 
       (* ── Core models ────────────────────────────────────────────── *)
       <|"id"->"Database",   "group"->"model",    "label"->"Database",
@@ -156,6 +165,28 @@ buildArchJSON[] :=
       <|"id"->"NestAPI",     "group"->"nest-rt", "label"->"GET /nest/results",
         "unit"->"RT: endpoint JSON · expone $lastResults para PowerBI"|>,
 
+      (* ── A2A protocol runtime pipeline (message/send end-to-end) ── *)
+      <|"id"->"A2ARpcIn",    "group"->"a2a-rt", "label"->"POST /a2a (JSON-RPC)",
+        "unit"->"RT: body JSON-RPC 2.0 · {method, params, id} → dispatch"|>,
+      <|"id"->"A2ADispatch", "group"->"a2a-rt", "label"->"dispatch(method)",
+        "unit"->"RT: enruta method → handler · errores JSON-RPC A2A"|>,
+      <|"id"->"A2AMsgSend",  "group"->"a2a-rt", "label"->"message/send handler",
+        "unit"->"RT: extrae seed/depth de los Parts del Message A2A"|>,
+      <|"id"->"A2AOrch",     "group"->"a2a-rt", "label"->"⊛ Ruliad Orchestrator",
+        "unit"->"RT: agente orquestador · expande la Ruliad (NestGraph)"|>,
+      <|"id"->"A2ARule1",    "group"->"a2a-rt", "label"->"Agent · 2x+1",
+        "unit"->"RT: agente-regla 1 · aplica 2x+1 al valor entrante"|>,
+      <|"id"->"A2ARule2",    "group"->"a2a-rt", "label"->"Agent · x+14",
+        "unit"->"RT: agente-regla 2 · aplica x+14 al valor entrante"|>,
+      <|"id"->"A2ARule3",    "group"->"a2a-rt", "label"->"Agent · x-18",
+        "unit"->"RT: agente-regla 3 · aplica x-18 al valor entrante"|>,
+      <|"id"->"A2ATask",     "group"->"a2a-rt", "label"->"A2A Task · FSM",
+        "unit"->"RT: submitted → working → completed · status + history"|>,
+      <|"id"->"A2AArtifacts","group"->"a2a-rt", "label"->"Artifacts",
+        "unit"->"RT: ruliad-trajectory + function-stacks + summary"|>,
+      <|"id"->"A2ACard",     "group"->"a2a-rt", "label"->"GET /.well-known/agent-card.json",
+        "unit"->"RT: discovery · Agent Card A2A (skills, transport JSONRPC)"|>,
+
       (* ── Confluent sentinels ────────────────────────────────────── *)
       <|"id"->"SentCtrl",   "group"->"sentinel", "label"->"⦿ Ctrl Health",
         "unit"->"Sentinel: convergen todos los controladores activos"|>,
@@ -189,6 +220,7 @@ buildArchJSON[] :=
       <|"source"->"Router",     "target"->"KernelCtrl"|>,
       <|"source"->"Router",     "target"->"DevOpsCtrl"|>,
       <|"source"->"Router",     "target"->"DagCtrl"|>,
+      <|"source"->"Router",     "target"->"A2ACtrl"|>,
 
       (* ── Controllers → Models (derivado de imports reales) ─────── *)
       (* Home: Assets *)
@@ -291,6 +323,36 @@ buildArchJSON[] :=
       <|"source"->"WAmodel",     "target"->"WAAPI"|>,
       <|"source"->"Database",    "target"->"SQLite"|>,
 
+      (* ── A2A subsystem dependencies (imports reales) ────────────── *)
+      (* A2AController: A2A protocol + AgentMesh + Renderer (UI) *)
+      <|"source"->"A2ACtrl",     "target"->"A2AProto"|>,
+      <|"source"->"A2ACtrl",     "target"->"AgentMeshM"|>,
+      <|"source"->"A2ACtrl",     "target"->"Renderer"|>,
+      (* AgentMesh: protocolo A2A + NestScheduler (Ruliad) + Flow engine *)
+      <|"source"->"AgentMeshM",  "target"->"A2AProto"|>,
+      <|"source"->"AgentMeshM",  "target"->"NestSched"|>,
+      <|"source"->"AgentMeshM",  "target"->"FlowModel"|>,
+      (* A2A protocol: persistencia best-effort de a2a_tasks *)
+      <|"source"->"A2AProto",    "target"->"Database"|>,
+
+      (* ── A2A protocol runtime pipeline (message/send) ───────────── *)
+      <|"source"->"A2ARpcIn",    "target"->"Router",       "rt"->True|>,
+      <|"source"->"A2ACtrl",     "target"->"A2ADispatch",  "rt"->True|>,
+      <|"source"->"A2ADispatch", "target"->"A2AMsgSend",   "rt"->True|>,
+      <|"source"->"A2AMsgSend",  "target"->"A2AOrch",      "rt"->True|>,
+      <|"source"->"A2AOrch",     "target"->"A2ARule1",     "rt"->True|>,
+      <|"source"->"A2AOrch",     "target"->"A2ARule2",     "rt"->True|>,
+      <|"source"->"A2AOrch",     "target"->"A2ARule3",     "rt"->True|>,
+      (* el orquestador delega la expansion al runtime del NestScheduler *)
+      <|"source"->"A2AOrch",     "target"->"RecordsBuild", "rt"->True|>,
+      <|"source"->"A2ARule1",    "target"->"A2ATask",      "rt"->True|>,
+      <|"source"->"A2ARule2",    "target"->"A2ATask",      "rt"->True|>,
+      <|"source"->"A2ARule3",    "target"->"A2ATask",      "rt"->True|>,
+      <|"source"->"A2ATask",     "target"->"A2AArtifacts", "rt"->True|>,
+      <|"source"->"A2AArtifacts","target"->"Response",     "rt"->True|>,
+      <|"source"->"A2ACtrl",     "target"->"A2ACard",      "rt"->True|>,
+      <|"source"->"A2ACard",     "target"->"Response",     "rt"->True|>,
+
       (* ── NestScheduler runtime pipeline ────────────────────────── *)
       <|"source"->"NestTrigger", "target"->"Router",      "rt"->True|>,
       <|"source"->"Nest",        "target"->"RulesParser", "rt"->True|>,
@@ -316,6 +378,8 @@ buildArchJSON[] :=
       <|"source"->"Renderer",    "target"->"Renderer",    "hb"->True|>,
       <|"source"->"SessionStore","target"->"SessionStore","hb"->True|>,
       <|"source"->"SettingsM",   "target"->"SettingsM",   "hb"->True|>,
+      <|"source"->"AgentMeshM",  "target"->"AgentMeshM",  "hb"->True|>,
+      <|"source"->"A2AProto",    "target"->"A2AProto",    "hb"->True|>,
 
       (* ── Confluent sentinel convergence ─────────────────────────── *)
       <|"source"->"Home",       "target"->"SentCtrl",  "conv"->True|>,
@@ -327,6 +391,9 @@ buildArchJSON[] :=
       <|"source"->"KernelCtrl", "target"->"SentCtrl",  "conv"->True|>,
       <|"source"->"SessionCtrl","target"->"SentCtrl",  "conv"->True|>,
       <|"source"->"DevOpsCtrl", "target"->"SentCtrl",  "conv"->True|>,
+      <|"source"->"A2ACtrl",    "target"->"SentCtrl",  "conv"->True|>,
+      <|"source"->"AgentMeshM", "target"->"SentModel", "conv"->True|>,
+      <|"source"->"A2AProto",   "target"->"SentModel", "conv"->True|>,
       <|"source"->"Database",   "target"->"SentModel", "conv"->True|>,
       <|"source"->"NestSched",  "target"->"SentModel", "conv"->True|>,
       <|"source"->"TaskMgr",    "target"->"SentModel", "conv"->True|>,
@@ -362,13 +429,15 @@ archData[req_] :=
 
 (* GET /arch/health  →  estado de salud de cada nodo en tiempo real *)
 archHealth[req_] :=
-  Module[{taskSnap, nestInfo, cacheStats, dbOk, ts, nodes, groups},
+  Module[{taskSnap, nestInfo, cacheStats, dbOk, ts, nodes, groups, a2aAgents, a2aTasks},
     ts        = UnixTime[];
     taskSnap  = Quiet @ Check[PersonalSite`TaskManager`summary[], <||>];
     nestInfo  = Quiet @ Check[PersonalSite`NestScheduler`taskInfo[], <||>];
     cacheStats= Quiet @ Check[PersonalSite`Cache`stats[], <||>];
     dbOk      = Quiet @ Check[
       (PersonalSite`Database`execute["SELECT 1", {}]; True), False];
+    a2aAgents = Quiet @ Check[Length[PersonalSite`AgentMesh`agents[]], 4];
+    a2aTasks  = Quiet @ Check[Length[PersonalSite`A2A`tasksList[]], 0];
 
     nodes = <|
       "HTTP"       -> hOk["entry"],
@@ -426,6 +495,21 @@ archHealth[req_] :=
       "DevOpsCtrl"  -> hOk["ctrl"],
       "DevOpsModel" -> If[dbOk, hOk["pipeline · L0-L7"], hWarn["DB warn"]],
       "DevStyleM"   -> hOk["hot-reload"],
+      (* ── A2A subsystem (Agent2Agent · Ruliad mesh) ───────────── *)
+      "A2ACtrl"     -> hOk["a2a · JSON-RPC 2.0"],
+      "A2AProto"    -> If[dbOk, hOk[ToString[a2aTasks] <> " tasks · FSM"],
+                              hWarn[ToString[a2aTasks] <> " tasks (mem)"]],
+      "AgentMeshM"  -> hOk[ToString[a2aAgents] <> " agentes · Ruliad mesh"],
+      "A2ARpcIn"    -> hOk["rpc in"],
+      "A2ADispatch" -> hOk["dispatch"],
+      "A2AMsgSend"  -> hOk["message/send"],
+      "A2AOrch"     -> hOk["orchestrator"],
+      "A2ARule1"    -> hOk["agent 2x+1"],
+      "A2ARule2"    -> hOk["agent x+14"],
+      "A2ARule3"    -> hOk["agent x-18"],
+      "A2ATask"     -> hOk["task fsm"],
+      "A2AArtifacts"-> hOk["artifacts"],
+      "A2ACard"     -> hOk["agent card"],
       (* ── Nuevos modelos ──────────────────────────────────────── *)
       "FlowModel"   -> hOk["NestGraph engine"],
       "SettingsM"   -> If[dbOk, hOk["kv store"], hErr["unreachable"]],
@@ -452,6 +536,8 @@ archHealth[req_] :=
       "frontend" -> "ok",
       "ext"      -> "unknown",
       "nest-rt"  -> If[TrueQ[Lookup[nestInfo,"active",False]], "ok", "idle"],
+      "a2a"      -> If[dbOk, "ok", "warn"],
+      "a2a-rt"   -> "ok",
       "sentinel" -> If[dbOk, "ok", "warn"]
     |>;
 

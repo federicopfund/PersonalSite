@@ -124,6 +124,24 @@ bridge-stop:
 bridge-status:
 	@curl -s http://localhost:8091/health 2>/dev/null || echo "bridge no responde — run: make bridge"
 
+# ── A2A protocol validation ─────────────────────────────────────────
+## Validacion end-to-end sin kernel (logica Ruliad + envelope JSON-RPC)
+a2a-logic:
+	python3 tools/validate_a2a_logic.py
+
+## Validacion end-to-end contra el kernel (paclet cargado + Tests/A2A.wlt)
+a2a-validate:
+	wolframscript -f tools/validate_a2a.wls
+
+## Validacion end-to-end por HTTP contra un servidor vivo (curl message/send)
+##   Uso: make a2a-e2e            (BASE_URL=http://localhost:8080 por defecto)
+##        make a2a-e2e BASE_URL=https://mi-deploy
+a2a-e2e:
+	BASE_URL=$(if $(BASE_URL),$(BASE_URL),http://localhost:8080) bash tools/a2a_e2e.sh
+
+## Suite completa de validacion A2A (logica + kernel; e2e HTTP si hay server)
+a2a-check: a2a-logic a2a-validate
+
 # ── Dev workflow completo ────────────────────────────────────────────
 ## Ciclo de desarrollo: css + deploy al container corriendo
 dev: css deploy
@@ -140,4 +158,4 @@ deploy:
 dev-up: up bridge
 	@echo "Dev ready: http://localhost:8080/kernel — bridge: http://localhost:8091/health"
 
-.PHONY: bridge bridge-stop bridge-status dev deploy dev-up
+.PHONY: bridge bridge-stop bridge-status dev deploy dev-up a2a-logic a2a-validate a2a-e2e a2a-check

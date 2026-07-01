@@ -45,7 +45,7 @@ reloadTemplates[] :=
   Module[{names},
     names = {"layout","home","blog/index","blog/item","blog/post",
              "contact","ask","apariencia","flow","perf","nest","tasks",
-             "arch","kernel","dag","kpi","devops","ruliology"};
+             "arch","kernel","dag","kpi","devops","ruliology","a2a"};
     Do[Unset[template[n]], {n, names}];
     Quiet @ Scan[template, names];
     "reloaded: " <> ToString[Length[names]] <> " templates"
@@ -118,7 +118,7 @@ postItem[post_Association] :=
    al cargar el modulo, para que ningun request pague la compilacion. *)
 Quiet @ Scan[template, {
   "layout", "home", "blog/index", "blog/item", "blog/post",
-  "contact", "ask", "apariencia", "flow", "perf", "nest", "tasks", "arch", "kernel", "dag", "kpi", "devops"}];
+  "contact", "ask", "apariencia", "flow", "perf", "nest", "tasks", "arch", "kernel", "dag", "kpi", "devops", "a2a"}];
 
 End[];
 EndPackage[];

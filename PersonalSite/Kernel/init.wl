@@ -36,6 +36,8 @@ With[{load = Function[parts,
   load[{"Models", "Cache.wl"}];
   load[{"Models", "Assets.wl"}];
   load[{"Models", "NestScheduler.wl"}];
+  load[{"Models", "A2A.wl"}];
+  load[{"Models", "AgentMesh.wl"}];
   load[{"Models", "SessionFSM.wl"}];
   load[{"Models", "SessionStore.wl"}];
   load[{"Models", "DevStyle.wl"}];
@@ -55,6 +57,7 @@ With[{load = Function[parts,
   load[{"Controllers", "FlowController.wl"}];
   load[{"Controllers", "PerfController.wl"}];
   load[{"Controllers", "NestController.wl"}];
+  load[{"Controllers", "A2AController.wl"}];
   load[{"Controllers", "TaskController.wl"}];
   load[{"Controllers", "ArchController.wl"}];
   load[{"Controllers", "KernelController.wl"}];

@@ -141,6 +141,29 @@ CREATE INDEX IF NOT EXISTS idx_sessions_expires ON sessions(expires_at);
 CREATE INDEX IF NOT EXISTS idx_sessions_user    ON sessions(user_id);
 CREATE INDEX IF NOT EXISTS idx_sessions_state   ON sessions(state);
 
+-- ── A2A tasks (Agent2Agent protocol) ──────────────────────────────────
+-- Persistencia best-effort de las Task A2A generadas por la malla de agentes
+-- de la Ruliad (PersonalSite`AgentMesh`). El almacen en memoria del kernel es
+-- la fuente de verdad por sesion; esta tabla habilita durabilidad + Power BI.
+-- state      : submitted | working | input-required | auth-required |
+--              completed | canceled | failed | rejected  (A2A TaskState)
+-- artifacts  : JSON array de Artifact A2A (trayectoria Ruliad, stacks, resumen)
+-- history    : JSON array de Message A2A (saltos entre agentes)
+-- metadata   : JSON libre (createdAt, seed, depth…)
+CREATE TABLE IF NOT EXISTS a2a_tasks (
+    task_id     TEXT    NOT NULL PRIMARY KEY,
+    context_id  TEXT    NOT NULL,
+    state       TEXT    NOT NULL DEFAULT 'submitted',
+    artifacts   TEXT    NOT NULL DEFAULT '[]',
+    history     TEXT    NOT NULL DEFAULT '[]',
+    metadata    TEXT    NOT NULL DEFAULT '{}',
+    created_at  TEXT    NOT NULL DEFAULT (datetime('now')),
+    updated_at  TEXT    NOT NULL DEFAULT (datetime('now'))
+);
+
+CREATE INDEX IF NOT EXISTS idx_a2a_tasks_context ON a2a_tasks(context_id);
+CREATE INDEX IF NOT EXISTS idx_a2a_tasks_state   ON a2a_tasks(state);
+
 -- Datos de ejemplo
 INSERT OR IGNORE INTO posts (slug, title, summary, body, date) VALUES
   ('hola-wolfram',

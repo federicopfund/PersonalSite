@@ -3,7 +3,7 @@
     <div class="arch-hero-text">
       <span class="arch-badge">Graph 3D &bull; Wolfram Language &bull; Live Heartbeat</span>
       <h1>Arquitectura del Sistema</h1>
-      <p>58 nodos &bull; 115+ aristas &bull; Heartbeat en tiempo real &bull; Flujos aut&oacute;nomos convergentes.<br>
+      <p>71 nodos &bull; 170+ aristas &bull; Subsistema A2A &bull; Heartbeat en tiempo real &bull; Flujos aut&oacute;nomos convergentes.<br>
          Arrastr&aacute; para rotar &bull; Scroll para zoom &bull; Hover para resaltar vecinos.</p>
     </div>
     <div class="arch-legend">
@@ -18,6 +18,8 @@
       <span class="arch-leg arch-leg--view">Renderer</span>
       <span class="arch-leg arch-leg--ext">External / Data</span>
       <span class="arch-leg arch-leg--nest-rt">NestScheduler RT</span>
+      <span class="arch-leg arch-leg--a2a">A2A Mesh &bull; AgentMesh</span>
+      <span class="arch-leg arch-leg--a2a-rt">A2A Protocol RT</span>
       <span class="arch-leg arch-leg--sentinel">&#x29BF; Confluent State</span>
     </div>
   </div>
@@ -92,7 +94,8 @@
     model:'#2db85e', view:'#aa44e0',   ext:'#d93535',
     'nest-rt':'#00e5ff', sentinel:'#ffd700',
     session:'#14b8a6',  devops:'#f97316',
-    'ux-model':'#c084fc', frontend:'#ec4899'
+    'ux-model':'#c084fc', frontend:'#ec4899',
+    a2a:'#6366f1', 'a2a-rt':'#818cf8'
   };
   var HB_COLOR = { ok:'#00ff88', warn:'#ffcc00', err:'#ff3333', idle:'#555566', unknown:'#7777aa' };
   var healthData = {};
@@ -251,15 +254,18 @@
           return nodeDisplayColor(n);
         })
         .nodeVal(function(n){
+          if(n.id==='AgentMeshM')  return 14;
           if(n.group==='sentinel') return 16;
           if(n.group==='entry')    return 12;
           if(n.group==='router')   return 10;
           if(n.group==='view')     return 9;
+          if(n.group==='a2a')      return 9;
           if(n.group==='session')  return 7;
           if(n.group==='devops')   return 7;
           if(n.group==='ux-model') return 7;
           if(n.group==='frontend') return 7;
           if(n.group==='nest-rt')  return 4;
+          if(n.group==='a2a-rt')   return 4;
           return 5;
         })
         .linkColor(function(l){
