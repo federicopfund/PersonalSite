@@ -19,6 +19,9 @@ escape::usage =
 postItem::usage =
   "postItem[post] renderiza el parcial blog/item para una Association de post.";
 
+reloadTemplates::usage =
+  "reloadTemplates[] invalida el cache de plantillas y las recarga de disco.";
+
 Begin["`Private`"];
 
 (* Carga y compila una plantilla por nombre (sin extension). MEMOIZADA: cada
@@ -35,6 +38,17 @@ escape[s_String] :=
   StringReplace[s, {"&" -> "&amp;", "<" -> "&lt;", ">" -> "&gt;",
                     "\"" -> "&quot;", "'" -> "&#39;"}];
 escape[x_] := escape[ToString[x]];
+
+(* Invalida el cache de plantillas — útil en desarrollo *)
+reloadTemplates[] :=
+  Module[{names},
+    names = {"layout","home","blog/index","blog/item","blog/post",
+             "contact","ask","apariencia","flow","perf","nest","tasks",
+             "arch","kernel","dag","kpi","ruliology"};
+    Do[Unset[template[n]], {n, names}];
+    Quiet @ Scan[template, names];
+    "reloaded: " <> ToString[Length[names]] <> " templates"
+  ];
 
 fragment[partial_String, data_Association] :=
   TemplateApply[template[partial], data];
@@ -59,7 +73,11 @@ render[view_String, data_Association] :=
   Module[{ctx = shared[], viewHtml, page},
     viewHtml = TemplateApply[template[view], Join[ctx, data]];
     page     = TemplateApply[template["layout"], <|"content" -> viewHtml, ctx|>];
-    HTTPResponse[page, <|"Headers" -> <|"Content-Type" -> "text/html; charset=utf-8"|>|>]
+    HTTPResponse[page, <|"Headers" -> <|
+      "Content-Type"  -> "text/html; charset=utf-8",
+      "Cache-Control" -> "no-store, must-revalidate",
+      "Pragma"        -> "no-cache"
+    |>|>]
   ];
 
 (* Tarjeta de post reutilizada por la home y el indice del blog. *)
