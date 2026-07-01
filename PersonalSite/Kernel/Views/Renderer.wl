@@ -70,9 +70,17 @@ shared[] :=
   ];
 
 render[view_String, data_Association] :=
-  Module[{ctx = shared[], viewHtml, page},
+  Module[{ctx = shared[], viewHtml, page, trimmed},
     viewHtml = TemplateApply[template[view], Join[ctx, data]];
-    page     = TemplateApply[template["layout"], <|"content" -> viewHtml, ctx|>];
+    trimmed  = StringTrim[viewHtml];
+    (* Las vistas standalone (documento completo con su propio <html>/<body>)
+       NO se envuelven en el layout global: evita navbars y <body> duplicados
+       que se superponen. Ej: kpi, dag, nest, tasks. *)
+    page = If[
+      StringStartsQ[trimmed, "<!DOCTYPE", IgnoreCase -> True] ||
+      StringStartsQ[trimmed, "<html",     IgnoreCase -> True],
+      viewHtml,
+      TemplateApply[template["layout"], <|"content" -> viewHtml, ctx|>]];
     HTTPResponse[page, <|"Headers" -> <|
       "Content-Type"  -> "text/html; charset=utf-8",
       "Cache-Control" -> "no-store, must-revalidate",
