@@ -28,7 +28,6 @@
     <div id="arch-sim-bar">
       <button id="arch-sim-btn" class="arch-sim-btn">&#9654; Simular NestSchedule</button>
       <button id="arch-hb-btn" class="arch-sim-btn arch-hb-btn">&#9679; Heartbeat ON</button>
-      <button id="arch-lbl-btn" class="arch-sim-btn arch-lbl-btn arch-lbl-btn--on">&#9635; Labels ON</button>
       <span id="arch-sim-label" class="arch-sim-label"></span>
       <span id="arch-task-fire" class="arch-task-fire"></span>
       <span id="arch-hb-ts" class="arch-hb-ts"></span>
@@ -86,7 +85,6 @@
 </section>
 
 <script src="https://unpkg.com/3d-force-graph@1/dist/3d-force-graph.min.js"></script>
-<script src="https://unpkg.com/three-spritetext@1/dist/three-spritetext.min.js"></script>
 <script>
 (function() {
   var COLOR = {
@@ -161,10 +159,9 @@
      unit:'HTTP 200 OK · Content-Type HTML/JSON · exit'}
   ];
   var simTimer = [], simActive = false;
-  var labelsOn  = true;    /* SpriteText labels — on by default */
   var el = document.getElementById('arch-graph');
   el.style.height = '620px';
-  var Graph;   /* declared here so the labels toggle closure can reach it */
+  var Graph;
 
   /* ── Scheduler task → graph-edge flow map ────────────────────────────── */
   /* Maps each active task to the set of directed edges it "fires" through  */
@@ -231,14 +228,9 @@
     Graph.linkDirectionalParticles(Graph.linkDirectionalParticles());
   }
 
-  /* Labels toggle button */
+  /* Labels toggle button — kept as no-op (sprite labels removed; hover shows badge) */
   var lblBtn = document.getElementById('arch-lbl-btn');
-  if (lblBtn) lblBtn.addEventListener('click', function() {
-    labelsOn = !labelsOn;
-    lblBtn.textContent = labelsOn ? '\u25A3 Labels ON' : '\u25A2 Labels OFF';
-    lblBtn.classList.toggle('arch-lbl-btn--on', labelsOn);
-    if (Graph) Graph.nodeThreeObject(Graph.nodeThreeObject());
-  });
+  if (lblBtn) lblBtn.style.display = 'none';
 
   fetch('/arch/data')
     .then(function(r){ return r.json(); })
@@ -270,23 +262,6 @@
           if(n.group==='nest-rt')  return 4;
           return 5;
         })
-        .nodeThreeObjectExtend(true)
-        .nodeThreeObject(function(n){
-          if (!labelsOn) return null;
-          /* Two-line sprite: label (group color) + unit description (truncated) */
-          var unitShort = n.unit ? n.unit.replace(/^RT:\s*/,'').substring(0,42) : '';
-          var txt = (n.label || n.id) + (unitShort ? '\n\u21B3 ' + unitShort : '');
-          var sp = new SpriteText(txt);
-          sp.color            = COLOR[n.group] || '#ccc';
-          sp.textHeight       = 2.8;
-          sp.backgroundColor  = 'rgba(8,8,14,0.78)';
-          sp.padding          = 1.6;
-          sp.borderRadius     = 3;
-          sp.borderWidth      = 0.5;
-          sp.borderColor      = COLOR[n.group] || '#444';
-          sp.position.y       = -11;
-          return sp;
-        })
         .linkColor(function(l){
           if(!highlighted.size) return 'rgba(160,160,170,0.5)';
           var s = l.source.id||l.source, t = l.target.id||l.target;
@@ -302,14 +277,10 @@
           if (highlighted.size) return highlighted.has(s) ? 3 : 0;
           return 0;
         })
-        .linkDirectionalParticleSpeed(function(l){
-          var s = l.source.id||l.source, t = l.target.id||l.target;
-          return hotLinks.has(s+'->'+t) ? 0.012 : 0.005;
-        })
+        .linkDirectionalParticleSpeed(0.009)
         .linkDirectionalParticleColor(function(l){
           var s = l.source.id||l.source, t = l.target.id||l.target;
-          if (hotLinks.has(s+'->'+t)) return '#00e5ff';
-          return '#ffffff';
+          return hotLinks.has(s+'->'+t) ? '#00e5ff' : '#ffffff';
         })
         .onNodeHover(function(node){
           el.style.cursor = node ? 'pointer' : 'default';
@@ -321,6 +292,19 @@
               if(s===node.id) highlighted.add(t);
               if(t===node.id) highlighted.add(s);
             });
+            /* Show unit badge on hover */
+            var badge = document.getElementById('arch-unit-badge');
+            if (badge && node.unit) {
+              var unitShort = node.unit.replace(/^RT:\s*/, '');
+              badge.innerHTML =
+                '<span class="arch-unit-badge__id" style="color:' + (COLOR[node.group]||'#ccc') + '">' +
+                (node.label || node.id) + '</span>' +
+                '<span class="arch-unit-badge__unit">' + unitShort + '</span>';
+              badge.classList.add('arch-unit-badge--visible');
+            }
+          } else {
+            var badge = document.getElementById('arch-unit-badge');
+            if (badge && !simActive) badge.classList.remove('arch-unit-badge--visible');
           }
           Graph.nodeColor(Graph.nodeColor())
                .linkColor(Graph.linkColor())
