@@ -65,8 +65,8 @@
   position: relative;
   z-index: 1;
   display: grid;
-  grid-template-columns: 1fr 260px;
-  gap: 4rem;
+  grid-template-columns: minmax(0, 1fr) 360px 200px;
+  gap: 2.25rem;
   align-items: center;
 
   @include breakpoint(lg) {
@@ -208,3 +208,239 @@
 
 // Limpiar estilos de .wl-badge si quedaron de iteración anterior
 .wl-badge { display: none; }
+
+// ── Card del NestGraph 3D (Graph3D interactivo en el hero) ──────────────
+.hero-graph {
+  position: relative;
+  // Se corre al hueco vacío a la izquierda: el card (210px) se ancla al
+  // inicio de una columna de 360px, dejándolo ~150px más a la izquierda.
+  justify-self: start;
+
+  // Sólo se muestra en desktop: WebGL es pesado en móvil/tablet.
+  @include breakpoint(lg) { display: none; }
+
+  // Simulación de luz filtrándose por debajo del card: un resplandor difuso
+  // que asoma bajo el borde inferior y late suavemente, como luz que pasa.
+  &::after {
+    content: '';
+    position: absolute;
+    left: 50%;
+    bottom: -12px;
+    transform: translateX(-50%);
+    width: 80%;
+    height: 46px;
+    z-index: 0;
+    pointer-events: none;
+    border-radius: 50%;
+    background: radial-gradient(ellipse at center,
+      rgba(34, 200, 255, .55) 0%,
+      rgba(150, 110, 255, .28) 42%,
+      transparent 72%);
+    filter: blur(17px);
+    animation: heroGraphUnderlight 4.2s ease-in-out infinite;
+  }
+}
+
+@keyframes heroGraphUnderlight {
+  0%, 100% { opacity: .55; transform: translateX(-50%) scaleX(.9); }
+  50%      { opacity: .95; transform: translateX(-50%) scaleX(1.08); }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .hero-graph::after { animation: none; opacity: .8; }
+}
+
+.hero-graph__card {
+  position: relative;
+  z-index: 1;
+  width: 210px;
+  perspective: 1300px;
+  cursor: pointer;
+
+  &:focus-visible { outline: none; }
+}
+
+// Contenedor 3D que rota al hacer hover/focus: revela el reverso (teorema).
+.hero-graph__flip {
+  position: relative;
+  width: 100%;
+  transform-style: preserve-3d;
+  transition: transform .85s cubic-bezier(.2, .7, .2, 1);
+}
+
+.hero-graph__card:hover .hero-graph__flip,
+.hero-graph__card:focus-within .hero-graph__flip {
+  transform: rotateY(180deg);
+}
+
+// Cara comun: sin backdrop-filter para no romper backface-visibility en el flip.
+.hero-graph__face {
+  border-radius: radius(md);
+  border: 1px solid rgba(255, 255, 255, .12);
+  overflow: hidden;
+  box-shadow:
+    0 16px 48px rgba(0, 0, 0, .45),
+    0 4px 12px rgba(0, 0, 0, .30);
+  -webkit-backface-visibility: hidden;
+  backface-visibility: hidden;
+}
+
+.hero-graph__face--front {
+  position: relative;
+  background: rgba(255, 255, 255, .04);
+}
+
+.hero-graph__face--back {
+  position: absolute;
+  inset: 0;
+  transform: rotateY(180deg);
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: .5rem;
+  padding: .9rem .8rem;
+  text-align: center;
+  background:
+    radial-gradient(120% 85% at 50% 0%, rgba(34, 200, 255, .12), transparent 58%),
+    linear-gradient(180deg, rgba(24, 26, 35, .96), rgba(12, 13, 18, .98));
+}
+
+// ── Reverso: Teorema 2 con sintaxis matematica ──────────────────────────
+.thm-badge {
+  font-size: .56rem;
+  font-weight: 700;
+  letter-spacing: .14em;
+  text-transform: uppercase;
+  color: #ffcf3f;
+  padding: .18rem .55rem;
+  border-radius: radius(pill);
+  background: rgba(255, 207, 63, .10);
+  border: 1px solid rgba(255, 207, 63, .35);
+}
+
+.thm-title {
+  margin: 0;
+  font-size: .92rem;
+  font-weight: 600;
+  line-height: 1.2;
+  letter-spacing: .01em;
+  color: #f4f6fb;
+
+  .thm-sub {
+    display: block;
+    margin-top: .1rem;
+    font-size: .64rem;
+    font-weight: 500;
+    font-style: italic;
+    letter-spacing: .04em;
+    color: var(--header-muted);
+
+    &::before { content: '('; }
+    &::after  { content: ')'; }
+  }
+}
+
+.thm-rules {
+  display: flex;
+  flex-direction: column;
+  gap: .3rem;
+  width: 100%;
+  padding: .5rem 0;
+  border-top: 1px solid rgba(255, 255, 255, .09);
+  border-bottom: 1px solid rgba(255, 255, 255, .09);
+}
+
+.thm-rule {
+  font-family: $font-mono;
+  font-size: .84rem;
+  letter-spacing: .05em;
+  color: #cbd2e6;
+
+  i {                       // variables del sistema de reescritura
+    font-style: italic;
+    color: #7ad4ff;
+  }
+
+  sup {                     // exponentes (b², c²)
+    font-size: .62em;
+    font-style: italic;
+    color: #c9a6ff;
+  }
+
+  .arw {                    // flecha de reescritura →
+    margin: 0 .42em;
+    font-weight: 700;
+    color: #ffcf3f;
+  }
+}
+
+.thm-note {
+  margin: 0;
+  font-size: .58rem;
+  line-height: 1.5;
+  font-style: italic;
+  color: var(--header-muted);
+}
+
+.hero-graph__head {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: .3rem;
+  padding: .6rem .7rem;
+  border-bottom: 1px solid rgba(255, 255, 255, .08);
+  text-align: center;
+}
+
+.hero-graph__title {
+  font-size: .82rem;
+  font-weight: 700;
+  letter-spacing: .01em;
+  line-height: 1.25;
+  background: linear-gradient(180deg, #fff 0%, #ffd76a 135%);
+  -webkit-background-clip: text;
+  background-clip: text;
+  -webkit-text-fill-color: transparent;
+}
+
+.hero-graph__stars {
+  display: flex;
+  gap: .18rem;
+}
+
+.hero-graph__star {
+  font-size: .72rem;
+  line-height: 1;
+  color: #ffcf3f;
+  text-shadow:
+    0 0 6px rgba(255, 200, 60, .5),
+    0 1px 1px rgba(0, 0, 0, .4);
+}
+
+.hero-graph__canvas {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 100%;
+  height: 172px;
+  padding: .4rem;
+  background: radial-gradient(circle at 50% 42%, rgba(34, 200, 255, .07), transparent 70%);
+}
+
+.hero-graph__img {
+  display: block;
+  width: 100%;
+  height: 100%;
+  object-fit: contain;
+  filter: drop-shadow(0 4px 14px rgba(34, 200, 255, .25));
+}
+
+.hero-graph__meta {
+  padding: .5rem .8rem;
+  font-size: .62rem;
+  letter-spacing: .02em;
+  text-align: center;
+  color: var(--header-muted);
+  border-top: 1px solid rgba(255, 255, 255, .08);
+}

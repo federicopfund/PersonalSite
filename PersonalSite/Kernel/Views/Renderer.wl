@@ -56,7 +56,7 @@ fragment[partial_String, data_Association] :=
 
 (* Variables compartidas, inyectadas tanto en la vista como en el layout. *)
 shared[] :=
-  Module[{cfg, cssV},
+  Module[{cfg, cssV, graphV},
     cfg = Quiet @ Check[PersonalSite`Theme`clientConfig[],
       <|"theme" -> "slate", "mode" -> "manual", "order" -> "slate", "interval" -> 20, "epoch" -> 0|>];
     (* Cache-buster del CSS: fecha de modificacion de styles.css (Unix).
@@ -66,10 +66,18 @@ shared[] :=
         FileNameJoin[{PersonalSite`$Root, "Resources", "Static", "styles.css"}],
         "Modification"],
       "0"];
+    (* Cache-buster del NestGraph 3D del hero: mtime de nest-graph.png.
+       Cambia al regenerar la imagen con buildHomeGraphImage[]. *)
+    graphV = Quiet @ Check[
+      ToString @ Round @ UnixTime @ FileDate[
+        FileNameJoin[{PersonalSite`$Root, "Resources", "Img", "nest-graph.png"}],
+        "Modification"],
+      "0"];
     <|
-      "siteName"      -> PersonalSite`Config`$siteName,
-      "year"          -> DateValue[Now, "Year"],
-      "cssVersion"    -> cssV,
+      "siteName"         -> PersonalSite`Config`$siteName,
+      "year"             -> DateValue[Now, "Year"],
+      "cssVersion"       -> cssV,
+      "heroGraphVersion" -> graphV,
       "theme"         -> cfg["theme"],
       "themeMode"     -> cfg["mode"],
       "themeOrder"    -> cfg["order"],
