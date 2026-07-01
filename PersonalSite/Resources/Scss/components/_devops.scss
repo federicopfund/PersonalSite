@@ -30,21 +30,6 @@
   scroll-behavior: smooth;
 }
 
-// ── Telemetría analítica de fondo ────────────────────────────────────────────
-//  Lienzo a pantalla completa detrás de todo el contenido (z-index:-1). No
-//  interactúa ni altera el layout; solo aporta la experiencia analítica runtime
-//  (series temporales del DAG, KPIs, heartbeat, info de sistema) por detrás.
-//  Scopeado bajo .dv-body: EXCLUSIVO de la vista /devops, nunca afecta otras.
-.dv-body .dv-bg-analytics {
-  position: fixed;
-  inset: 0;
-  width: 100%;
-  height: 100%;
-  z-index: -1;
-  pointer-events: none;
-  opacity: .9;
-}
-
 // ── Header ──────────────────────────────────────────────────────────────────
 .dv-header {
   position: sticky; top: 0; z-index: 50;

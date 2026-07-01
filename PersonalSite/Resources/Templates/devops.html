@@ -12,8 +12,6 @@
 </head>
 <body class="dv-body">
 
-  <!-- ═══ Telemetría analítica en segundo plano (runtime, no interactiva) ═══ -->
-  <canvas id="dv-bg-canvas" class="dv-bg-analytics" aria-hidden="true"></canvas>
 
   <!-- ═══════════════════════════ HEADER ═══════════════════════════════ -->
   <header class="dv-header">
@@ -255,7 +253,6 @@
 
   let DAG = { nodes:[], edges:[] };
   let running = {};   // id -> true while executing
-  let lastStatus = null;   // último /devops/status — alimenta la telemetría de fondo
 
   // ── Logging ──────────────────────────────────────────────────────────────
   function logHint(){ return $('dv-log').querySelector('.dv-log-hint'); }
@@ -275,7 +272,6 @@
     try {
       const r = await fetch(API.status, {cache:'no-store'});
       const d = await r.json();
-      lastStatus = d;
       const badge = $('dv-bridge'), txt = $('dv-bridge-txt');
       if (d.bridge_ok){
         badge.classList.remove('is-down'); badge.classList.add('is-up');
@@ -552,222 +548,10 @@
   });
   $('dv-hist-refresh').addEventListener('click', fetchHistory);
 
-  // ═══════════════════════════════════════════════════════════════════════════
-  //  TELEMETRÍA EN SEGUNDO PLANO — experiencia analítica en runtime (end-to-end)
-  //  Series temporales de las tasks del DAG (por grupo) + KPIs de performance +
-  //  info de sistema + heartbeat ECG. Todo modulado por el estado real del
-  //  pipeline (/devops/status) y simulado en segundo plano. No interactúa
-  //  (pointer-events:none) y vive DETRÁS del contenido (z-index:-1): los estilos
-  //  actuales quedan intactos, solo se añade la experiencia analítica de fondo.
-  // ═══════════════════════════════════════════════════════════════════════════
-  const Tele = (() => {
-    const cv = document.getElementById('dv-bg-canvas');
-    if (!cv || !cv.getContext) return { start(){} };
-    const ctx = cv.getContext('2d');
-    const ORDER = ['git','build','test','ops'];
-    const N = 220;                                    // muestras por serie
-    const series = { git:[], build:[], test:[], ops:[] };
-    const hr = [];                                    // waveform del heartbeat
-    const particles = [];
-    let W = 0, H = 0, dpr = 1;
-    let bpm = 66, beatPhase = 0;
-    let cpu = 22, mem = 41, load = 0.30;
-    let lastSample = 0; const sampleDt = 250;         // muestreo 4 Hz
-    const t0 = performance.now();
-
-    function resize(){
-      dpr = Math.min(window.devicePixelRatio || 1, 2);
-      W = window.innerWidth; H = window.innerHeight;
-      cv.width  = Math.floor(W * dpr);
-      cv.height = Math.floor(H * dpr);
-      ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
-    }
-    window.addEventListener('resize', resize);
-
-    // ── métricas derivadas del estado real ──────────────────────────────────
-    function groupStages(g){ return (DAG.nodes || []).filter(n => n.group === g).map(n => n.id); }
-    function isBusy(){
-      const b = document.getElementById('dv-run-all');
-      return (b && b.disabled) || Object.values(running).some(Boolean);
-    }
-    function okCount(){
-      const sr = (lastStatus && lastStatus.stageResults) || {};
-      return Object.values(sr).filter(r => r && r.ok).length;
-    }
-    function groupActivity(g){
-      const ids = groupStages(g);
-      const sr = (lastStatus && lastStatus.stageResults) || {};
-      if (!ids.length) return 0.5;
-      let ok = 0, seen = 0, run = 0;
-      ids.forEach(id => {
-        if (running[id]) run++;
-        const r = sr[id];
-        if (r){ seen++; if (r.ok) ok++; }
-      });
-      const base = seen ? ok / ids.length : 0.45;
-      const busy = (run > 0 || isBusy()) ? 0.25 : 0;
-      return Math.max(0, Math.min(1, base * 0.70 + busy + 0.12));
-    }
-
-    function sample(){
-      ORDER.forEach(g => {
-        const arr = series[g];
-        const target = groupActivity(g);
-        const prev = arr.length ? arr[arr.length - 1] : target;
-        const noise = (Math.random() - 0.5) * 0.06;
-        arr.push(Math.max(0, Math.min(1, prev + (target - prev) * 0.18 + noise)));
-        if (arr.length > N) arr.shift();
-      });
-      const busy = isBusy();
-      const bms  = (lastStatus && lastStatus.bridge_ms) || 0;
-      cpu  += (((busy ? 62 : 20) + Math.min(30, bms / 4) + Math.random() * 8) - cpu) * 0.15;
-      mem  += ((40 + (busy ? 18 : 0) + Math.sin(performance.now() / 9000) * 4) - mem) * 0.08;
-      load += (((cpu / 100) * 1.4) - load) * 0.10;
-      bpm  += ((58 + (busy ? 34 : 0) + Math.min(16, bms / 6)) - bpm) * 0.08;
-    }
-
-    // ── forma de onda tipo ECG ──────────────────────────────────────────────
-    function g1(x, mu, s){ const d = (x - mu) / s; return Math.exp(-0.5 * d * d); }
-    function ecg(p){
-      return 0.10 * g1(p, 0.120, 0.020)
-           - 0.13 * g1(p, 0.170, 0.008)
-           + 1.00 * g1(p, 0.190, 0.008)
-           - 0.28 * g1(p, 0.215, 0.010)
-           + 0.26 * g1(p, 0.330, 0.028);
-    }
-
-    // ── render ────────────────────────────────────────────────────────────────
-    let raf = 0, last = 0;
-    function frame(ts){
-      raf = requestAnimationFrame(frame);
-      const dt = ts - last;
-      if (dt < 33) return;                            // ~30 fps
-      last = ts;
-      if (ts - lastSample >= sampleDt){ lastSample = ts; sample(); }
-
-      beatPhase += (bpm / 60) * (dt / 1000);
-      while (beatPhase >= 1) beatPhase -= 1;
-      hr.push(ecg(beatPhase));
-      const cap = Math.floor(W);
-      if (hr.length > cap) hr.splice(0, hr.length - cap);
-
-      ctx.clearRect(0, 0, W, H);
-      drawGrid(ts);
-      drawSeries();
-      drawHeartbeat();
-      drawReadouts();
-      drawParticles(dt);
-    }
-
-    function drawGrid(ts){
-      ctx.save();
-      ctx.globalAlpha = 0.10; ctx.strokeStyle = '#6b74a8'; ctx.lineWidth = 1;
-      const step = 46;
-      ctx.beginPath();
-      for (let y = step; y < H; y += step){ ctx.moveTo(0, y); ctx.lineTo(W, y); }
-      for (let x = (ts / 40) % step; x < W; x += step){ ctx.moveTo(x, 0); ctx.lineTo(x, H); }
-      ctx.stroke();
-      const sx = (ts / 16) % (W + 120);               // barrido de escaneo
-      const grd = ctx.createLinearGradient(sx - 100, 0, sx, 0);
-      grd.addColorStop(0, 'rgba(124,77,255,0)');
-      grd.addColorStop(1, 'rgba(124,77,255,0.055)');
-      ctx.globalAlpha = 1; ctx.fillStyle = grd;
-      ctx.fillRect(sx - 100, 0, 100, H);
-      ctx.restore();
-    }
-
-    function drawSeries(){
-      const top = H * 0.10, band = H * 0.62, yBase = top + band;
-      ORDER.forEach(g => {
-        const arr = series[g]; if (arr.length < 2) return;
-        const col = groupColor(g);
-        ctx.save();
-        ctx.beginPath();
-        arr.forEach((v, i) => { const x = (i / (N - 1)) * W, y = yBase - v * band; i ? ctx.lineTo(x, y) : ctx.moveTo(x, y); });
-        ctx.lineTo(W, yBase); ctx.lineTo(0, yBase); ctx.closePath();
-        ctx.globalAlpha = 0.05; ctx.fillStyle = col; ctx.fill();
-        ctx.beginPath();
-        arr.forEach((v, i) => { const x = (i / (N - 1)) * W, y = yBase - v * band; i ? ctx.lineTo(x, y) : ctx.moveTo(x, y); });
-        ctx.globalAlpha = 0.32; ctx.strokeStyle = col; ctx.lineWidth = 1.4; ctx.stroke();
-        const lv = arr[arr.length - 1];
-        ctx.globalAlpha = 0.85; ctx.fillStyle = col;
-        ctx.beginPath(); ctx.arc(W - 2, yBase - lv * band, 2.2, 0, 7); ctx.fill();
-        ctx.restore();
-      });
-    }
-
-    function drawHeartbeat(){
-      const yb = H * 0.86, amp = H * 0.10, n = hr.length;
-      if (n < 2) return;
-      ctx.save();
-      ctx.globalAlpha = 0.28; ctx.strokeStyle = '#22c55e'; ctx.lineWidth = 1.4;
-      ctx.beginPath();
-      for (let i = 0; i < n; i++){ const x = W - (n - i), y = yb - hr[i] * amp; i ? ctx.lineTo(x, y) : ctx.moveTo(x, y); }
-      ctx.stroke();
-      const y = yb - hr[n - 1] * amp;
-      ctx.globalAlpha = 0.80; ctx.fillStyle = '#22c55e';
-      ctx.beginPath(); ctx.arc(W - 1, y, 2.4, 0, 7); ctx.fill();
-      ctx.restore();
-    }
-
-    function fmtUptime(){
-      const s = Math.floor((performance.now() - t0) / 1000);
-      const h = String(Math.floor(s / 3600)).padStart(2, '0');
-      const m = String(Math.floor(s / 60) % 60).padStart(2, '0');
-      const ss = String(s % 60).padStart(2, '0');
-      return h + ':' + m + ':' + ss;
-    }
-    function drawReadouts(){
-      const kernel = ((document.getElementById('dv-kernel') || {}).textContent || '—').trim();
-      const busy = isBusy();
-      const bms  = (lastStatus && lastStatus.bridge_ms) || 0;
-      const bok  = lastStatus ? !!lastStatus.bridge_ok : false;
-      const tot  = (DAG.nodes || []).length || 18;
-      const lines = [
-        '◈ RULIAD · TELEMETRÍA RUNTIME',
-        'KERNEL     #' + kernel,
-        'HEARTBEAT  ' + bpm.toFixed(0) + ' bpm',
-        'BRIDGE     ' + (bok ? bms + ' ms' : 'offline'),
-        'CPU        ' + cpu.toFixed(0) + '%   MEM ' + mem.toFixed(0) + '%',
-        'LOAD       ' + load.toFixed(2),
-        'STAGES     ' + okCount() + '/' + tot + ' ok',
-        'PIPELINE   ' + (busy ? 'RUN' : 'IDLE'),
-        'UPTIME     ' + fmtUptime(),
-      ];
-      ctx.save();
-      ctx.font = '11px SFMono-Regular, Consolas, "Liberation Mono", monospace';
-      ctx.textBaseline = 'top';
-      ctx.globalAlpha = 0.24; ctx.fillStyle = '#aeb6e0';
-      lines.forEach((ln, i) => ctx.fillText(ln, 18, 96 + i * 15));
-      ctx.textAlign = 'right'; ctx.globalAlpha = 0.16;
-      ORDER.forEach((g, i) => { ctx.fillStyle = groupColor(g); ctx.fillText(g.toUpperCase(), W - 16, 96 + i * 15); });
-      ctx.restore();
-    }
-
-    function drawParticles(dt){
-      if (particles.length < 42 && Math.random() < 0.30){
-        const g = ORDER[(Math.random() * 4) | 0];
-        particles.push({ x: -4, y: Math.random() * H, v: 20 + Math.random() * 42, c: groupColor(g) });
-      }
-      ctx.save();
-      for (let i = particles.length - 1; i >= 0; i--){
-        const p = particles[i];
-        p.x += p.v * dt / 1000;
-        ctx.globalAlpha = 0.18; ctx.fillStyle = p.c;
-        ctx.beginPath(); ctx.arc(p.x, p.y, 1.3, 0, 7); ctx.fill();
-        if (p.x > W + 4) particles.splice(i, 1);
-      }
-      ctx.restore();
-    }
-
-    return { start(){ resize(); cancelAnimationFrame(raf); raf = requestAnimationFrame(frame); } };
-  })();
-
   // ── Boot ─────────────────────────────────────────────────────────────────
   fetchStatus();
   fetchDag();
   fetchHistory();
-  Tele.start();                        // enciende la telemetría de fondo
   setInterval(fetchStatus, 15000);
   setInterval(fetchHistory, 15000);   // Warehouse en vivo — la serie se auto-refresca
 })();
