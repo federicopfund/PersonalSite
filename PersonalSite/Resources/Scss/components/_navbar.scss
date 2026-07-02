@@ -1,20 +1,21 @@
 // =============================================================
-//  components/_navbar.scss
+//  components/_navbar.scss  —  Minimal navbar + Explorer Overlay
 // =============================================================
 @use '../abstracts' as *;
+
+// ─── Minimal navbar ────────────────────────────────────────────────────────
 
 .navbar {
   position: fixed;
   inset: 0 0 auto 0;
-  z-index: 200;
+  z-index: 400;
   height: $nav-height;
   background: rgba(gray(950), .96);
   backdrop-filter: blur(16px);
   -webkit-backdrop-filter: blur(16px);
   border-bottom: 1px solid rgba(#fff, .08);
 
-  /* Sombra de perfil centrada: concentra oscuridad en el centro
-     y se desvanece hacia los extremos, dando profundidad */
+  // Profile shadow — concentrated in centre, fades to edges
   &::after {
     content: '';
     position: absolute;
@@ -28,6 +29,19 @@
     pointer-events: none;
     z-index: -1;
   }
+
+  // Dot-grid ambient texture
+  &::before {
+    content: '';
+    position: absolute;
+    inset: 0;
+    background-image: radial-gradient(circle, rgba(#fff, .12) 1px, transparent 1px);
+    background-size: 24px 24px;
+    pointer-events: none;
+    z-index: 0;
+    mask-image: linear-gradient(90deg, transparent 0%, black 15%, black 85%, transparent 100%);
+    opacity: .3;
+  }
 }
 
 .nav-container {
@@ -37,6 +51,8 @@
   display: flex;
   align-items: center;
   justify-content: space-between;
+  position: relative;
+  z-index: 3;
 }
 
 .nav-brand {
@@ -47,128 +63,152 @@
   text-decoration: none;
 }
 
-.nav-links {
-  list-style: none;
+// Right-side action cluster
+.nav-actions {
   display: flex;
   align-items: center;
-  gap: .25rem;
-
-  a {
-    display: block;
-    padding: .5rem .9rem;
-    border-radius: radius(sm);
-    font-size: .9rem;
-    font-weight: 500;
-    color: var(--header-muted);
-    transition: color $ease, background $ease;
-
-    &:hover {
-      color: var(--header-text);
-      background: rgba(#fff, .1);
-      text-decoration: none;
-    }
-  }
-
-  @include breakpoint(md) {
-    position: absolute;
-    top: $nav-height;
-    left: 0;
-    right: 0;
-    flex-direction: column;
-    gap: 0;
-    background: rgba(gray(950), .98);
-    border-top: 1px solid rgba(#fff, .08);
-    padding: .5rem 0;
-    display: none;
-
-    &.open {
-      display: flex;
-    }
-
-    li {
-      width: 100%;
-    }
-
-    a {
-      border-radius: 0;
-      padding: .85rem 1.5rem;
-    }
-  }
+  gap: .6rem;
 }
 
+// Contacto CTA
 .nav-cta {
-  background: var(--accent) !important;
-  color: var(--accent-contrast) !important;
-  padding: .5rem 1.1rem !important;
-
-  &:hover {
-    background: var(--accent-strong) !important;
-  }
-
-  @include breakpoint(md) {
-    margin: .4rem 1rem !important;
-    border-radius: radius(sm) !important;
-    text-align: center;
-  }
-}
-
-.nav-toggle {
-  display: none;
-  flex-direction: column;
-  justify-content: center;
-  gap: 5px;
-  width: 40px;
-  height: 40px;
-  background: none;
-  border: none;
-  padding: 8px;
+  display: inline-flex;
+  align-items: center;
+  padding: .42rem 1.05rem;
   border-radius: radius(sm);
+  background: var(--accent);
+  color: var(--accent-contrast);
+  font-size: .875rem;
+  font-weight: 600;
+  text-decoration: none;
+  transition: background $ease;
 
-  &:hover {
-    background: rgba(#fff, .08);
+  &:hover { background: var(--accent-strong); text-decoration: none; }
+
+  @include breakpoint(sm) { display: none; }
+}
+
+// ─── Explorer button ────────────────────────────────────────────────────────
+
+.nav-explorer-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: .45rem;
+  padding: .4rem .82rem .4rem .6rem;
+  border-radius: radius(sm);
+  border: 1px solid rgba(#fff, .13);
+  background: transparent;
+  color: var(--header-muted);
+  font-size: .875rem;
+  font-weight: 500;
+  cursor: pointer;
+  transition: color $ease, border-color $ease, background $ease;
+
+  &:hover,
+  &[aria-expanded='true'] {
+    color: var(--header-text);
+    border-color: rgba(#fff, .28);
+    background: rgba(#fff, .05);
   }
 
-  span {
-    display: block;
-    height: 2px;
-    background: gray(200);
-    border-radius: 2px;
-    transition: $ease;
+  // 3×3 dot-grid icon
+  .neb-grid {
+    display: grid;
+    grid-template-columns: repeat(3, 4px);
+    gap: 3px;
+
+    span {
+      width: 4px;
+      height: 4px;
+      border-radius: 1px;
+      background: currentColor;
+      transition: transform .32s $ease, opacity .25s $ease;
+    }
   }
 
-  &.open span:nth-child(1) { transform: translateY(7px) rotate(45deg); }
-  &.open span:nth-child(2) { opacity: 0; transform: scaleX(0); }
-  &.open span:nth-child(3) { transform: translateY(-7px) rotate(-45deg); }
+  // Morph grid → × when open
+  &.open .neb-grid {
+    span:nth-child(1) { transform: translate(7px,  7px); }
+    span:nth-child(2) { opacity: 0; transform: scale(0); }
+    span:nth-child(3) { transform: translate(-7px,  7px); }
+    span:nth-child(4) { opacity: 0; transform: scale(0); }
+    span:nth-child(5) { opacity: 0; transform: scale(0); }
+    span:nth-child(6) { opacity: 0; transform: scale(0); }
+    span:nth-child(7) { transform: translate(7px, -7px); }
+    span:nth-child(8) { opacity: 0; transform: scale(0); }
+    span:nth-child(9) { transform: translate(-7px, -7px); }
+  }
 
-  @include breakpoint(md) {
-    display: flex;
+  .neb-label {
+    @include breakpoint(sm) { display: none; }
   }
 }
 
-// ═══════════════════════════════════════════════════════════════════════════
-//  RULIAD NAVIGATION  —  multiway computational graph
-//  Each <li> carries data-rule (Wolfram rule N), data-step (evolutionary
-//  depth), data-current (active branch), data-branch-dist (hover distance).
-// ═══════════════════════════════════════════════════════════════════════════
+// ─── Navigation Explorer Overlay ───────────────────────────────────────────
 
-// ── CA canvas overlay on navbar ───────────────────────────────────────────
-.nav-ca-canvas {
+.nav-overlay {
+  position: fixed;
+  inset: 0;
+  z-index: 350;
+  pointer-events: none;
+  // display: none is the primary gate; visibility keeps it out of a11y tree
+  display: none;
+
+  &.open {
+    display: block;
+    pointer-events: auto;
+  }
+}
+
+.nav-overlay-backdrop {
+  position: absolute;
+  inset: 0;
+  background: rgba(gray(950), .80);
+  backdrop-filter: blur(8px);
+  -webkit-backdrop-filter: blur(8px);
+  opacity: 0;
+  // Use explicit cubic-bezier without the $ease shorthand to avoid
+  // the unintended 0.22s delay that $ease injects as a delay token.
+  transition: opacity .28s cubic-bezier(.4, 0, .2, 1);
+
+  .nav-overlay.open & { opacity: 1; }
+}
+
+.nav-overlay-panel {
+  position: absolute;
+  top: $nav-height;
+  left: 0;
+  right: 0;
+  background: rgba(gray(900), .99);
+  border-bottom: 1px solid rgba(#fff, .08);
+  box-shadow: 0 28px 60px rgba(#000, .7);
+  transform: translateY(-10px);
+  opacity: 0;
+  // Explicit timing — no delay — so panel is never invisible while overlay is open
+  transition: transform .30s cubic-bezier(.4, 0, .2, 1),
+              opacity   .24s cubic-bezier(.4, 0, .2, 1);
+  overflow: hidden;
+
+  .nav-overlay.open & {
+    transform: translateY(0);
+    opacity: 1;
+  }
+}
+
+// ── CA canvas (top strip, rule-driven) ────────────────────────────────────
+.nav-ov-ca-canvas {
   position: absolute;
   top: 0;
   left: 0;
   width: 100%;
-  height: 100%;
   pointer-events: none;
-  opacity: 1;
+  opacity: .5;
   mix-blend-mode: screen;
   z-index: 0;
 }
 
-// Keep nav content above all canvas layers
-.nav-container { position: relative; z-index: 3; }
-
-// ── Entanglement arc canvas (edge lines between entangled nodes) ───────────
-.nav-ent-canvas {
+// ── Edge-arc canvas (spans full panel) ────────────────────────────────────
+.nav-ov-edge-canvas {
   position: absolute;
   inset: 0;
   width: 100%;
@@ -177,149 +217,143 @@
   z-index: 2;
 }
 
-// ── Dot-grid background texture ───────────────────────────────────────────
-.navbar::before {
-  content: '';
-  position: absolute;
-  inset: 0;
-  background-image: radial-gradient(circle, rgba(#fff, .12) 1px, transparent 1px);
-  background-size: 24px 24px;
-  pointer-events: none;
-  z-index: 0;
-  mask-image: linear-gradient(90deg, transparent 0%, black 15%, black 85%, transparent 100%);
-  opacity: .35;
-}
-
-// Branchial space baseline: horizontal causal thread between all nodes
-.nav-links::before {
-  content: '';
-  position: absolute;
-  top: 50%;
-  left: 0;
-  right: 0;
-  height: 1px;
-  background: linear-gradient(
-    90deg,
-    transparent 0%,
-    rgba(#fff, .04) 12%,
-    rgba(#fff, .07) 40%,
-    rgba(#fff, .07) 60%,
-    rgba(#fff, .04) 88%,
-    transparent 100%
-  );
-  pointer-events: none;
-
-  @include breakpoint(md) { display: none; }
-}
-
-// ── Nav items: position context ───────────────────────────────────────────
-.nav-links li[data-rule] {
+// ── Header row ────────────────────────────────────────────────────────────
+.nav-overlay-header {
   position: relative;
+  z-index: 3;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: .85rem 1.5rem .6rem;
+  border-bottom: 1px solid rgba(#fff, .05);
+}
 
-  // ── Step depth dot (below link) ────────────────────────────────────────
-  .nav-rul-dot {
+.nav-overlay-title {
+  font-size: .68rem;
+  font-weight: 700;
+  letter-spacing: .14em;
+  text-transform: uppercase;
+  color: rgba(#fff, .28);
+  font-family: $font-mono;
+}
+
+.nav-overlay-close {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 30px;
+  height: 30px;
+  border-radius: radius(sm);
+  border: 1px solid rgba(#fff, .10);
+  background: transparent;
+  color: rgba(#fff, .35);
+  cursor: pointer;
+  transition: color $ease, border-color $ease, background $ease;
+
+  &:hover {
+    color: rgba(#fff, .85);
+    border-color: rgba(#fff, .26);
+    background: rgba(#fff, .06);
+  }
+}
+
+// ── Groups grid ───────────────────────────────────────────────────────────
+.nav-overlay-grid {
+  position: relative;
+  z-index: 3;
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 0;
+  padding: 1.1rem 1.5rem 1.4rem;
+
+  @include breakpoint(md) {
+    grid-template-columns: 1fr;
+    padding: .7rem 1rem 1.2rem;
+  }
+}
+
+.nav-ov-group {
+  padding: 0 1.1rem;
+  border-right: 1px solid rgba(#fff, .05);
+
+  &:first-child { padding-left: 0; }
+  &:last-child  { border-right: none; padding-right: 0; }
+
+  @include breakpoint(md) {
+    padding: 0;
+    border-right: none;
+    border-bottom: 1px solid rgba(#fff, .05);
+    padding-bottom: .5rem;
+    margin-bottom: .5rem;
+
+    &:last-child { border-bottom: none; margin-bottom: 0; }
+  }
+}
+
+.nav-ov-group-label {
+  display: block;
+  font-size: .62rem;
+  font-weight: 700;
+  letter-spacing: .11em;
+  text-transform: uppercase;
+  color: rgba(#fff, .22);
+  font-family: $font-mono;
+  margin-bottom: .45rem;
+  padding-left: .3rem;
+}
+
+// ── Individual nav card ───────────────────────────────────────────────────
+.nav-ov-card {
+  --ent: 0.6;
+  position: relative;
+  display: flex;
+  align-items: center;
+  gap: .55rem;
+  padding: .48rem .55rem;
+  border-radius: radius(sm);
+  margin-bottom: .18rem;
+  text-decoration: none;
+  background: rgba(#fff, calc(0.00 + 0.055 * var(--ent)));
+  overflow: hidden;
+
+  &::before {
+    content: '';
     position: absolute;
-    bottom: 4px;
-    left: 50%;
-    transform: translateX(-50%);
-    width: 4px;
-    height: 4px;
-    border-radius: 50%;
-    background: rgba(#fff, .2);
-    transition: background .2s, box-shadow .2s, width .18s, height .18s;
+    inset: 0;
+    border: 1px solid rgba(#fff, calc(0.00 + 0.20 * var(--ent)));
+    border-radius: radius(sm);
     pointer-events: none;
   }
 
-  &:hover .nav-rul-dot,
-  &[data-current] .nav-rul-dot {
+  &:hover,
+  &[data-current] {
+    text-decoration: none;
+    background: rgba(#fff, .08);
+  }
+
+  // Current-page left accent bar
+  &[data-current]::after {
+    content: '';
+    position: absolute;
+    left: 0;
+    top: 15%;
+    bottom: 15%;
+    width: 2px;
     background: var(--accent);
+    border-radius: 1px;
     box-shadow: 0 0 8px var(--accent);
-    width: 5px;
-    height: 5px;
-  }
-
-  &[data-current] .nav-rul-dot {
-    animation: rul-pulse 2.4s cubic-bezier(.4,0,.6,1) infinite;
-  }
-
-  // ── Entanglement: CSS variable driven by JS rAF loop ─────────────────────
-  --ent: 0;
-  transition: none; // EMA smoothing is handled in JS
-
-  // ── Current branch: accent underline ──────────────────────────────────
-  &[data-current] > a {
-    color: var(--header-text) !important;
-
-    &::after {
-      content: '';
-      position: absolute;
-      bottom: 0;
-      left: 10%;
-      right: 10%;
-      height: 2px;
-      background: var(--accent);
-      border-radius: 1px;
-      box-shadow: 0 0 8px var(--accent);
-    }
   }
 }
 
-// ── Entanglement variable-driven overrides ──────────────────────────────────
-// Active when JS sets [data-ent] attribute and writes --ent (0..1)
-.nav-links li[data-rule][data-ent] {
-  opacity: calc(0.26 + 0.74 * var(--ent));
-
-  .nav-rul-dot {
-    width:      calc(3px + 4px * var(--ent));
-    height:     calc(3px + 4px * var(--ent));
-    background: var(--accent);
-    box-shadow: 0 0 calc(3px + 14px * var(--ent)) var(--accent);
-    opacity:    calc(0.12 + 0.88 * var(--ent));
-    transform:  translateX(-50%) scale(calc(0.85 + 0.45 * var(--ent)));
-    transition: none;
-  }
-}
-
-// ── Rule badge (8-bit pattern + label) ────────────────────────────────────
-.nav-rul-badge {
-  position: absolute;
-  top: -40px;
-  left: 50%;
-  transform: translateX(-50%) translateY(6px);
+// ── Rule badge (bit cells + label) ────────────────────────────────────────
+.nc-badge {
   display: flex;
   flex-direction: column;
   align-items: center;
-  gap: 4px;
-  padding: 5px 7px 4px;
-  background: rgba(#000, .92);
-  border: 1px solid rgba(#fff, .14);
-  border-radius: 5px;
-  opacity: 0;
-  transition: opacity .18s, transform .18s;
-  pointer-events: none;
-  white-space: nowrap;
-  z-index: 300;
-  backdrop-filter: blur(8px);
-
-  // Connecting tick down to the link
-  &::after {
-    content: '';
-    position: absolute;
-    bottom: -5px;
-    left: 50%;
-    transform: translateX(-50%);
-    width: 1px;
-    height: 5px;
-    background: rgba(#fff, .2);
-  }
-
-  li:hover & {
-    opacity: 1;
-    transform: translateX(-50%) translateY(0);
-  }
+  gap: 2px;
+  flex-shrink: 0;
 }
 
-// ── 8 binary cells row ────────────────────────────────────────────────────
 .nav-rul-cells {
   display: flex;
   gap: 2px;
@@ -344,74 +378,74 @@
   }
 }
 
-// ── Rule label ────────────────────────────────────────────────────────────
 .nav-rul-label {
-  font-size: .56rem;
-  font-family: 'SFMono-Regular', Consolas, monospace;
+  font-size: .52rem;
+  font-family: $font-mono;
   font-weight: 700;
-  color: rgba(#fff, .5);
+  color: rgba(#fff, .32);
   letter-spacing: .06em;
   text-transform: uppercase;
 }
 
-// ── Pulse animation for current branch ───────────────────────────────────
+// ── Card text ─────────────────────────────────────────────────────────────
+.nc-name {
+  flex: 1;
+  font-size: .94rem;
+  font-weight: 600;
+  color: var(--header-text);
+}
+
+.nc-arrow {
+  font-size: .82rem;
+  color: rgba(#fff, .28);
+  opacity: calc(0.15 + 0.85 * var(--ent));
+  transform: translateX(calc(-4px + 6px * var(--ent)));
+  transition: none;
+
+  .nav-ov-card:hover & {
+    opacity: 1;
+    transform: translateX(2px);
+    transition: transform .2s $ease;
+  }
+}
+
+// ── Entanglement glow dot ─────────────────────────────────────────────────
+.nav-ov-dot {
+  width: 5px;
+  height: 5px;
+  border-radius: 50%;
+  background: var(--accent);
+  flex-shrink: 0;
+  box-shadow: 0 0 calc(2px + 10px * var(--ent)) var(--accent);
+  opacity: calc(0.08 + 0.92 * var(--ent));
+  transform: scale(calc(0.65 + 0.65 * var(--ent)));
+  transition: none;
+}
+
+// ── Stagger animation on overlay open ─────────────────────────────────────
+.nav-overlay.open .nav-ov-card {
+  animation: ov-card-in .3s $ease both;
+
+  @for $i from 1 through 12 {
+    &:nth-child(#{$i}) { animation-delay: #{$i * 0.028}s; }
+  }
+}
+
+@keyframes ov-card-in {
+  from { transform: translateY(7px); opacity: 0; }
+  to   { transform: none; opacity: 1; }
+}
+
+// ── Body scroll lock ──────────────────────────────────────────────────────
+body.nav-overlay-open { overflow: hidden; }
+
+// ── Pulse for current-page dot ────────────────────────────────────────────
+.nav-ov-card[data-current] .nav-ov-dot {
+  animation: rul-pulse 2.4s cubic-bezier(.4, 0, .6, 1) infinite;
+}
+
 @keyframes rul-pulse {
   0%, 100% { box-shadow: 0 0 4px var(--accent); }
   50%       { box-shadow: 0 0 14px var(--accent), 0 0 4px var(--accent); }
 }
 
-// ── Mobile: tree-branch vertical layout ──────────────────────────────────
-@include breakpoint(md) {
-  // Stack items with left-side branch line
-  .nav-links {
-    position: relative;
-
-    // Vertical causal thread
-    &::after {
-      content: '';
-      position: absolute;
-      top: 0;
-      bottom: 0;
-      left: 1.5rem;
-      width: 1px;
-      background: linear-gradient(
-        180deg,
-        transparent 0%,
-        rgba(#fff, .12) 10%,
-        rgba(#fff, .12) 90%,
-        transparent 100%
-      );
-      pointer-events: none;
-    }
-  }
-
-  .nav-links li[data-rule] {
-    padding-left: 2.5rem;
-
-    // Branch connector to the vertical thread
-    &::before {
-      content: '';
-      position: absolute;
-      left: 1.5rem;
-      top: 50%;
-      width: .65rem;
-      height: 1px;
-      background: rgba(#fff, .15);
-      pointer-events: none;
-    }
-
-    // Node circle on the vertical thread
-    .nav-rul-dot {
-      left: 1.5rem;
-      bottom: auto;
-      top: 50%;
-      transform: translate(-50%, -50%);
-    }
-
-    // Hide rule badge on mobile (no space)
-    .nav-rul-badge { display: none; }
-
-    // Reset branch-dist dimming on mobile
-    &[data-branch-dist] { opacity: 1; }
-  }
-}

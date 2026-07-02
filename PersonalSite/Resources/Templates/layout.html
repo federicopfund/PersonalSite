@@ -15,26 +15,86 @@
   <nav class="navbar">
     <div class="nav-container">
       <a class="nav-brand" href="/"><* TemplateSlot["siteName"] *></a>
-      <button class="nav-toggle" id="nt" aria-label="Men&uacute;">
-        <span></span><span></span><span></span>
-      </button>
-      <ul class="nav-links" id="nl">
-        <li data-rule="30"  data-step="0" data-group="root"><a href="/">Inicio</a></li>
-        <li data-rule="110" data-step="1" data-group="content"><a href="/blog">Blog</a></li>
-        <li data-rule="90"  data-step="1" data-group="content"><a href="/ask">Wolfram &alpha;</a></li>
-        <li data-rule="54"  data-step="2" data-group="ux"><a href="/apariencia">Apariencia</a></li>
-        <li data-rule="73"  data-step="2" data-group="compute"><a href="/flow">Flow</a></li>
-        <li data-rule="45"  data-step="3" data-group="compute"><a href="/perf">Perf</a></li>
-        <li data-rule="86"  data-step="3" data-group="compute"><a href="/arch">Arch</a></li>
-        <li data-rule="126" data-step="4" data-group="compute"><a href="/dag">DAG</a></li>
-        <li data-rule="150" data-step="4" data-group="compute"><a href="/kernel">Kernel</a></li>
-        <li data-rule="169" data-step="4" data-group="compute"><a href="/a2a">A2A</a></li>
-        <li data-rule="184" data-step="5" data-group="ops"><a href="/kpi">KPI</a></li>
-        <li data-rule="195" data-step="5" data-group="ops"><a href="/devops">DevOps</a></li>
-        <li data-rule="255" data-step="6" data-group="contact"><a href="/contacto" class="nav-cta">Contacto</a></li>
-      </ul>
+      <div class="nav-actions">
+        <a href="/contacto" class="nav-cta">Contacto</a>
+        <button class="nav-explorer-btn" id="nav-explorer-btn"
+                aria-label="Explorar secciones" aria-expanded="false">
+          <span class="neb-grid" aria-hidden="true">
+            <span></span><span></span><span></span>
+            <span></span><span></span><span></span>
+            <span></span><span></span><span></span>
+          </span>
+          <span class="neb-label">Explorar</span>
+        </button>
+      </div>
     </div>
   </nav>
+
+  <!-- ═══ Navigation Explorer Overlay ════════════════════════════════════ -->
+  <div class="nav-overlay" id="nav-overlay" aria-hidden="true"
+       role="dialog" aria-modal="true" aria-label="Explorar secciones">
+    <div class="nav-overlay-backdrop" id="nav-overlay-backdrop"></div>
+    <div class="nav-overlay-panel" id="nav-overlay-panel">
+      <canvas class="nav-ov-ca-canvas" aria-hidden="true"></canvas>
+      <canvas class="nav-ov-edge-canvas" aria-hidden="true"></canvas>
+      <div class="nav-overlay-header">
+        <span class="nav-overlay-title">// explorar</span>
+        <button class="nav-overlay-close" id="nav-overlay-close" aria-label="Cerrar">
+          <svg width="18" height="18" viewBox="0 0 18 18" fill="none" aria-hidden="true">
+            <path d="M4 4l10 10M14 4L4 14" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/>
+          </svg>
+        </button>
+      </div>
+      <div class="nav-overlay-grid" id="nav-overlay-grid">
+        <div class="nav-ov-group">
+          <span class="nav-ov-group-label">Principal</span>
+          <a class="nav-ov-card" href="/"          data-rule="30"  data-step="0" data-group="root">
+            <span class="nc-badge"></span><span class="nc-name">Inicio</span><span class="nc-arrow" aria-hidden="true">&rarr;</span>
+          </a>
+          <a class="nav-ov-card" href="/blog"       data-rule="110" data-step="1" data-group="content">
+            <span class="nc-badge"></span><span class="nc-name">Blog</span><span class="nc-arrow" aria-hidden="true">&rarr;</span>
+          </a>
+          <a class="nav-ov-card" href="/ask"        data-rule="90"  data-step="1" data-group="content">
+            <span class="nc-badge"></span><span class="nc-name">Wolfram &alpha;</span><span class="nc-arrow" aria-hidden="true">&rarr;</span>
+          </a>
+        </div>
+        <div class="nav-ov-group">
+          <span class="nav-ov-group-label">Computaci&oacute;n</span>
+          <a class="nav-ov-card" href="/flow"       data-rule="73"  data-step="2" data-group="compute">
+            <span class="nc-badge"></span><span class="nc-name">Flow</span><span class="nc-arrow" aria-hidden="true">&rarr;</span>
+          </a>
+          <a class="nav-ov-card" href="/perf"       data-rule="45"  data-step="3" data-group="compute">
+            <span class="nc-badge"></span><span class="nc-name">Perf</span><span class="nc-arrow" aria-hidden="true">&rarr;</span>
+          </a>
+          <a class="nav-ov-card" href="/arch"       data-rule="86"  data-step="3" data-group="compute">
+            <span class="nc-badge"></span><span class="nc-name">Arch</span><span class="nc-arrow" aria-hidden="true">&rarr;</span>
+          </a>
+          <a class="nav-ov-card" href="/dag"        data-rule="126" data-step="4" data-group="compute">
+            <span class="nc-badge"></span><span class="nc-name">DAG</span><span class="nc-arrow" aria-hidden="true">&rarr;</span>
+          </a>
+          <a class="nav-ov-card" href="/kernel"     data-rule="150" data-step="4" data-group="compute">
+            <span class="nc-badge"></span><span class="nc-name">Kernel</span><span class="nc-arrow" aria-hidden="true">&rarr;</span>
+          </a>
+          <a class="nav-ov-card" href="/a2a"        data-rule="169" data-step="4" data-group="compute">
+            <span class="nc-badge"></span><span class="nc-name">A2A</span><span class="nc-arrow" aria-hidden="true">&rarr;</span>
+          </a>
+        </div>
+        <div class="nav-ov-group">
+          <span class="nav-ov-group-label">UX &amp; Ops</span>
+          <a class="nav-ov-card" href="/apariencia" data-rule="54"  data-step="2" data-group="ux">
+            <span class="nc-badge"></span><span class="nc-name">Apariencia</span><span class="nc-arrow" aria-hidden="true">&rarr;</span>
+          </a>
+          <a class="nav-ov-card" href="/kpi"        data-rule="184" data-step="5" data-group="ops">
+            <span class="nc-badge"></span><span class="nc-name">KPI</span><span class="nc-arrow" aria-hidden="true">&rarr;</span>
+          </a>
+          <a class="nav-ov-card" href="/devops"     data-rule="195" data-step="5" data-group="ops">
+            <span class="nc-badge"></span><span class="nc-name">DevOps</span><span class="nc-arrow" aria-hidden="true">&rarr;</span>
+          </a>
+        </div>
+      </div>
+    </div>
+  </div>
+
 <* TemplateSlot["content"] *>
   <footer class="footer">
     <div class="footer-inner">
@@ -42,8 +102,42 @@
     </div>
   </footer>
   <script>
-    var t=document.getElementById('nt'),n=document.getElementById('nl');
-    t.addEventListener('click',function(){n.classList.toggle('open');t.classList.toggle('open')});
+    // ── Nav Explorer Overlay open/close ────────────────────────────────────
+    (function () {
+      var btn = document.getElementById('nav-explorer-btn');
+      var ov  = document.getElementById('nav-overlay');
+      var cl  = document.getElementById('nav-overlay-close');
+      var bd  = document.getElementById('nav-overlay-backdrop');
+      var closeTimer = null;
+
+      function open() {
+        if (closeTimer) { clearTimeout(closeTimer); closeTimer = null; }
+        ov.style.display = 'block';           // show before adding .open
+        // Double-rAF: let the browser paint display:block before triggering transitions
+        requestAnimationFrame(function () {
+          requestAnimationFrame(function () {
+            ov.classList.add('open');
+            ov.removeAttribute('aria-hidden');
+            btn.setAttribute('aria-expanded', 'true');
+            btn.classList.add('open');
+            document.body.classList.add('nav-overlay-open');
+          });
+        });
+      }
+      function close() {
+        ov.classList.remove('open');
+        ov.setAttribute('aria-hidden', 'true');
+        btn.setAttribute('aria-expanded', 'false');
+        btn.classList.remove('open');
+        document.body.classList.remove('nav-overlay-open');
+        // Hide after transitions complete (~300ms)
+        closeTimer = setTimeout(function () { ov.style.display = ''; closeTimer = null; }, 320);
+      }
+      btn.addEventListener('click', function () { ov.classList.contains('open') ? close() : open(); });
+      cl.addEventListener('click', close);
+      bd.addEventListener('click', close);
+      document.addEventListener('keydown', function (e) { if (e.key === 'Escape') close(); });
+    }());
     // WA cards: expand height to full natural image height on hover
     document.querySelectorAll('.wa-card').forEach(function(card){
       var img=card.querySelector('.wa-plot');
@@ -164,20 +258,20 @@
   </script>
   <script>
   // ══════════════════════════════════════════════════════════════════════════
-  //  ENTANGLEMENT RULE  —  Ruliad nav UX algorithm
+  //  ENTANGLEMENT RULE  —  Ruliad overlay UX algorithm
   //
-  //  Each nav node carries a Wolfram rule number (R30–R255) and an
-  //  evolutionary step depth (0–6).  A live rAF loop computes, for every
-  //  node j, an entanglement coefficient:
+  //  Each overlay card carries a Wolfram rule number (R30–R255) and an
+  //  evolutionary step depth (0–6).  A live rAF loop (runs only while the
+  //  overlay is open) computes, for every node j, an entanglement coefficient:
   //
-  //    Ej = 0.40 · field(mouse, xj, σ=180px)   ← spatial Gaussian
-  //       + 0.35 · ruleKernel(Ra, Rj)           ← Hamming rule similarity
-  //       + 0.25 · histWeight(PATH → hrefj)     ← Markov behavioral memory
-  //    (= 1.0 when j is the directly hovered node)
+  //    Ej = 0.40 · field2D(mouse, xj, yj, σ=200px)  ← 2D spatial Gaussian
+  //       + 0.35 · ruleKernel(Ra, Rj)                ← Hamming rule similarity
+  //       + 0.25 · histWeight(PATH → hrefj)           ← Markov behavioral memory
+  //    (= 1.0 when j is the directly hovered card)
   //
-  //  Ej → CSS var(--ent) → drives opacity, dot glow, arc arc height.
+  //  Ej → CSS var(--ent) → drives card glow, dot brightness, arc height.
   //  CA canvas evolves using the hovered rule, seeded at mouse position.
-  //  Edge arcs connect pairs with high entanglement × rule kernel product.
+  //  Edge arcs connect card pairs with high entanglement × rule kernel product.
   // ══════════════════════════════════════════════════════════════════════════
   (function () {
     'use strict';
@@ -201,19 +295,20 @@
     try { sessionStorage.setItem(MEM_KEY, JSON.stringify(mem)); } catch (e) {}
 
     // ── 2. DOM index ────────────────────────────────────────────────────────
-    var navbar = document.querySelector('.navbar');
-    if (!navbar) return;
+    var ovPanel = document.getElementById('nav-overlay-panel');
+    var ovGrid  = document.getElementById('nav-overlay-grid');
+    if (!ovPanel) return;
 
-    var items = Array.from(document.querySelectorAll('.nav-links li[data-rule]'));
-    var nodes = items.map(function (li) {
-      var a = li.querySelector('a');
+    var items = Array.from(document.querySelectorAll('.nav-ov-card[data-rule]'));
+    var nodes = items.map(function (card) {
       return {
-        el:   li,
-        rule: +li.dataset.rule,
-        step: +(li.dataset.step || 0),
-        href: a ? a.getAttribute('href') : '',
-        cx:   0,     // viewport X center (updated by measure())
-        ent:  0      // current entanglement coefficient (EMA-smoothed)
+        el:   card,
+        rule: +card.dataset.rule,
+        step: +(card.dataset.step || 0),
+        href: card.getAttribute('href') || '',
+        cx:   0,   // viewport X center (updated by measure())
+        cy:   0,   // viewport Y center
+        ent:  0    // current entanglement coefficient (EMA-smoothed)
       };
     });
 
@@ -223,10 +318,10 @@
         n.el.dataset.current = 'true';
     });
 
-    // ── 4. Inject rule badges (8-bit pattern) + step dots ──────────────────
+    // ── 4. Inject rule badges (8-bit pattern) + glow dots ──────────────────
     function makeBadge(n) {
-      var w = document.createElement('span');
-      w.className = 'nav-rul-badge'; w.setAttribute('aria-hidden', 'true');
+      var badge = n.el.querySelector('.nc-badge');
+      if (!badge) return;
       var cells = document.createElement('span'); cells.className = 'nav-rul-cells';
       for (var i = 7; i >= 0; i--) {
         var b = document.createElement('span');
@@ -236,50 +331,32 @@
       var lbl = document.createElement('span');
       lbl.className = 'nav-rul-label';
       lbl.textContent = 'R\u2009' + n.rule;
-      w.appendChild(cells); w.appendChild(lbl);
-      n.badge     = w;
+      badge.appendChild(cells); badge.appendChild(lbl);
       n.badgeBits = Array.from(cells.children);
       n.badgeLbl  = lbl;
-      return w;
     }
 
     nodes.forEach(function (n) {
-      n.el.appendChild(makeBadge(n));
+      makeBadge(n);
       var dot = document.createElement('span');
-      dot.className = 'nav-rul-dot'; dot.setAttribute('aria-hidden', 'true');
-      dot.title = 'depth\u2009' + n.step;
+      dot.className = 'nav-ov-dot'; dot.setAttribute('aria-hidden', 'true');
       n.el.appendChild(dot);
-      // Enable entanglement CSS mode
-      n.el.setAttribute('data-ent', '');
-      n.el.style.setProperty('--ent', '0');
+      n.el.style.setProperty('--ent', '0.6'); // start visible
     });
 
-    // ── 5. Canvases ─────────────────────────────────────────────────────────
-    // (a) CA canvas — reuse if already present in DOM
-    var caCvs = navbar.querySelector('.nav-ca-canvas');
-    if (!caCvs) {
-      caCvs = document.createElement('canvas');
-      caCvs.className = 'nav-ca-canvas'; caCvs.setAttribute('aria-hidden', 'true');
-      navbar.insertBefore(caCvs, navbar.firstChild);
-    }
-    var caCtx = caCvs.getContext('2d');
-
-    // (b) Edge canvas — entanglement arc lines
-    var edgeCvs = document.createElement('canvas');
-    edgeCvs.className = 'nav-ent-canvas'; edgeCvs.setAttribute('aria-hidden', 'true');
-    navbar.insertBefore(edgeCvs, navbar.querySelector('.nav-container'));
-    var edgeCtx = edgeCvs.getContext('2d');
+    // ── 5. Canvases (inside overlay panel) ──────────────────────────────────
+    var caCvs = ovPanel.querySelector('.nav-ov-ca-canvas');
+    var caCtx = caCvs ? caCvs.getContext('2d') : null;
+    var edgeCvs = ovPanel.querySelector('.nav-ov-edge-canvas');
+    var edgeCtx = edgeCvs ? edgeCvs.getContext('2d') : null;
 
     // ── 6. Math helpers ─────────────────────────────────────────────────────
     function popcount8(x) {
       x &= 0xFF; x = (x & 0x55) + ((x >> 1) & 0x55); x = (x & 0x33) + ((x >> 2) & 0x33);
       return (x + (x >> 4)) & 0x0F;
     }
-    // Hamming similarity: 1 when identical, 0 when complement
     function ruleKernel(a, b) { return 1 - popcount8(a ^ b) / 8; }
-    // Gaussian spatial field
-    function gauss(dx, sig)   { return Math.exp(-(dx * dx) / (2 * sig * sig)); }
-    // Markov weight: how often user navigated from current page to toHref
+    function gauss2D(dx, dy, sig) { return Math.exp(-(dx*dx + dy*dy) / (2 * sig * sig)); }
     function histWeight(toHref) {
       var row = mem.t[PATH]; if (!row) return 0;
       var total = 0;
@@ -288,61 +365,60 @@
     }
 
     // ── 7. Mouse / hover state ──────────────────────────────────────────────
-    var MX = -9999, speed = 0, prevMX = -9999;
+    var MX = -9999, MY = -9999, speed = 0, prevMX = -9999;
     var hoveredIdx = -1, prevHoveredIdx = -2;
     var caRule = 30;
-    var navbarRect = navbar.getBoundingClientRect();
+    var ovRect = { left: 0, top: 0 };
 
-    navbar.addEventListener('mousemove', function (e) {
-      prevMX = MX; MX = e.clientX;
+    ovPanel.addEventListener('mousemove', function (e) {
+      prevMX = MX; MX = e.clientX; MY = e.clientY;
       speed = speed * 0.65 + Math.abs(MX - prevMX) * 0.35;
     });
-    navbar.addEventListener('mouseleave', function () {
-      MX = -9999; speed = 0; hoveredIdx = -1; caRule = 30;
+    ovPanel.addEventListener('mouseleave', function () {
+      MX = -9999; MY = -9999; speed = 0; hoveredIdx = -1; caRule = 30;
     });
-    items.forEach(function (li, i) {
-      li.addEventListener('mouseenter', function () { hoveredIdx = i; caRule = nodes[i].rule; });
-      li.addEventListener('mouseleave',  function () { if (hoveredIdx === i) hoveredIdx = -1; });
+    items.forEach(function (card, i) {
+      card.addEventListener('mouseenter', function () { hoveredIdx = i; caRule = nodes[i].rule; });
+      card.addEventListener('mouseleave',  function () { if (hoveredIdx === i) hoveredIdx = -1; });
     });
 
-    // ── 8. Measure node viewport centers (cheap, called on resize + measure) ─
+    // ── 8. Measure node viewport centers ────────────────────────────────────
     function measure() {
-      navbarRect = navbar.getBoundingClientRect();
+      ovRect = ovPanel.getBoundingClientRect();
       nodes.forEach(function (n) {
         var r = n.el.getBoundingClientRect();
-        n.cx = r.left + r.width * 0.5;
+        n.cx = r.left + r.width  * 0.5;
+        n.cy = r.top  + r.height * 0.5;
       });
     }
-    measure();
     window.addEventListener('resize', measure);
 
-    // ── 9. Entanglement coefficients (runs every rAF) ───────────────────────
-    var SIGMA = 180; // px — spatial field half-width
+    // ── 9. Entanglement coefficients ────────────────────────────────────────
+    var SIGMA = 200;
     function computeEntanglement() {
       var refRule = hoveredIdx >= 0 ? nodes[hoveredIdx].rule : caRule;
       nodes.forEach(function (n, i) {
-        var field  = MX > -100 ? gauss(n.cx - MX, SIGMA) : 0;
+        var field  = MX > -100 ? gauss2D(n.cx - MX, n.cy - MY, SIGMA) : 0;
         var interf = ruleKernel(refRule, n.rule);
         var hist   = histWeight(n.href);
         var raw    = i === hoveredIdx
           ? 1.0
           : Math.max(0, Math.min(1, 0.40 * field + 0.35 * interf + 0.25 * hist));
-        // Asymmetric EMA: snap up fast, decay slowly
-        var alpha  = raw > n.ent ? 0.30 : 0.10;
+        var alpha  = raw > n.ent ? 0.25 : 0.08;
         n.ent = n.ent * (1 - alpha) + raw * alpha;
         n.el.style.setProperty('--ent', n.ent.toFixed(3));
       });
     }
 
-    // ── 10. Live badge update — show XOR interference on hover ─────────────
+    // ── 10. Live badge XOR interference on hover ────────────────────────────
     function setBadgeBits(n, dispRule, label) {
+      if (!n.badgeBits) return;
       for (var i = 0; i < 8; i++) {
         var on = (dispRule >> (7 - i)) & 1;
         n.badgeBits[i].className = 'nav-rul-bit ' + (on ? 'nav-rul-bit--on' : 'nav-rul-bit--off');
       }
-      if (label !== undefined) n.badgeLbl.textContent = label;
+      if (label !== undefined && n.badgeLbl) n.badgeLbl.textContent = label;
     }
-    // Current-page node (for XOR computation)
     var currentNode = null;
     nodes.forEach(function (n) {
       if (n.href === PATH || (n.href !== '/' && PATH.startsWith(n.href))) currentNode = n;
@@ -350,26 +426,25 @@
 
     // ── 11. CA canvas — evolves with hovered rule, seeded at mouse X ────────
     function drawCA() {
-      var W = navbar.offsetWidth, ROWS = 14, CELL = 4;
+      if (!caCtx) return;
+      var W = ovPanel.offsetWidth, ROWS = 12, CELL = 4;
       if (!W) return;
       if (caCvs.width !== W) { caCvs.width = W; caCvs.height = ROWS * CELL; }
       var COLS = Math.ceil(W / CELL);
       var row  = new Uint8Array(COLS);
-      var localX = MX - navbarRect.left;
-      var seedX  = MX > -100
-        ? Math.max(0, Math.min(COLS - 1, Math.floor(localX / CELL)))
-        : Math.floor(COLS / 2);
+      var localX = MX > -100 ? MX - ovRect.left : ovPanel.offsetWidth / 2;
+      var seedX  = Math.max(0, Math.min(COLS - 1, Math.floor(localX / CELL)));
       row[seedX] = 1;
       caCtx.clearRect(0, 0, W, ROWS * CELL);
       var rule = caRule;
       for (var gen = 0; gen < ROWS; gen++) {
         var next = new Uint8Array(COLS);
         for (var c = 0; c < COLS; c++) {
-          var l = row[(c - 1 + COLS) % COLS], m = row[c], r = row[(c + 1) % COLS];
-          next[c] = (rule >> ((l << 2) | (m << 1) | r)) & 1;
+          var l = row[(c - 1 + COLS) % COLS], m = row[c], r2 = row[(c + 1) % COLS];
+          next[c] = (rule >> ((l << 2) | (m << 1) | r2)) & 1;
         }
-        var alpha = 0.012 + gen * 0.004 + speed * 0.0006;
-        caCtx.fillStyle = 'rgba(255,255,255,' + Math.min(alpha, 0.11).toFixed(3) + ')';
+        var al = 0.008 + gen * 0.005 + speed * 0.0005;
+        caCtx.fillStyle = 'rgba(255,255,255,' + Math.min(al, 0.10).toFixed(3) + ')';
         for (var c2 = 0; c2 < COLS; c2++) {
           if (next[c2]) caCtx.fillRect(c2 * CELL, gen * CELL, CELL - 1, CELL - 1);
         }
@@ -377,46 +452,47 @@
       }
     }
 
-    // ── 12. Edge arc canvas — arcs between entangled node pairs ────────────
+    // ── 12. Edge arc canvas — 2D arcs between entangled card pairs ──────────
     function drawEdges() {
-      var W = navbar.offsetWidth, H = navbar.offsetHeight;
+      if (!edgeCtx) return;
+      var W = ovPanel.offsetWidth, H = ovPanel.offsetHeight;
       if (!W || !H) return;
       if (edgeCvs.width !== W || edgeCvs.height !== H) { edgeCvs.width = W; edgeCvs.height = H; }
       edgeCtx.clearRect(0, 0, W, H);
-      var H2 = H * 0.5;
       for (var i = 0; i < nodes.length; i++) {
-        var a = nodes[i]; if (a.ent < 0.12) continue;
+        var a = nodes[i]; if (a.ent < 0.15) continue;
         for (var j = i + 1; j < nodes.length; j++) {
-          var b = nodes[j]; if (b.ent < 0.12) continue;
+          var b = nodes[j]; if (b.ent < 0.15) continue;
           var strength = Math.min(a.ent, b.ent) * ruleKernel(a.rule, b.rule);
-          if (strength < 0.07) continue;
-          var ax  = a.cx - navbarRect.left;
-          var bx  = b.cx - navbarRect.left;
-          var cpY = H2 - H * 0.55 * strength;   // arc rises with strength
+          if (strength < 0.08) continue;
+          var ax = a.cx - ovRect.left, ay = a.cy - ovRect.top;
+          var bx = b.cx - ovRect.left, by = b.cy - ovRect.top;
+          var cpX = (ax + bx) * 0.5;
+          var cpY = Math.min(ay, by) - 40 * strength;
           edgeCtx.beginPath();
-          edgeCtx.moveTo(ax, H2);
-          edgeCtx.quadraticCurveTo((ax + bx) * 0.5, cpY, bx, H2);
-          edgeCtx.strokeStyle = 'rgba(255,255,255,' + (strength * 0.22).toFixed(3) + ')';
-          edgeCtx.lineWidth   = Math.min(1.2, strength * 1.8);
+          edgeCtx.moveTo(ax, ay);
+          edgeCtx.quadraticCurveTo(cpX, cpY, bx, by);
+          edgeCtx.strokeStyle = 'rgba(255,255,255,' + (strength * 0.18).toFixed(3) + ')';
+          edgeCtx.lineWidth   = Math.min(1.2, strength * 1.6);
           edgeCtx.stroke();
         }
       }
     }
 
-    // ── 13. rAF loop ────────────────────────────────────────────────────────
+    // ── 13. rAF loop (only while overlay is open) ───────────────────────────
+    var rafId = null;
+    var overlayOpen = false;
+
     function tick() {
+      if (!overlayOpen) { rafId = null; return; }
       computeEntanglement();
       drawCA();
       drawEdges();
-
-      // Badge live update only when hovered node changes
       if (hoveredIdx !== prevHoveredIdx) {
-        // Restore previous
         if (prevHoveredIdx >= 0) {
           var pn = nodes[prevHoveredIdx];
           setBadgeBits(pn, pn.rule, 'R\u2009' + pn.rule);
         }
-        // Activate new: show XOR interference with current page
         if (hoveredIdx >= 0) {
           var hn  = nodes[hoveredIdx];
           var xor = currentNode ? hn.rule ^ currentNode.rule : hn.rule;
@@ -424,10 +500,27 @@
         }
         prevHoveredIdx = hoveredIdx;
       }
-
-      requestAnimationFrame(tick);
+      rafId = requestAnimationFrame(tick);
     }
-    requestAnimationFrame(tick);
+
+    // Hook into overlay open/close events
+    var ovEl = document.getElementById('nav-overlay');
+    var ovBtn = document.getElementById('nav-explorer-btn');
+    if (ovEl && ovBtn) {
+      // Observe class changes on overlay to start/stop the loop
+      var mo = new MutationObserver(function () {
+        if (ovEl.classList.contains('open')) {
+          overlayOpen = true;
+          measure();
+          // Reset ent to neutral so cards appear uniformly lit on open
+          nodes.forEach(function (n) { n.ent = 0.6; n.el.style.setProperty('--ent', '0.6'); });
+          if (!rafId) rafId = requestAnimationFrame(tick);
+        } else {
+          overlayOpen = false;
+        }
+      });
+      mo.observe(ovEl, { attributes: true, attributeFilter: ['class'] });
+    }
 
   })();
   </script>
